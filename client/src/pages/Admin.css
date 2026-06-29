@@ -1,0 +1,52 @@
+.admin {
+
+  padding: 40px;
+
+  max-width: 600px;
+
+  margin: auto;
+
+}
+
+.admin h1 {
+
+  margin-bottom: 20px;
+
+}
+
+.product-form {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 15px;
+
+}
+
+.product-form input,
+.product-form textarea {
+
+  padding: 12px;
+
+  border-radius: 8px;
+
+  border: 1px solid #ccc;
+
+}
+
+.product-form button {
+
+  padding: 12px;
+
+  background: #e8904a;
+
+  color: white;
+
+  border: none;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+}

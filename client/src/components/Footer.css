@@ -1,0 +1,448 @@
+/* ======================================== */
+/* PREMIUM FOOTER */
+/* ======================================== */
+
+.footer {
+
+  margin-top: 70px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2a1006 0%,
+      #4b1f0c 45%,
+      #2f1207 100%
+    );
+
+  color: white;
+
+  padding-top: 55px;
+
+  position: relative;
+
+  overflow: hidden;
+
+}
+
+/* ======================================== */
+/* GLOW EFFECT */
+/* ======================================== */
+
+.footer::before {
+
+  content: "";
+
+  position: absolute;
+
+  top: -180px;
+
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: 500px;
+
+  height: 500px;
+
+  background:
+    radial-gradient(
+      rgba(232,144,74,0.10),
+      transparent 70%
+    );
+
+  pointer-events: none;
+
+}
+
+/* ======================================== */
+/* CONTAINER */
+/* ======================================== */
+
+.footer-container {
+
+  max-width: 1250px;
+
+  margin: auto;
+
+  display: grid;
+
+  grid-template-columns:
+    1.1fr 1fr 1fr 0.9fr;
+
+  gap: 38px;
+
+  padding: 0 35px 42px;
+
+  position: relative;
+
+  z-index: 2;
+
+  align-items: start;
+
+}
+
+/* ======================================== */
+/* SECTION */
+/* ======================================== */
+
+.footer-section {
+
+  display: flex;
+
+  flex-direction: column;
+
+}
+
+.footer-section h3 {
+
+  font-size: 20px;
+
+  margin-bottom: 18px;
+
+  color: #f4c7a0;
+
+  font-weight: 700;
+
+}
+
+/* ======================================== */
+/* BRAND */
+/* ======================================== */
+
+.footer-logo {
+
+  font-size: 34px;
+
+  margin-bottom: 16px;
+
+  font-weight: 800;
+
+  color: white;
+
+  line-height: 1.1;
+
+}
+
+.footer-description {
+
+  color: rgba(255,255,255,0.82);
+
+  line-height: 1.9;
+
+  font-size: 15px;
+
+  max-width: 280px;
+
+}
+
+/* ======================================== */
+/* PAYMENT */
+/* ======================================== */
+
+.payment-text {
+
+  color: rgba(255,255,255,0.82);
+
+  line-height: 1.7;
+
+  margin-bottom: 18px;
+
+  font-size: 14px;
+
+}
+
+.payment-grid {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 72px);
+
+  gap: 12px;
+
+}
+
+/* CARD */
+
+.payment-card {
+
+  background:
+    rgba(255,255,255,0.08);
+
+  border:
+    1px solid rgba(255,255,255,0.06);
+
+  border-radius: 14px;
+
+  width: 72px;
+
+  height: 64px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  transition: 0.3s;
+
+  backdrop-filter: blur(10px);
+
+}
+
+/* HOVER */
+
+.payment-card:hover {
+
+  transform:
+    translateY(-4px);
+
+  background:
+    rgba(255,255,255,0.13);
+
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.16);
+
+}
+
+/* LOGO */
+
+.payment-card img {
+
+  width: 48px;
+
+  height: 22px;
+
+  object-fit: contain;
+
+}
+
+/* ======================================== */
+/* CONTACT */
+/* ======================================== */
+
+.footer-contact-item {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 16px;
+
+  color: rgba(255,255,255,0.92);
+
+  font-size: 15px;
+
+  transition: 0.3s;
+
+  line-height: 1.5;
+
+}
+
+.footer-contact-item:hover {
+
+  transform:
+    translateX(3px);
+
+}
+
+/* ICON */
+
+.contact-real-icon {
+
+  width: 20px;
+
+  height: 20px;
+
+  object-fit: contain;
+
+  flex-shrink: 0;
+
+}
+
+/* ======================================== */
+/* WHATSAPP */
+/* ======================================== */
+
+.footer-whatsapp {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #25d366,
+      #1da851
+    );
+
+  padding: 13px 18px;
+
+  border-radius: 14px;
+
+  text-decoration: none;
+
+  color: white;
+
+  font-size: 15px;
+
+  font-weight: 700;
+
+  transition: 0.3s;
+
+  box-shadow:
+    0 10px 24px rgba(37,211,102,0.25);
+
+  width: fit-content;
+
+}
+
+/* HOVER */
+
+.footer-whatsapp:hover {
+
+  transform:
+    translateY(-4px);
+
+  box-shadow:
+    0 16px 32px rgba(37,211,102,0.35);
+
+}
+
+/* LOGO */
+
+.footer-whatsapp img {
+
+  width: 22px;
+
+  height: 22px;
+
+}
+
+/* ======================================== */
+/* BOTTOM */
+/* ======================================== */
+
+.footer-bottom {
+
+  border-top:
+    1px solid rgba(255,255,255,0.08);
+
+  text-align: center;
+
+  padding: 20px;
+
+  color: rgba(255,255,255,0.68);
+
+  font-size: 13px;
+
+  position: relative;
+
+  z-index: 2;
+
+}
+
+/* ======================================== */
+/* RESPONSIVE */
+/* ======================================== */
+
+@media(max-width:992px) {
+
+  .footer-container {
+
+    grid-template-columns:
+      repeat(2, 1fr);
+
+    gap: 45px;
+
+  }
+
+}
+
+@media(max-width:768px) {
+
+  .footer {
+
+    padding-top: 50px;
+
+  }
+
+  .footer-container {
+
+    grid-template-columns:
+      1fr;
+
+    gap: 40px;
+
+    padding: 0 22px 40px;
+
+  }
+
+  .footer-logo {
+
+    font-size: 30px;
+
+  }
+
+  .footer-description {
+
+    max-width: 100%;
+
+  }
+
+  .payment-grid {
+
+    grid-template-columns:
+      repeat(3, 70px);
+
+  }
+
+  .footer-whatsapp {
+
+    width: 100%;
+
+  }
+
+}
+
+@media(max-width:520px) {
+
+  .footer-logo {
+
+    font-size: 28px;
+
+  }
+
+  .footer-section h3 {
+
+    font-size: 18px;
+
+  }
+
+  .payment-grid {
+
+    grid-template-columns:
+      repeat(3, 1fr);
+
+  }
+
+  .payment-card {
+
+    width: 100%;
+
+  }
+
+  .footer-contact-item {
+
+    font-size: 14px;
+
+  }
+
+}

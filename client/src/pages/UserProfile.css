@@ -1,0 +1,585 @@
+.profile-page {
+  min-height: 100vh;
+  padding: 42px 24px 72px;
+  background:
+    linear-gradient(
+      to bottom,
+      #f7f3ef,
+      #ffffff
+    );
+}
+
+.profile-header-card,
+.profile-panel,
+.profile-stats div {
+  background: white;
+  border: 1px solid #f0e2d6;
+  box-shadow:
+    0 12px 34px rgba(0,0,0,0.06);
+}
+
+.profile-header-card {
+  max-width: 1120px;
+  margin: 0 auto 20px;
+  padding: 26px;
+  border-radius: 18px;
+  border-left: 5px solid #e8904a;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.profile-avatar-large {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 3px solid #f0d6bd;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.profile-avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-header-text {
+  flex: 1;
+}
+
+.profile-header-text h1 {
+  margin: 0 0 6px;
+  color: #3e2723;
+  font-size: 34px;
+}
+
+.profile-header-text p {
+  margin: 4px 0;
+  color: #666;
+  font-size: 15px;
+}
+
+.profile-upload-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: #3e2723;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-wishlist-shortcut {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #e2d4c8;
+  border-radius: 10px;
+  background: #fff8f2;
+  color: #3e2723;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-upload-btn input {
+  display: none;
+}
+
+.profile-message {
+  max-width: 1120px;
+  margin: 0 auto 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff8f2;
+  border: 1px solid #f0d6bd;
+  color: #5d4037;
+  font-weight: 700;
+}
+
+.profile-stats {
+  max-width: 1120px;
+  margin: 0 auto 22px;
+  display: grid;
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+  gap: 14px;
+}
+
+.profile-stats div {
+  padding: 18px;
+  border-radius: 14px;
+}
+
+.profile-stats span {
+  display: block;
+  color: #777;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.profile-stats strong {
+  color: #3e2723;
+  font-size: 28px;
+}
+
+.profile-grid {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.profile-wishlist-panel {
+  max-width: 1120px;
+  margin: 22px auto 0;
+}
+
+.profile-wishlist-empty {
+  margin: 0;
+  color: #777;
+  font-weight: 700;
+}
+
+.profile-wishlist-list {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-wishlist-card {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #f0d6bd;
+  border-radius: 12px;
+  background: #fffaf6;
+}
+
+.profile-wishlist-card img {
+  width: 86px;
+  height: 86px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f8f8f8;
+}
+
+.profile-wishlist-info {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.profile-wishlist-info h3 {
+  margin: 0;
+  color: #3e2723;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.profile-wishlist-info strong {
+  color: #c8742d;
+}
+
+.profile-stock-badge {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: white;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.profile-stock-badge.in {
+  background: #16a34a;
+}
+
+.profile-stock-badge.low {
+  background: #d97706;
+}
+
+.profile-stock-badge.out {
+  background: #991b1b;
+}
+
+.profile-wishlist-rating {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: #d1d5db;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.profile-wishlist-rating .filled {
+  color: #f59e0b;
+}
+
+.profile-wishlist-rating small {
+  color: #6b625d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-wishlist-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-wishlist-actions button {
+  min-height: 40px;
+  border: none;
+  border-radius: 9px;
+  padding: 0 12px;
+  background: #3e2723;
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-wishlist-actions button:last-child {
+  background: #fff;
+  color: #b91c1c;
+  border: 1px solid #f0c4c4;
+}
+
+.profile-panel {
+  padding: 24px;
+  border-radius: 18px;
+}
+
+.profile-panel h2 {
+  margin: 0 0 18px;
+  color: #3e2723;
+  font-size: 24px;
+}
+
+.profile-address-form,
+.profile-settings-form {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.profile-address-form input,
+.profile-settings-form input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 0 13px;
+  background: #fafafa;
+  color: #3e2723;
+  font-size: 14px;
+  outline: none;
+}
+
+.profile-settings-form label {
+  display: grid;
+  gap: 7px;
+  color: #3e2723;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.profile-address-form input:focus,
+.profile-settings-form input:focus {
+  border-color: #e8904a;
+  background: white;
+  box-shadow:
+    0 0 0 3px rgba(232,144,74,0.14);
+}
+
+.profile-address-form button,
+.profile-settings-form button {
+  min-height: 46px;
+  border: none;
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      135deg,
+      #e8904a,
+      #cf7d38
+    );
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-address-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.profile-address-list > p {
+  margin: 0;
+  color: #777;
+}
+
+.profile-address-card {
+  padding: 14px;
+  border-radius: 12px;
+  background: #fffaf6;
+  border: 1px solid #f0d6bd;
+  display: grid;
+  gap: 5px;
+}
+
+.profile-address-card strong {
+  color: #3e2723;
+}
+
+.profile-address-card span,
+.profile-address-card small {
+  color: #666;
+  line-height: 1.5;
+}
+
+.profile-address-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.profile-address-actions button {
+  min-height: 36px;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.profile-address-edit-btn {
+  border: 1px solid #e7c7a9;
+  background: #fff7ed;
+  color: #7a3e18;
+  box-shadow: 0 8px 18px rgba(138, 82, 43, 0.10);
+}
+
+.profile-address-delete-btn {
+  border: 1px solid #f0c4c4;
+  background: #fff5f3;
+  color: #b42318;
+  box-shadow: 0 8px 18px rgba(180, 35, 24, 0.08);
+}
+
+.profile-address-edit-btn:hover {
+  background: #f7eadc;
+  transform: translateY(-1px);
+}
+
+.profile-address-delete-btn:hover {
+  background: #ffe8e4;
+  transform: translateY(-1px);
+}
+
+.profile-address-actions button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.profile-logout-btn {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 16px;
+  border: none;
+  border-radius: 10px;
+  background: #d32f2f;
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-logout-btn:hover {
+  background: #b71c1c;
+}
+
+@media(max-width: 900px) {
+  .profile-header-card,
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .profile-grid {
+    display: grid;
+  }
+}
+
+@media(max-width: 560px) {
+  .profile-page {
+    padding: 22px 12px calc(52px + env(safe-area-inset-bottom));
+  }
+
+  .profile-header-card,
+  .profile-panel,
+  .profile-stats div {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .profile-header-card {
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .profile-header-text h1 {
+    font-size: 24px;
+  }
+
+  .profile-header-text p {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-avatar-large {
+    width: 76px;
+    height: 76px;
+  }
+
+  .profile-upload-btn {
+    width: 100%;
+  }
+
+  .profile-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .profile-stats div {
+    min-height: 82px;
+    padding: 12px 8px;
+  }
+
+  .profile-stats span {
+    font-size: 11px;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
+
+  .profile-stats strong {
+    font-size: 18px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-grid {
+    gap: 14px;
+  }
+
+  .profile-panel h2 {
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+
+  .profile-address-form,
+  .profile-settings-form {
+    gap: 10px;
+  }
+
+  .profile-address-form input,
+  .profile-settings-form input {
+    height: 46px;
+    font-size: 16px;
+  }
+
+  .profile-address-card {
+    padding: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-address-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-address-actions button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .profile-wishlist-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+  }
+
+  .profile-wishlist-card img {
+    width: 72px;
+    height: 72px;
+  }
+
+  .profile-wishlist-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media(max-width: 360px) {
+  .profile-page {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .profile-stats {
+    grid-template-columns: 1fr;
+  }
+}

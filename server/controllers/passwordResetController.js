@@ -1,0 +1,226 @@
+const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
+
+const db = require("../config/db");
+
+const OTP_TTL_MINUTES = 10;
+const FORGOT_RESPONSE = {
+  success: true,
+  message: "If the email exists, an OTP has been sent."
+};
+
+function runQuery(sql, params = []) {
+  return db.promise().execute(sql, params);
+}
+
+function normalizeEmail(email) {
+  return (email || "").trim().toLowerCase();
+}
+
+function generateOtp() {
+  return String(crypto.randomInt(100000, 1000000));
+}
+
+function createTransporter() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+}
+
+async function findUserByEmail(email) {
+  const [rows] = await runQuery(
+    "SELECT id, email FROM users WHERE email = ? LIMIT 1",
+    [email]
+  );
+
+  return rows[0];
+}
+
+async function findValidReset(userId, otp) {
+  const [rows] = await runQuery(
+    `
+      SELECT id, user_id, otp, expires_at
+      FROM password_resets
+      WHERE user_id = ?
+        AND otp = ?
+        AND expires_at > NOW()
+      LIMIT 1
+    `,
+    [userId, otp]
+  );
+
+  return rows[0];
+}
+
+async function sendOtpEmail(email, otp) {
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Haroon Stores Password Reset OTP",
+    text: `Hello,
+
+Your OTP is: ${otp}
+
+This OTP expires in 10 minutes.
+
+If you did not request this password reset, please ignore this email.
+
+Haroon Stores Team`
+  });
+}
+
+async function forgotPassword(req, res) {
+  const email = normalizeEmail(req.body.email);
+
+  try {
+    if (!email) {
+      return res.json(FORGOT_RESPONSE);
+    }
+
+    const user = await findUserByEmail(email);
+
+    if (user) {
+      const otp = generateOtp();
+
+      await runQuery(
+        "DELETE FROM password_resets WHERE user_id = ?",
+        [user.id]
+      );
+
+      await runQuery(
+        `
+          INSERT INTO password_resets
+          (user_id, otp, expires_at)
+          VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))
+        `,
+        [user.id, otp, OTP_TTL_MINUTES]
+      );
+
+      await sendOtpEmail(user.email, otp);
+    }
+  } catch (error) {
+    console.error("Forgot password failed:", error);
+  }
+
+  res.json(FORGOT_RESPONSE);
+}
+
+async function verifyOtp(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+
+    if (!email || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP."
+      });
+    }
+
+    const user = await findUserByEmail(email);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP."
+      });
+    }
+
+    const reset = await findValidReset(user.id, otp);
+
+    if (!reset) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP."
+      });
+    }
+
+    res.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("OTP verification failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "OTP verification failed"
+    });
+  }
+}
+
+async function resetPassword(req, res) {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "").trim();
+    const password = req.body.password || "";
+
+    if (!email || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP."
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters."
+      });
+    }
+
+    const user = await findUserByEmail(email);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP."
+      });
+    }
+
+    const reset = await findValidReset(user.id, otp);
+
+    if (!reset) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP."
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await runQuery(
+      "UPDATE users SET password_hash = ? WHERE id = ?",
+      [passwordHash, user.id]
+    );
+
+    await runQuery(
+      "DELETE FROM password_resets WHERE user_id = ?",
+      [user.id]
+    );
+
+    res.json({
+      success: true,
+      message: "Password reset successfully"
+    });
+  } catch (error) {
+    console.error("Password reset failed:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Password reset failed"
+    });
+  }
+}
+
+module.exports = {
+  forgotPassword,
+  verifyOtp,
+  resetPassword
+};

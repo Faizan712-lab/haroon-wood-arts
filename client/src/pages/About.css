@@ -1,0 +1,362 @@
+/* ======================================== */
+/* ABOUT PAGE */
+/* ======================================== */
+
+.about-page {
+
+  min-height: 100vh;
+
+  padding: 80px 20px;
+
+  background:
+    linear-gradient(
+      to bottom,
+      #f8f5f1,
+      #ffffff
+    );
+
+}
+
+/* ======================================== */
+/* HERO */
+/* ======================================== */
+
+.about-hero {
+
+  text-align: center;
+
+  max-width: 850px;
+
+  margin: 0 auto 70px;
+
+}
+
+.about-tag {
+
+  display: inline-block;
+
+  color: #e8904a;
+
+  font-weight: 700;
+
+  letter-spacing: 3px;
+
+  margin-bottom: 18px;
+
+  font-size: 14px;
+
+}
+
+.about-hero h1 {
+
+  font-size: 64px;
+
+  color: #3e2723;
+
+  margin-bottom: 22px;
+
+  font-weight: 800;
+
+  line-height: 1.1;
+
+}
+
+.about-subtitle {
+
+  font-size: 20px;
+
+  color: #666;
+
+  line-height: 1.8;
+
+}
+
+/* ======================================== */
+/* CONTAINER */
+/* ======================================== */
+
+.about-container {
+
+  max-width: 1250px;
+
+  margin: auto;
+
+}
+
+/* ======================================== */
+/* MAIN CARD */
+/* ======================================== */
+
+.about-card {
+
+  background: white;
+
+  padding: 42px;
+
+  border-radius: 22px;
+
+  box-shadow:
+    0 20px 45px rgba(0,0,0,0.06);
+
+  border: 1px solid #f1e4d8;
+
+  margin-bottom: 50px;
+
+  position: relative;
+
+  overflow: hidden;
+
+}
+
+.about-card::before {
+
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+
+  left: 0;
+
+  width: 100%;
+
+  height: 6px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #e8904a,
+      #cf7d38
+    );
+
+}
+
+.about-card h2 {
+
+  font-size: 38px;
+
+  color: #3e2723;
+
+  margin-bottom: 22px;
+
+  font-weight: 700;
+
+}
+
+.about-card p {
+
+  color: #666;
+
+  line-height: 2;
+
+  font-size: 17px;
+
+  margin-bottom: 22px;
+
+}
+
+/* ======================================== */
+/* FEATURES */
+/* ======================================== */
+
+.about-features {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(250px, 1fr)
+    );
+
+  gap: 22px;
+
+}
+
+/* FEATURE BOX */
+
+.feature-box {
+
+  background: white;
+
+  padding: 28px 24px;
+
+  border-radius: 20px;
+
+  text-align: left;
+
+  box-shadow:
+    0 15px 35px rgba(0,0,0,0.05);
+
+  border: 1px solid #f3e4d8;
+
+  transition: 0.35s;
+
+  position: relative;
+
+  overflow: hidden;
+
+}
+
+/* HOVER */
+
+.feature-box:hover {
+
+  transform:
+    translateY(-8px);
+
+  box-shadow:
+    0 25px 45px rgba(0,0,0,0.08);
+
+}
+
+/* ICON */
+
+.feature-icon {
+
+  width: 58px;
+
+  height: 58px;
+
+  margin: 0 0 18px;
+
+  border-radius: 50%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 24px;
+
+  color: #c8742d;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff1e5,
+      #ffe3cc
+    );
+
+}
+
+/* TITLE */
+
+.feature-box h3 {
+
+  font-size: 21px;
+
+  margin-bottom: 14px;
+
+  color: #3e2723;
+
+  font-weight: 700;
+
+}
+
+/* TEXT */
+
+.feature-box p {
+
+  color: #777;
+
+  line-height: 1.8;
+
+  font-size: 15px;
+
+}
+
+/* ======================================== */
+/* RESPONSIVE */
+/* ======================================== */
+
+@media(max-width:900px) {
+
+  .about-page {
+
+    padding: 60px 18px;
+
+  }
+
+  .about-hero h1 {
+
+    font-size: 48px;
+
+  }
+
+  .about-subtitle {
+
+    font-size: 18px;
+
+  }
+
+  .about-card {
+
+    padding: 35px;
+
+  }
+
+}
+
+@media(max-width:600px) {
+
+  .about-page {
+    padding: 44px 14px 56px;
+  }
+
+  .about-hero {
+    margin-bottom: 42px;
+  }
+
+  .about-tag {
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .about-hero h1 {
+
+    font-size: 34px;
+
+  }
+
+  .about-subtitle {
+
+    font-size: 16px;
+
+  }
+
+  .about-card {
+
+    padding: 24px 20px;
+    border-radius: 20px;
+
+  }
+
+  .about-card h2 {
+
+    font-size: 26px;
+
+  }
+
+  .about-card p {
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  .feature-box {
+
+    padding: 28px 22px;
+    border-radius: 20px;
+
+  }
+
+  .feature-icon {
+
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
+
+  }
+
+}
