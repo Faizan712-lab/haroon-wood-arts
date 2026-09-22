@@ -2,6 +2,7 @@ import "./OrderDetails.css";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 } from "../utils/imageFallback";
 
@@ -516,8 +517,9 @@ function OrderDetails() {
             >
 
               <img
-                src={item.image || PRODUCT_PLACEHOLDER}
+                src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
                 alt={item.name}
+                loading="lazy"
                 onError={handleImageFallback}
               />
 
@@ -568,16 +570,25 @@ function OrderDetails() {
           <p className="details-paid">
 
             Paid:
-            Rs. {order.paid || order.total}
+            Rs. {order.paid}
 
           </p>
+
+          {order.paymentMode === "COD" && (
+
+            <p className="details-paid">
+              Required Online Advance (10%):
+              Rs. {order.codAdvance}
+            </p>
+
+          )}
 
           {order.paymentMode === "COD" && (
 
             <p className="details-remaining">
 
               Remaining on Delivery:
-              Rs. {order.remaining}
+              Rs. {order.codRemainingOnDelivery ?? order.remaining}
 
             </p>
 

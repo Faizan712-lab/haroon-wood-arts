@@ -49,6 +49,7 @@ function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [form, setForm] = useState({
@@ -96,17 +97,19 @@ function AdminSettings() {
 
   function readImage(file) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Only JPG, PNG, and WEBP images are allowed.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateField("profileImage", String(reader.result || ""));
-      toast.success("Profile picture selected.");
-    };
-    reader.readAsDataURL(file);
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Profile image must be 5MB or smaller.");
+      return;
+    }
+
+    setProfileImageFile(file);
+    updateField("profileImage", URL.createObjectURL(file));
+    toast.success("Profile picture selected.");
   }
 
   function handleImageChange(event) {
@@ -135,13 +138,22 @@ function AdminSettings() {
         }
       }
 
-      const updatedAdmin = await updateAdminAccount({
+      const payload = profileImageFile ? new FormData() : {};
+      const fields = {
         name: form.name,
         designation: form.designation,
         currentPassword: form.currentPassword,
-        newPassword: form.newPassword,
-        profileImage: form.profileImage
-      });
+        newPassword: form.newPassword
+      };
+
+      if (payload instanceof FormData) {
+        Object.entries(fields).forEach(([key, value]) => payload.append(key, value));
+        payload.append("profileImage", profileImageFile);
+      } else {
+        Object.assign(payload, fields);
+      }
+
+      const updatedAdmin = await updateAdminAccount(payload);
 
       setAdmin(updatedAdmin);
       setForm(current => ({
@@ -153,6 +165,7 @@ function AdminSettings() {
         newPassword: "",
         confirmPassword: ""
       }));
+      setProfileImageFile(null);
       toast.success("Admin settings updated.");
     } catch (error) {
       toast.error(error.message || "Failed to update settings");

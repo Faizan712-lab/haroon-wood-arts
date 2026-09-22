@@ -15,6 +15,8 @@ from "../../utils/api";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getImageList,
+  getPrimaryImage,
   handleImageFallback
 }
 from "../../utils/imageFallback";
@@ -172,14 +174,19 @@ function AdminProducts() {
             size.stock === undefined ||
             size.stock === null
               ? ""
-              : String(size.stock)
+              : String(size.stock),
+          images:
+            Array.isArray(size.images)
+              ? size.images
+              : []
         }))
       : [
           {
             id: "",
             size: "",
             price: "",
-            stock: ""
+            stock: "",
+            images: []
           }
         ];
   }
@@ -192,7 +199,8 @@ function AdminProducts() {
       discountPercent: String(product.discountPercent || 0),
       category: product.category || "",
       description: product.description || "",
-      image: product.image || "",
+      image: getPrimaryImage(product) || "",
+      images: getImageList(product),
       stock: product.stock || 100,
       stockStatus:
         product.stockStatus ||
@@ -212,6 +220,113 @@ function AdminProducts() {
       ...previous,
       [field]: value
     }));
+  }
+
+  function updateEditImages(nextImages) {
+    setEditForm(previous => ({
+      ...previous,
+      images: nextImages,
+      image: nextImages[0] || ""
+    }));
+  }
+
+  function readImageFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        reject(new Error("Only JPG, PNG, and WEBP images are allowed."));
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        reject(new Error("Each image must be 5MB or smaller."));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Failed to read image."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function appendDataImage(payload, image, index, fieldName = "images", namePrefix = "product-image") {
+    const response = await fetch(image);
+    const blob = await response.blob();
+    const extension = blob.type === "image/png"
+      ? "png"
+      : blob.type === "image/webp"
+        ? "webp"
+        : "jpg";
+
+    payload.append(fieldName, blob, `${namePrefix}-${index + 1}.${extension}`);
+  }
+
+  async function appendVariantImages(payload, sourceVariants) {
+    let uploadIndex = 0;
+    const resolved = [];
+
+    for (const variant of sourceVariants) {
+      const images = [];
+
+      for (const image of variant.images || []) {
+        if (String(image || "").startsWith("data:image/")) {
+          await appendDataImage(payload, image, uploadIndex, "variantImages", "variant-image");
+          images.push(`upload:${uploadIndex}`);
+          uploadIndex += 1;
+        } else if (image) {
+          images.push(image);
+        }
+      }
+
+      resolved.push({ ...variant, images });
+    }
+
+    return resolved;
+  }
+
+  async function appendEditImages(event) {
+    const files = Array.from(event.target.files || []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    try {
+      const slots = Math.max(0, 8 - editForm.images.length);
+      const previews = await Promise.all(files.slice(0, slots).map(readImageFile));
+      updateEditImages([...editForm.images, ...previews].slice(0, 8));
+    } catch (error) {
+      toast.error(error.message || "Unable to read image");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  async function replaceEditImage(index, event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const preview = await readImageFile(file);
+      updateEditImages(
+        editForm.images.map((image, currentIndex) =>
+          currentIndex === index ? preview : image
+        )
+      );
+    } catch (error) {
+      toast.error(error.message || "Unable to read image");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function removeEditImage(index) {
+    updateEditImages(
+      editForm.images.filter((_, currentIndex) => currentIndex !== index)
+    );
   }
 
   function updateEditSize(index, field, value) {
@@ -237,7 +352,8 @@ function AdminProducts() {
           id: "",
           size: "",
           price: "",
-          stock: ""
+          stock: "",
+          images: []
         }
       ]
     }));
@@ -255,6 +371,49 @@ function AdminProducts() {
     }));
   }
 
+  async function appendEditVariantImages(index, event) {
+    const files = Array.from(event.target.files || []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    try {
+      const currentImages = editForm.variants[index]?.images || [];
+      const slots = Math.max(0, 8 - currentImages.length);
+      const previews = await Promise.all(
+        files.slice(0, slots).map(readImageFile)
+      );
+
+      updateEditSize(index, "images", [...currentImages, ...previews].slice(0, 8));
+    } catch (error) {
+      toast.error(error.message || "Unable to read image");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function removeEditVariantImage(variantIndex, imageIndex) {
+    const images = editForm.variants[variantIndex]?.images || [];
+    updateEditSize(
+      variantIndex,
+      "images",
+      images.filter((_, currentIndex) => currentIndex !== imageIndex)
+    );
+  }
+
+  function moveEditVariantImage(variantIndex, imageIndex, direction) {
+    const images = [...(editForm.variants[variantIndex]?.images || [])];
+    const target = imageIndex + direction;
+
+    if (target < 0 || target >= images.length) {
+      return;
+    }
+
+    [images[imageIndex], images[target]] = [images[target], images[imageIndex]];
+    updateEditSize(variantIndex, "images", images);
+  }
+
   async function saveProductEdit(event) {
     event.preventDefault();
 
@@ -265,9 +424,14 @@ function AdminProducts() {
     try {
       setIsSavingEdit(true);
 
-      const payload = {
-        ...editForm,
-        variants: editForm.variants
+      const payload = new FormData();
+      ["name", "price", "discountPercent", "category", "description", "stock", "stockStatus", "image"].forEach(field => {
+        payload.append(field, String(editForm[field] ?? ""));
+      });
+      const resolvedVariants = await appendVariantImages(payload, editForm.variants);
+      payload.append(
+        "variants",
+        JSON.stringify(resolvedVariants
           .filter(size =>
             size.size.trim()
           )
@@ -280,18 +444,28 @@ function AdminProducts() {
             stock:
               size.stock === ""
                 ? Number(editForm.stock || 0)
-                : Number(size.stock)
+                : Number(size.stock),
+            images: size.images || []
           }))
-      };
+        )
+      );
+
+      const imageOrder = [];
+      for (const [index, image] of editForm.images.entries()) {
+        if (String(image || "").startsWith("data:image/")) {
+          imageOrder.push(`upload:${imageOrder.filter(item => item.startsWith("upload:")).length}`);
+          await appendDataImage(payload, image, index);
+        } else if (image) {
+          imageOrder.push(image);
+        }
+      }
+      payload.append("image_order", JSON.stringify(imageOrder));
 
       const response = await fetch(
         getApiUrl(`/api/products/${editingProduct.id}`),
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
+          body: payload
         }
       );
 
@@ -381,9 +555,10 @@ function AdminProducts() {
               <div className="admin-card-image-frame admin-product-image-frame">
                 <img
 
-                  src={product.image || PRODUCT_PLACEHOLDER}
+                  src={getPrimaryImage(product) || PRODUCT_PLACEHOLDER}
 
                   alt={product.name}
+                  loading="lazy"
 
                   onError={handleImageFallback}
 
@@ -626,19 +801,56 @@ function AdminProducts() {
 
               <section className="admin-edit-section">
                 <h3>
-                  Image Preview
+                  Current Gallery
                 </h3>
 
-                <div className="admin-edit-image-row">
-                  <img
-                    className="admin-edit-preview"
-                    src={editForm.image || PRODUCT_PLACEHOLDER}
-                    alt={editForm.name || "Product preview"}
-                    onError={handleImageFallback}
-                  />
+                <div className="admin-edit-gallery">
+                  {editForm.images.map((image, index) => (
+                    <div
+                      key={`${image}-${index}`}
+                      className="admin-edit-gallery-item"
+                    >
+                      <img
+                        src={image || PRODUCT_PLACEHOLDER}
+                        alt={`Product gallery ${index + 1}`}
+                        loading="lazy"
+                        onError={handleImageFallback}
+                      />
+                      <div className="admin-edit-gallery-actions">
+                        <label>
+                          Replace
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(event) =>
+                              replaceEditImage(index, event)
+                            }
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => removeEditImage(index)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-                  <label>
-                    Image URL
+                <label className="admin-upload-more">
+                  Upload More Images ({editForm.images.length}/8)
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={appendEditImages}
+                    disabled={editForm.images.length >= 8}
+                  />
+                </label>
+
+                <label>
+                  Image URL
                     <input
                       type="text"
                       value={editForm.image}
@@ -647,8 +859,7 @@ function AdminProducts() {
                       }
                       placeholder="Image URL or base64 image"
                     />
-                  </label>
-                </div>
+                </label>
               </section>
 
               <section className="admin-edit-section">
@@ -711,6 +922,73 @@ function AdminProducts() {
                       >
                         Delete
                       </button>
+
+                      <div className="variant-image-manager">
+                        <div className="variant-image-manager-header">
+                          <strong>
+                            Upload Images
+                          </strong>
+                          <span>
+                            {(size.images || []).length}/8
+                          </span>
+                        </div>
+
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          multiple
+                          onChange={(event) =>
+                            appendEditVariantImages(index, event)
+                          }
+                          disabled={(size.images || []).length >= 8}
+                        />
+
+                        {(size.images || []).length > 0 && (
+                          <div className="variant-image-thumbs">
+                            {(size.images || []).map((preview, imageIndex) => (
+                              <div
+                                key={`${preview}-${imageIndex}`}
+                                className="variant-image-thumb"
+                              >
+                                <img
+                                  src={preview || PRODUCT_PLACEHOLDER}
+                                  alt={`Variant preview ${imageIndex + 1}`}
+                                  loading="lazy"
+                                  onError={handleImageFallback}
+                                />
+                                <div className="variant-image-actions">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      moveEditVariantImage(index, imageIndex, -1)
+                                    }
+                                    disabled={imageIndex === 0}
+                                  >
+                                    Up
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      moveEditVariantImage(index, imageIndex, 1)
+                                    }
+                                    disabled={imageIndex === (size.images || []).length - 1}
+                                  >
+                                    Down
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeEditVariantImage(index, imageIndex)
+                                    }
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
 

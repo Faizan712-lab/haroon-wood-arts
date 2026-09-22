@@ -374,6 +374,49 @@
 
 }
 
+/* Final mobile category-card consistency for Home and the Categories page. */
+@media (max-width: 600px) {
+  .categories-page,
+  .home-categories-section {
+    padding-inline: 14px;
+    overflow-x: clip;
+  }
+
+  .categories-grid,
+  .home-categories-section .categories-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .category-card,
+  .home-categories-section .category-card {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 14px;
+  }
+
+  .category-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .category-overlay { padding: 11px; }
+  .category-overlay h2,
+  .home-categories-section .category-overlay h2 { margin-bottom: 3px; font-size: clamp(14px, 4vw, 17px); }
+  .category-overlay p,
+  .home-categories-section .category-overlay p { margin: 0; font-size: 11px; }
+}
+
+@media (max-width: 360px) {
+  .categories-page,
+  .home-categories-section { padding-inline: 10px; }
+  .categories-grid,
+  .home-categories-section .categories-grid { gap: 10px; }
+}
+
 .home-categories-section {
 
   min-height: auto;

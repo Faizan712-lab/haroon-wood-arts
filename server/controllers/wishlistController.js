@@ -1,30 +1,7 @@
 const db = require("../config/db");
 
-let wishlistSchemaReady = false;
-
-async function ensureWishlistSchema() {
-  if (wishlistSchemaReady) {
-    return;
-  }
-
-  await db.promise().execute(`
-    CREATE TABLE IF NOT EXISTS wishlists (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      user_id INT NOT NULL,
-      product_id INT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE KEY unique_wishlist(user_id, product_id),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    )
-  `);
-
-  wishlistSchemaReady = true;
-}
-
 async function getWishlist(req, res) {
   try {
-    await ensureWishlistSchema();
 
     const [items] = await db.promise().execute(
       `
@@ -85,14 +62,17 @@ async function getWishlist(req, res) {
 
 async function addWishlistItem(req, res) {
   try {
-    await ensureWishlistSchema();
+    const productId = Number(req.params.productId);
+    if (!Number.isInteger(productId) || productId <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid product." });
+    }
 
     await db.promise().execute(
       `
         INSERT IGNORE INTO wishlists (user_id, product_id)
         VALUES (?, ?)
       `,
-      [req.auth.id, req.params.productId]
+      [req.auth.id, productId]
     );
 
     res.status(201).json({
@@ -111,14 +91,17 @@ async function addWishlistItem(req, res) {
 
 async function removeWishlistItem(req, res) {
   try {
-    await ensureWishlistSchema();
+    const productId = Number(req.params.productId);
+    if (!Number.isInteger(productId) || productId <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid product." });
+    }
 
     await db.promise().execute(
       `
         DELETE FROM wishlists
         WHERE user_id = ? AND product_id = ?
       `,
-      [req.auth.id, req.params.productId]
+      [req.auth.id, productId]
     );
 
     res.json({

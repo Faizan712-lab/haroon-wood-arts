@@ -41,6 +41,15 @@ async function findUserByEmail(email) {
   return rows[0];
 }
 
+async function findUserById(userId) {
+  const [rows] = await runQuery(
+    "SELECT id, email, password_hash FROM users WHERE id = ? LIMIT 1",
+    [userId]
+  );
+
+  return rows[0];
+}
+
 async function findValidReset(userId, otp) {
   const [rows] = await runQuery(
     `
@@ -219,8 +228,63 @@ async function resetPassword(req, res) {
   }
 }
 
+async function requestAuthenticatedPasswordChange(req, res) {
+  try {
+    const currentPassword = req.body.currentPassword || "";
+    const newPassword = req.body.newPassword || "";
+    const user = await findUserById(req.auth.id);
+
+    if (!user || !await bcrypt.compare(currentPassword, user.password_hash)) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect." });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
+    }
+
+    const otp = generateOtp();
+    await runQuery("DELETE FROM password_resets WHERE user_id = ?", [user.id]);
+    await runQuery(
+      "INSERT INTO password_resets (user_id, otp, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))",
+      [user.id, otp, OTP_TTL_MINUTES]
+    );
+    await sendOtpEmail(user.email, otp);
+
+    res.json({ success: true, email: user.email, message: "Verification code sent." });
+  } catch (error) {
+    console.error("Authenticated password-change request failed:", error);
+    res.status(500).json({ success: false, message: "Unable to send verification code." });
+  }
+}
+
+async function confirmAuthenticatedPasswordChange(req, res) {
+  try {
+    const otp = String(req.body.otp || "").trim();
+    const newPassword = req.body.newPassword || "";
+    const user = await findUserById(req.auth.id);
+
+    if (!user || !/^\d{6}$/.test(otp) || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+    }
+
+    const reset = await findValidReset(user.id, otp);
+    if (!reset) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+    }
+
+    await runQuery("UPDATE users SET password_hash = ? WHERE id = ?", [await bcrypt.hash(newPassword, 10), user.id]);
+    await runQuery("DELETE FROM password_resets WHERE user_id = ?", [user.id]);
+    res.json({ success: true, message: "Password changed successfully." });
+  } catch (error) {
+    console.error("Authenticated password-change confirmation failed:", error);
+    res.status(500).json({ success: false, message: "Unable to change password." });
+  }
+}
+
 module.exports = {
   forgotPassword,
   verifyOtp,
-  resetPassword
+  resetPassword,
+  requestAuthenticatedPasswordChange,
+  confirmAuthenticatedPasswordChange
 };

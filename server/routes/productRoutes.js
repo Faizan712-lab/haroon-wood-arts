@@ -13,12 +13,26 @@ const {
 const {
   requireAuth
 } = require("../middleware/authMiddleware");
+const { requireAdminAuth } = require("../controllers/adminAuthController");
+const {
+  createImageUpload,
+  validateUploadedImages
+} = require("../middleware/imageUpload");
+
+const productImagesUpload = createImageUpload("products", 72, {
+  variantImages: "variants"
+});
 
 router.get("/", getProducts);
 router.get("/:id", getProductById);
-router.post("/", addProduct);
-router.put("/:id", updateProduct);
+const productImageFields = productImagesUpload.fields([
+  { name: "images", maxCount: 8 },
+  { name: "variantImages", maxCount: 64 }
+]);
+
+router.post("/", requireAdminAuth, productImageFields, validateUploadedImages, addProduct);
+router.put("/:id", requireAdminAuth, productImageFields, validateUploadedImages, updateProduct);
 router.post("/:id/reviews", requireAuth(["user"]), addProductReview);
-router.delete("/:id", deleteProduct);
+router.delete("/:id", requireAdminAuth, deleteProduct);
 
 module.exports = router;

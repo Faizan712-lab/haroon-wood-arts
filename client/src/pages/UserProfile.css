@@ -18,6 +18,18 @@
     0 12px 34px rgba(0,0,0,0.06);
 }
 
+.profile-stats button {
+  padding: 18px;
+  border: 1px solid #f0e2d6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.06);
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-stats button:hover { transform: translateY(-1px); }
+
 .profile-header-card {
   max-width: 1120px;
   margin: 0 auto 20px;
@@ -91,6 +103,24 @@
   border-radius: 10px;
   background: #fff8f2;
   color: #3e2723;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-settings-shortcut {
+  display: none;
+}
+
+.profile-change-password-btn {
+  min-height: 44px;
+  width: fit-content;
+  padding: 0 16px;
+  border: 1px solid #d8bfae;
+  border-radius: 10px;
+  background: #fff8f2;
+  color: #6b3c25;
+  font: inherit;
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
@@ -341,6 +371,18 @@
   gap: 10px;
 }
 
+.profile-add-address-btn {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 14px;
+  border: 1px dashed #c7824c;
+  border-radius: 10px;
+  background: #fff8f2;
+  color: #6b3c25;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .profile-address-list > p {
   margin: 0;
   color: #777;
@@ -430,6 +472,35 @@
 }
 
 .profile-logout-btn:hover {
+  background: #b71c1c;
+}
+
+.profile-danger-btn {
+  border: none;
+  background: #d32f2f;
+  color: #fff;
+}
+
+.profile-danger-btn:hover {
+  background: #b71c1c;
+}
+
+/* Overrides the shared primary form-button rule for destructive/security actions. */
+.profile-settings-form .profile-change-password-btn {
+  background: #171717;
+  color: #fff;
+}
+
+.profile-settings-form .profile-change-password-btn:hover {
+  background: #000;
+}
+
+.profile-address-form .profile-danger-btn {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.profile-address-form .profile-danger-btn:hover {
   background: #b71c1c;
 }
 
@@ -581,5 +652,112 @@
 
   .profile-stats {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile-only profile polish */
+@media (max-width: 560px) {
+  .profile-page {
+    padding: 18px 14px calc(72px + env(safe-area-inset-bottom));
+    overflow-x: clip;
+  }
+
+  .profile-header-card {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .profile-header-actions {
+    grid-column: 1 / -1;
+    margin-top: 2px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .profile-upload-btn,
+  .profile-wishlist-shortcut,
+  .profile-settings-shortcut {
+    min-height: 42px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .profile-wishlist-shortcut {
+    background: #fff3e8;
+    border-color: #edc8a9;
+  }
+
+  .profile-settings-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2d4c8;
+    border-radius: 10px;
+    background: #fff8f2;
+    color: #3e2723;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .profile-stats div {
+    min-height: 88px;
+    padding: 13px 12px;
+  }
+
+  .profile-stats button {
+    min-height: 88px;
+    padding: 13px 12px;
+  }
+
+  .profile-stats button:active { transform: scale(.98); }
+
+  .profile-grid > #profile-settings {
+    display: none;
+  }
+
+  .profile-address-form {
+    display: none;
+  }
+
+  .profile-address-form.is-open {
+    position: fixed;
+    z-index: 100;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    max-height: 84vh;
+    padding: 18px 14px calc(16px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    border-radius: 20px 20px 0 0;
+    background: #fffaf5;
+    box-shadow: 0 -14px 42px rgba(41,25,15,.24);
+  }
+
+  .profile-address-form.is-open::before {
+    content: "Address details";
+    color: #3e2723;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .profile-panel {
+    padding: 16px;
+  }
+
+  .profile-settings-group {
+    margin: 4px 0 0;
+    color: #9a5a2f;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .profile-address-form button,
+  .profile-settings-form button,
+  .profile-logout-btn {
+    min-height: 48px;
   }
 }

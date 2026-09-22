@@ -4,6 +4,10 @@ const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 
 const db = require("../config/db");
+const {
+  uploadedImagePaths,
+  deleteCloudinaryImages
+} = require("../middleware/imageUpload");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -18,27 +22,31 @@ function runQuery(sql, params = []) {
   return db.promise().execute(sql, params);
 }
 
-function adminCookieOptions(maxAge = ADMIN_COOKIE_MAX_AGE) {
-  const isProduction = process.env.NODE_ENV === "production";
-
-  return {
+function adminCookieBaseOptions() {
+  const sameSite = String(process.env.COOKIE_SAME_SITE || "lax").toLowerCase();
+  const options = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    maxAge,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: ["lax", "strict", "none"].includes(sameSite) ? sameSite : "lax",
     path: "/"
+  };
+
+  if (process.env.COOKIE_DOMAIN) {
+    options.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  return options;
+}
+
+function adminCookieOptions(maxAge = ADMIN_COOKIE_MAX_AGE) {
+  return {
+    ...adminCookieBaseOptions(),
+    maxAge
   };
 }
 
 function adminClearCookieOptions() {
-  const isProduction = process.env.NODE_ENV === "production";
-
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    path: "/"
-  };
+  return adminCookieBaseOptions();
 }
 
 function maxAdmins() {
@@ -148,79 +156,7 @@ Haroon Stores Team`
   });
 }
 
-async function ensureAdminSchema() {
-  const [columns] = await runQuery("SHOW COLUMNS FROM admins");
-  const existing = new Set(columns.map(column => column.Field));
-
-  if (!existing.has("email")) {
-    await runQuery("ALTER TABLE admins ADD COLUMN email VARCHAR(255) NULL AFTER username");
-  }
-
-  if (!existing.has("is_active")) {
-    await runQuery("ALTER TABLE admins ADD COLUMN is_active BOOLEAN DEFAULT TRUE");
-  }
-
-  if (!existing.has("is_email_verified")) {
-    await runQuery("ALTER TABLE admins ADD COLUMN is_email_verified BOOLEAN DEFAULT FALSE");
-  }
-
-  if (!existing.has("updated_at")) {
-    await runQuery(
-      "ALTER TABLE admins ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-    );
-  }
-
-  if (!existing.has("profile_image")) {
-    await runQuery("ALTER TABLE admins ADD COLUMN profile_image LONGTEXT NULL AFTER name");
-  }
-
-  if (!existing.has("designation")) {
-    await runQuery(
-      "ALTER TABLE admins ADD COLUMN designation VARCHAR(100) DEFAULT 'Administrator'"
-    );
-  }
-
-  if (!existing.has("last_login")) {
-    await runQuery("ALTER TABLE admins ADD COLUMN last_login TIMESTAMP NULL");
-  }
-
-  await runQuery(
-    "UPDATE admins SET designation = 'Administrator' WHERE designation IS NULL OR designation = ''"
-  );
-
-  await ensureAdminOtpSchema();
-}
-
-async function ensureAdminOtpSchema() {
-  const [columns] = await runQuery("SHOW COLUMNS FROM admin_otps");
-  const existing = new Set(columns.map(column => column.Field));
-  const adminIdColumn = columns.find(column => column.Field === "admin_id");
-
-  if (adminIdColumn && adminIdColumn.Null === "NO") {
-    await runQuery("ALTER TABLE admin_otps MODIFY COLUMN admin_id INT NULL");
-  }
-
-  if (!existing.has("purpose")) {
-    await runQuery(
-      "ALTER TABLE admin_otps ADD COLUMN purpose VARCHAR(40) NOT NULL DEFAULT 'login' AFTER admin_id"
-    );
-  }
-
-  if (!existing.has("email")) {
-    await runQuery("ALTER TABLE admin_otps ADD COLUMN email VARCHAR(255) NULL AFTER purpose");
-  }
-
-  if (!existing.has("name")) {
-    await runQuery("ALTER TABLE admin_otps ADD COLUMN name VARCHAR(100) NULL AFTER email");
-  }
-
-  if (!existing.has("password_hash")) {
-    await runQuery("ALTER TABLE admin_otps ADD COLUMN password_hash VARCHAR(255) NULL AFTER name");
-  }
-}
-
 async function countActiveAdmins() {
-  await ensureAdminSchema();
   const [rows] = await runQuery(
     "SELECT COUNT(*) AS total FROM admins WHERE is_active = 1"
   );
@@ -229,7 +165,6 @@ async function countActiveAdmins() {
 }
 
 async function findActiveAdminByEmail(email) {
-  await ensureAdminSchema();
   const [rows] = await runQuery(
     "SELECT * FROM admins WHERE email = ? AND is_active = 1 LIMIT 1",
     [email]
@@ -267,7 +202,6 @@ async function createAdminOtp(admin, label) {
   const otpHash = await bcrypt.hash(otp, 10);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
-  await ensureAdminOtpSchema();
   await runQuery(
     "DELETE FROM admin_otps WHERE admin_id = ? AND purpose = ?",
     [admin.id, label === "Reset Password" ? "reset_password" : "login"]
@@ -294,7 +228,6 @@ async function createPendingRegistrationOtp(payload) {
   const otp = generateOtp();
   const otpHash = await bcrypt.hash(otp, 10);
 
-  await ensureAdminOtpSchema();
   await runQuery(
     "DELETE FROM admin_otps WHERE email = ? AND purpose = 'register'",
     [payload.email]
@@ -394,6 +327,8 @@ async function me(req, res) {
 }
 
 async function updateAccount(req, res) {
+  let uploadedProfileImage = "";
+
   try {
     const { name, designation, currentPassword, newPassword, profileImage } = req.body;
     const updates = [];
@@ -409,7 +344,11 @@ async function updateAccount(req, res) {
       values.push(designation.trim() || "Administrator");
     }
 
-    if (typeof profileImage === "string") {
+    if (req.file) {
+      [uploadedProfileImage] = await uploadedImagePaths(req, "admin-profiles");
+      updates.push("profile_image = ?");
+      values.push(uploadedProfileImage);
+    } else if (typeof profileImage === "string") {
       updates.push("profile_image = ?");
       values.push(profileImage || null);
     }
@@ -465,11 +404,18 @@ async function updateAccount(req, res) {
       [req.admin.id]
     );
 
+    if (uploadedProfileImage) {
+      await deleteCloudinaryImages([req.admin.profile_image]);
+    }
+
     res.json({
       success: true,
       user: sanitizeAdmin(rows[0])
     });
   } catch (error) {
+    if (uploadedProfileImage) {
+      await deleteCloudinaryImages([uploadedProfileImage]);
+    }
     console.error("Admin update account failed:", error);
     res.status(500).json({
       success: false,
@@ -960,7 +906,6 @@ async function logout(req, res) {
 }
 
 module.exports = {
-  ensureAdminSchema,
   sanitizeAdmin,
   adminCookieOptions,
   adminClearCookieOptions,

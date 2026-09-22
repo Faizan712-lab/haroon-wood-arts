@@ -6,3 +6,39 @@ export function handleImageFallback(event) {
     event.currentTarget.src = PRODUCT_PLACEHOLDER;
   }
 }
+
+export function getImageList(item) {
+  const source =
+    item?.images ||
+    item?.product_images ||
+    item?.category_images ||
+    [];
+
+  const images = Array.isArray(source)
+    ? source
+    : (() => {
+        try {
+          const parsed = JSON.parse(source || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      })();
+
+  return [...new Set(
+    [
+      ...images,
+      item?.image
+    ]
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
+export function getPrimaryImage(item) {
+  return getImageList(item)[0] || PRODUCT_PLACEHOLDER;
+}
+
+export function getSecondaryImage(item) {
+  return getImageList(item)[1] || "";
+}

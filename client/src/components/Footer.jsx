@@ -138,7 +138,7 @@ function Footer() {
             />
 
             <span>
-              haroonstores@gmail.com
+              haroonstores3@gmail.com
             </span>
 
           </div>
@@ -154,7 +154,8 @@ function Footer() {
             />
 
             <span>
-              Kashmir, India
+              Shalimar, Opposite Shalimar Garden,
+              190025, Srinagar, Jammu & Kashmir, India
             </span>
 
           </div>

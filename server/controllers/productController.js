@@ -1,66 +1,8 @@
 const db = require("../config/db");
-
-let schemaReady = false;
-
-async function ensureProductSchema() {
-  if (schemaReady) {
-    return;
-  }
-
-  const connection = db.promise();
-
-  const statements = [
-    "ALTER TABLE products ADD COLUMN discount_price DECIMAL(10,2) NULL AFTER price",
-    "ALTER TABLE products ADD COLUMN discount_percent INT NOT NULL DEFAULT 0 AFTER discount_price",
-    "ALTER TABLE products ADD COLUMN stock_status ENUM('in_stock','out_of_stock') DEFAULT 'in_stock' AFTER stock",
-    "ALTER TABLE products ADD COLUMN sizes JSON NULL AFTER stock",
-    `CREATE TABLE IF NOT EXISTS product_reviews (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      product_id INT NOT NULL,
-      user_id INT NOT NULL,
-      rating TINYINT NOT NULL,
-      review TEXT NULL,
-      comment TEXT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY unique_product_user_review (product_id, user_id),
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )`,
-    "ALTER TABLE product_reviews ADD COLUMN review TEXT NULL AFTER rating",
-    "ALTER TABLE product_reviews ADD COLUMN comment TEXT NULL AFTER review",
-    `CREATE TABLE IF NOT EXISTS product_variants (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      product_id INT NOT NULL,
-      size_label VARCHAR(100) NOT NULL,
-      price DECIMAL(10,2) NOT NULL,
-      stock INT DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    )`,
-    "ALTER TABLE product_variants ADD COLUMN size_label VARCHAR(100) NULL AFTER product_id",
-    "ALTER TABLE product_variants MODIFY COLUMN size VARCHAR(120) NULL",
-    "UPDATE product_variants SET size_label = size WHERE size_label IS NULL AND size IS NOT NULL"
-  ];
-
-  for (const statement of statements) {
-    try {
-      await connection.execute(statement);
-    } catch (error) {
-      if (
-        error.code !== "ER_DUP_FIELDNAME" &&
-        error.code !== "ER_DUP_KEYNAME" &&
-        error.code !== "ER_TABLE_EXISTS_ERROR" &&
-        error.code !== "ER_BAD_FIELD_ERROR"
-      ) {
-        throw error;
-      }
-    }
-  }
-
-  schemaReady = true;
-}
+const {
+  uploadedImagePaths,
+  deleteCloudinaryImages
+} = require("../middleware/imageUpload");
 
 function normalizeDiscountPercent(value) {
   const percent = Number(value || 0);
@@ -103,6 +45,91 @@ function parseSizes(value) {
   }
 }
 
+function parseRequestArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseImages(value, fallback = "") {
+  const images = [];
+
+  if (Array.isArray(value)) {
+    images.push(...value);
+  } else if (value) {
+    try {
+      const parsed = typeof value === "string" ? JSON.parse(value) : value;
+      if (Array.isArray(parsed)) {
+        images.push(...parsed);
+      }
+    } catch {
+      images.push(value);
+    }
+  }
+
+  if (fallback) {
+    images.push(fallback);
+  }
+
+  return [...new Set(
+    images
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
+async function requestImages(req, fallbackImage = "") {
+  const uploaded = await uploadedImagePaths(req, "products", "images");
+  const imageOrder = parseRequestArray(req.body.image_order);
+
+  if (imageOrder.length > 0) {
+    return imageOrder
+      .map(image => {
+        const match = /^upload:(\d+)$/.exec(String(image || ""));
+        return match ? uploaded[Number(match[1])] : image;
+      })
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  const bodyImages = parseImages(
+    req.body.product_images ?? req.body.images,
+    req.body.image || fallbackImage
+  );
+
+  return [...uploaded, ...bodyImages].slice(0, 8);
+}
+
+async function resolveVariantImages(req, variants) {
+  const uploaded = await uploadedImagePaths(req, "variants", "variantImages");
+  const resolvedVariants = variants.map(variant => ({
+    ...variant,
+    images: parseImages(variant.variant_images ?? variant.images).map(image => {
+      const match = /^upload:(\d+)$/.exec(String(image || ""));
+      return match ? uploaded[Number(match[1])] || "" : image;
+    }).filter(Boolean)
+  }));
+
+  return { variants: resolvedVariants, uploaded };
+}
+
+function removedImages(previousImages, nextImages) {
+  const next = new Set(nextImages);
+  return previousImages.filter(image => !next.has(image));
+}
+
 function mapProduct(row) {
   const price =
     Number(row.price || 0);
@@ -123,8 +150,13 @@ function mapProduct(row) {
         ? legacyDiscountPrice
         : price;
 
+  const images = parseImages(row.product_images, row.image);
+
   return {
     ...row,
+    images,
+    product_images: images,
+    image: images[0] || "",
     price,
     discountPercent,
     discount_percent: discountPercent,
@@ -144,6 +176,7 @@ function mapProduct(row) {
 function mapVariant(row, product) {
   const price = Number(row.price || product.price || 0);
   const label = row.size_label || row.size || "";
+  const images = parseImages(row.variant_images);
   const discountedPrice =
     product.discountPercent > 0
       ? calculateDiscountedPrice(price, product.discountPercent)
@@ -157,6 +190,8 @@ function mapVariant(row, product) {
     sizeLabel: label,
     price,
     stock: Number(row.stock || 0),
+    images,
+    variant_images: images,
     discountedPrice,
     finalPrice: discountedPrice
   };
@@ -250,6 +285,11 @@ async function getReviews(productId) {
 }
 
 async function saveVariants(productId, variants, fallbackPrice, fallbackStock) {
+  const [previousRows] = await db.promise().execute(
+    "SELECT variant_images FROM product_variants WHERE product_id = ?",
+    [productId]
+  );
+  const previousImages = previousRows.flatMap(row => parseImages(row.variant_images));
   await db.promise().execute(
     "DELETE FROM product_variants WHERE product_id = ?",
     [productId]
@@ -263,30 +303,34 @@ async function saveVariants(productId, variants, fallbackPrice, fallbackStock) {
       .map(variant => ({
         size: String(variant.size || variant.label || "").trim(),
         price: Number(variant.price || fallbackPrice || 0),
-        stock: Number(variant.stock ?? fallbackStock ?? 0)
+        stock: Number(variant.stock ?? fallbackStock ?? 0),
+        images: parseImages(variant.variant_images ?? variant.images)
       }));
 
   for (const variant of cleanVariants) {
     await db.promise().execute(
       `
         INSERT INTO product_variants
-        (product_id, size_label, price, stock)
-        VALUES (?, ?, ?, ?)
+        (product_id, size_label, price, stock, variant_images)
+        VALUES (?, ?, ?, ?, ?)
       `,
       [
         productId,
         variant.size,
         variant.price,
-        variant.stock
+        variant.stock,
+        JSON.stringify(variant.images)
       ]
     );
   }
+
+  const nextImages = cleanVariants.flatMap(variant => variant.images);
+  await deleteCloudinaryImages(removedImages(previousImages, nextImages));
 }
 
 // GET ALL PRODUCTS
 const getProducts = async (req, res) => {
   try {
-    await ensureProductSchema();
 
     const [products] = await db.promise().execute(
       `
@@ -319,7 +363,6 @@ const getProducts = async (req, res) => {
 // GET SINGLE PRODUCT
 const getProductById = async (req, res) => {
   try {
-    await ensureProductSchema();
 
     const [result] = await db.promise().execute(
       `
@@ -378,28 +421,34 @@ const addProduct = async (req, res) => {
     sizes,
     variants
   } = req.body;
-
   const discount =
     normalizeDiscountPercent(
       discountPercent ?? discount_percent ?? 0
     );
 
-  const productVariants =
-    Array.isArray(variants) ? variants : Array.isArray(sizes) ? sizes : [];
+  let productVariants =
+    parseRequestArray(variants).length > 0
+      ? parseRequestArray(variants)
+      : parseRequestArray(sizes);
 
   const normalizedStockStatus =
     (stockStatus || stock_status) === "out_of_stock"
       ? "out_of_stock"
       : "in_stock";
 
+  let variantUploadedImages = [];
+
   try {
-    await ensureProductSchema();
+    const images = await requestImages(req, image);
+    const resolvedVariants = await resolveVariantImages(req, productVariants);
+    productVariants = resolvedVariants.variants;
+    variantUploadedImages = resolvedVariants.uploaded;
 
     const [result] = await db.promise().execute(
       `
         INSERT INTO products
-        (name, description, price, discount_price, discount_percent, category, image, stock, stock_status, sizes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (name, description, price, discount_price, discount_percent, category, image, product_images, stock, stock_status, sizes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         name,
@@ -408,7 +457,8 @@ const addProduct = async (req, res) => {
         null,
         discount,
         category,
-        image,
+        images[0] || "",
+        JSON.stringify(images),
         stock,
         normalizedStockStatus,
         JSON.stringify([])
@@ -422,6 +472,7 @@ const addProduct = async (req, res) => {
       message: "Product added successfully"
     });
   } catch (err) {
+    await deleteCloudinaryImages(variantUploadedImages);
     console.error("Failed to add product:", err);
 
     res.status(500).json({
@@ -432,11 +483,10 @@ const addProduct = async (req, res) => {
 };
 
 const addProductReview = async (req, res) => {
-  const rating =
-    Number(req.body.rating);
+  const productId = Number(req.params.id);
+  const rating = Number(req.body.rating);
 
-  const comment =
-    String(req.body.review ?? req.body.comment ?? "").trim();
+  const comment = String(req.body.review ?? req.body.comment ?? "").trim();
 
   if (!req.auth?.id || req.auth.role !== "user") {
     return res.status(401).json({
@@ -445,15 +495,18 @@ const addProductReview = async (req, res) => {
     });
   }
 
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+  if (!Number.isInteger(productId) || productId <= 0 || !Number.isInteger(rating) || rating < 1 || rating > 5) {
     return res.status(400).json({
       success: false,
       message: "Rating must be between 1 and 5"
     });
   }
 
+  if (comment.length > 2000) {
+    return res.status(400).json({ success: false, message: "Review is too long." });
+  }
+
   try {
-    await ensureProductSchema();
 
     const [purchases] = await db.promise().execute(
       `
@@ -465,7 +518,7 @@ const addProductReview = async (req, res) => {
           AND LOWER(orders.status) NOT IN ('cancelled', 'cancellation requested')
         LIMIT 1
       `,
-      [req.auth.id, req.params.id]
+        [req.auth.id, productId]
     );
 
     if (purchases.length === 0) {
@@ -486,7 +539,7 @@ const addProductReview = async (req, res) => {
           comment = VALUES(comment)
       `,
       [
-        req.params.id,
+        productId,
         req.auth.id,
         rating,
         comment,
@@ -506,7 +559,7 @@ const addProductReview = async (req, res) => {
         WHERE products.id = ?
         GROUP BY products.id
       `,
-      [req.params.id]
+      [productId]
     );
 
     if (productRows.length === 0) {
@@ -552,22 +605,42 @@ const updateProduct = async (req, res) => {
     sizes,
     variants
   } = req.body;
-
   const discount =
     normalizeDiscountPercent(
       discountPercent ?? discount_percent ?? 0
     );
 
-  const productVariants =
-    Array.isArray(variants) ? variants : Array.isArray(sizes) ? sizes : [];
+  let productVariants =
+    parseRequestArray(variants).length > 0
+      ? parseRequestArray(variants)
+      : parseRequestArray(sizes);
 
   const normalizedStockStatus =
     (stockStatus || stock_status) === "out_of_stock"
       ? "out_of_stock"
       : "in_stock";
 
+  let variantUploadedImages = [];
+
   try {
-    await ensureProductSchema();
+    const [existingRows] = await db.promise().execute(
+      "SELECT image, product_images FROM products WHERE id = ? LIMIT 1",
+      [req.params.id]
+    );
+
+    if (existingRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    const previousImages = parseImages(
+      existingRows[0].product_images,
+      existingRows[0].image
+    );
+    const incomingImages = await requestImages(req);
+    const nextImages = incomingImages.length > 0 ? incomingImages : parseImages(image);
+    const resolvedVariants = await resolveVariantImages(req, productVariants);
+    productVariants = resolvedVariants.variants;
+    variantUploadedImages = resolvedVariants.uploaded;
 
     const [result] = await db.promise().execute(
       `
@@ -580,6 +653,7 @@ const updateProduct = async (req, res) => {
           discount_percent = ?,
           category = ?,
           image = ?,
+          product_images = ?,
           stock = ?,
           stock_status = ?,
           sizes = ?
@@ -592,7 +666,8 @@ const updateProduct = async (req, res) => {
         null,
         discount,
         category,
-        image,
+        nextImages[0] || image || "",
+        JSON.stringify(nextImages),
         stock,
         normalizedStockStatus,
         JSON.stringify([]),
@@ -608,6 +683,7 @@ const updateProduct = async (req, res) => {
     }
 
     await saveVariants(req.params.id, productVariants, Number(price || 0), Number(stock || 0));
+    await deleteCloudinaryImages(removedImages(previousImages, nextImages));
 
     const [rows] = await db.promise().execute(
       `
@@ -630,6 +706,7 @@ const updateProduct = async (req, res) => {
       product: (await attachVariants([mapProduct(rows[0])]))[0]
     });
   } catch (err) {
+    await deleteCloudinaryImages(variantUploadedImages);
     console.error("Failed to update product:", err);
 
     res.status(500).json({
@@ -640,31 +717,36 @@ const updateProduct = async (req, res) => {
 };
 
 // DELETE PRODUCT
-const deleteProduct = (req, res) => {
-  const sql = "DELETE FROM products WHERE id = ?";
+const deleteProduct = async (req, res) => {
+  try {
+    const [rows] = await db.promise().execute(
+      "SELECT image, product_images FROM products WHERE id = ? LIMIT 1",
+      [req.params.id]
+    );
 
-  db.query(sql, [req.params.id], (err, result) => {
-    if (err) {
-      console.error("Failed to delete product:", err);
-
-      return res.status(500).json({
-        success: false,
-        message: "Failed to delete product"
-      });
-    }
-
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Product not found"
       });
     }
 
+    const [variantRows] = await db.promise().execute(
+      "SELECT variant_images FROM product_variants WHERE product_id = ?",
+      [rows[0].id || req.params.id]
+    );
+    await db.promise().execute("DELETE FROM products WHERE id = ?", [req.params.id]);
+    await deleteCloudinaryImages(parseImages(rows[0].product_images, rows[0].image));
+    await deleteCloudinaryImages(variantRows.flatMap(row => parseImages(row.variant_images)));
+
     res.status(200).json({
       success: true,
       message: "Product deleted successfully"
     });
-  });
+  } catch (err) {
+    console.error("Failed to delete product:", err);
+    res.status(500).json({ success: false, message: "Failed to delete product" });
+  }
 };
 
 module.exports = {

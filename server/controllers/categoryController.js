@@ -1,15 +1,65 @@
 const db = require("../config/db");
+const {
+  uploadedImagePaths,
+  deleteCloudinaryImages
+} = require("../middleware/imageUpload");
 
 function runQuery(sql, params = []) {
   return db.promise().execute(sql, params);
 }
 
 function mapCategory(row) {
+  const images = parseImages(row.category_images, row.image);
+
   return {
     id: row.id,
     name: row.name,
-    image: row.image || ""
+    image: images[0] || "",
+    images,
+    category_images: images
   };
+}
+
+function parseImages(value, fallback = "") {
+  const images = [];
+
+  if (Array.isArray(value)) {
+    images.push(...value);
+  } else if (value) {
+    try {
+      const parsed = typeof value === "string" ? JSON.parse(value) : value;
+      if (Array.isArray(parsed)) {
+        images.push(...parsed);
+      }
+    } catch {
+      images.push(value);
+    }
+  }
+
+  if (fallback) {
+    images.push(fallback);
+  }
+
+  return [...new Set(
+    images
+      .map(image => String(image || "").trim())
+      .filter(Boolean)
+  )].slice(0, 8);
+}
+
+async function requestImages(req, fallbackImage = "") {
+  const uploaded = await uploadedImagePaths(req, "categories");
+  const bodyImages = parseImages(
+    req.body.category_images ?? req.body.images,
+    req.body.image || fallbackImage
+  );
+
+  return [...uploaded, ...bodyImages].slice(0, 8);
+}
+
+function removedImages(previousImages, nextImages) {
+  const next = new Set(nextImages);
+  return previousImages.filter(image => !next.has(image));
 }
 
 function getNumericCategoryId(rawId) {
@@ -22,24 +72,11 @@ function getNumericCategoryId(rawId) {
   return id;
 }
 
-async function ensureCategoriesTable() {
-  await runQuery(`
-    CREATE TABLE IF NOT EXISTS categories (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(120) NOT NULL UNIQUE,
-      image LONGTEXT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )
-  `);
-}
-
 async function getCategories(req, res) {
   try {
-    await ensureCategoriesTable();
 
     const [savedCategories] = await runQuery(`
-      SELECT id, name, image
+      SELECT id, name, image, category_images
       FROM categories
       ORDER BY name ASC
     `);
@@ -60,14 +97,21 @@ async function getCategories(req, res) {
 
 async function addCategory(req, res) {
   try {
-    await ensureCategoriesTable();
 
     const name =
       String(req.body.name || "").trim();
     const image =
       req.body.image || "";
+    const [existingRows] = await runQuery(
+      "SELECT image, category_images FROM categories WHERE name = ? LIMIT 1",
+      [name]
+    );
+    const previousImages = existingRows[0]
+      ? parseImages(existingRows[0].category_images, existingRows[0].image)
+      : [];
+    const images = await requestImages(req, image);
 
-    if (!name || !image) {
+    if (!name || images.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Category name and image are required."
@@ -76,17 +120,19 @@ async function addCategory(req, res) {
 
     await runQuery(
       `
-        INSERT INTO categories (name, image)
-        VALUES (?, ?)
+        INSERT INTO categories (name, image, category_images)
+        VALUES (?, ?, ?)
         ON DUPLICATE KEY UPDATE
           image = VALUES(image),
+          category_images = VALUES(category_images),
           updated_at = CURRENT_TIMESTAMP
       `,
-      [name, image]
+      [name, images[0], JSON.stringify(images)]
     );
+    await deleteCloudinaryImages(removedImages(previousImages, images));
 
     const [rows] = await runQuery(
-      "SELECT id, name, image FROM categories WHERE name = ? LIMIT 1",
+      "SELECT id, name, image, category_images FROM categories WHERE name = ? LIMIT 1",
       [name]
     );
 
@@ -106,7 +152,6 @@ async function addCategory(req, res) {
 
 async function deleteCategory(req, res) {
   try {
-    await ensureCategoriesTable();
 
     const id = getNumericCategoryId(req.params.id);
 
@@ -118,7 +163,7 @@ async function deleteCategory(req, res) {
     }
 
     const [categories] = await runQuery(
-      "SELECT name FROM categories WHERE id = ? LIMIT 1",
+      "SELECT name, image, category_images FROM categories WHERE id = ? LIMIT 1",
       [id]
     );
 
@@ -132,6 +177,9 @@ async function deleteCategory(req, res) {
     await runQuery(
       "DELETE FROM categories WHERE id = ?",
       [id]
+    );
+    await deleteCloudinaryImages(
+      parseImages(categories[0].category_images, categories[0].image)
     );
 
     res.json({
@@ -150,13 +198,32 @@ async function deleteCategory(req, res) {
 
 async function updateCategory(req, res) {
   try {
-    await ensureCategoriesTable();
 
     const id = getNumericCategoryId(req.params.id);
     const name = String(req.body.name || "").trim();
     const image = req.body.image || "";
+    if (!id || !name) {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to update category"
+      });
+    }
 
-    if (!id || !name || !image) {
+    const [existingRows] = await runQuery(
+      "SELECT image, category_images FROM categories WHERE id = ? LIMIT 1",
+      [id]
+    );
+    if (!existingRows[0]) {
+      return res.status(404).json({ success: false, message: "Unable to update category" });
+    }
+
+    const previousImages = parseImages(
+      existingRows[0].category_images,
+      existingRows[0].image
+    );
+    const images = await requestImages(req, image);
+
+    if (images.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Unable to update category"
@@ -166,11 +233,12 @@ async function updateCategory(req, res) {
     const [result] = await runQuery(
       `
         UPDATE categories
-        SET name = ?, image = ?
+        SET name = ?, image = ?, category_images = ?
         WHERE id = ?
       `,
-      [name, image, id]
+      [name, images[0], JSON.stringify(images), id]
     );
+    await deleteCloudinaryImages(removedImages(previousImages, images));
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
@@ -180,7 +248,7 @@ async function updateCategory(req, res) {
     }
 
     const [rows] = await runQuery(
-      "SELECT id, name, image FROM categories WHERE id = ? LIMIT 1",
+      "SELECT id, name, image, category_images FROM categories WHERE id = ? LIMIT 1",
       [id]
     );
 

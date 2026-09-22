@@ -8,41 +8,16 @@ const {
   createToken,
   sanitizeUser
 } = require("./authController");
+const {
+  sendWelcomeEmail,
+  sendLoginNotificationEmail
+} = require("../services/emailService");
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 function runQuery(sql, params = []) {
   return db.promise().execute(sql, params);
-}
-
-async function ensureGoogleColumns() {
-  const [columns] = await runQuery("SHOW COLUMNS FROM users");
-  const existingColumns = new Set(
-    columns.map((column) => column.Field)
-  );
-
-  if (!existingColumns.has("google_id")) {
-    await runQuery(
-      "ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL"
-    );
-  }
-
-  if (!existingColumns.has("profile_image")) {
-    await runQuery(
-      "ALTER TABLE users ADD COLUMN profile_image LONGTEXT NULL"
-    );
-  }
-
-  if (!existingColumns.has("is_email_verified")) {
-    await runQuery(
-      "ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN DEFAULT TRUE"
-    );
-  } else {
-    await runQuery(
-      "ALTER TABLE users MODIFY COLUMN is_email_verified BOOLEAN DEFAULT TRUE"
-    );
-  }
 }
 
 async function verifyGoogleCredential(credential) {
@@ -150,16 +125,15 @@ async function updateExistingGoogleUser(user, profile) {
 
 async function googleAuth(req, res) {
   try {
-    const credential = req.body.credential;
+    const credential = String(req.body.credential || "");
 
-    if (!credential) {
+    if (!credential || credential.length > 12000) {
       return res.status(400).json({
         success: false,
         message: "Google credential is required."
       });
     }
 
-    await ensureGoogleColumns();
 
     const profile =
       await verifyGoogleCredential(credential);
@@ -170,6 +144,7 @@ async function googleAuth(req, res) {
         profile.email
       );
 
+    const isNewUser = !existingUser;
     const user = existingUser
       ? await updateExistingGoogleUser(existingUser, profile)
       : await createGoogleUser(profile);
@@ -186,21 +161,22 @@ async function googleAuth(req, res) {
       authCookieOptions()
     );
 
+    await (isNewUser
+      ? sendWelcomeEmail(user)
+      : sendLoginNotificationEmail(user));
+
     res.json({
       success: true,
       user: sanitizeUser(user)
     });
   } catch (error) {
-    console.error("Google authentication failed:", error);
+    console.error("Google authentication failed:", { message: error.message });
 
     res.status(401).json({
       success: false,
-      message: error.message || "Google authentication failed"
+      message: "Google authentication failed"
     });
   }
 }
 
-module.exports = {
-  googleAuth,
-  ensureGoogleColumns
-};
+module.exports = { googleAuth };

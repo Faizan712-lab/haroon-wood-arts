@@ -3,12 +3,16 @@ import { useContext } from "react";
 import { CartContext } from "../context/CartContext";
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
+  getSecondaryImage,
   handleImageFallback
 } from "../utils/imageFallback";
 
 function ProductCard({ product }) {
 
   const { addToCart } = useContext(CartContext);
+  const primaryImage = getPrimaryImage(product);
+  const secondaryImage = getSecondaryImage(product);
 
   function handleClick() {
 
@@ -20,11 +24,24 @@ function ProductCard({ product }) {
 
     <div className="product-card">
 
-      <img
-        src={product.image || PRODUCT_PLACEHOLDER}
-        alt={product.name}
-        onError={handleImageFallback}
-      />
+      <div className="product-image-frame product-card-image-frame">
+        <img
+          src={primaryImage || PRODUCT_PLACEHOLDER}
+          alt={product.name}
+          loading="lazy"
+          onError={handleImageFallback}
+        />
+
+        {secondaryImage && (
+          <img
+            className="product-card-hover-image"
+            src={secondaryImage}
+            alt=""
+            loading="lazy"
+            onError={handleImageFallback}
+          />
+        )}
+      </div>
 
       <h3>
         {product.name}

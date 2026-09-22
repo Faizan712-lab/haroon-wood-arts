@@ -31,7 +31,8 @@ haroon-wood-arts/
     controllers/       Route handlers and business workflows
     middleware/        Authentication middleware
     routes/            API route definitions
-    sql/               Database schema scripts
+    migrations/        Numbered production database migrations
+    scripts/migrate.js Migration runner
   .env.example         Combined environment variable reference
 ```
 
@@ -49,6 +50,12 @@ Install backend dependencies:
 ```bash
 cd ../server
 npm install
+```
+
+Initialize or update the database schema:
+
+```bash
+npm run migrate
 ```
 
 ## Environment Setup

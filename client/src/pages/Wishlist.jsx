@@ -14,6 +14,7 @@ import {
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 } from "../utils/imageFallback";
 
@@ -63,8 +64,9 @@ function Wishlist() {
             >
               <div className="image-container wishlist-image-container">
                 <img
-                  src={product.image || PRODUCT_PLACEHOLDER}
+                  src={getPrimaryImage(product) || PRODUCT_PLACEHOLDER}
                   alt={product.name}
+                  loading="lazy"
                   onError={handleImageFallback}
                 />
 

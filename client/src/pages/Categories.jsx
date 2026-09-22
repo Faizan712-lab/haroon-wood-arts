@@ -15,6 +15,9 @@ import {
   getApiUrl
 }
 from "../utils/api";
+import {
+  getImageList
+} from "../utils/imageFallback";
 
 const CATEGORY_PLACEHOLDER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='420' viewBox='0 0 640 420'%3E%3Crect width='640' height='420' fill='%23f3ede7'/%3E%3Cpath d='M90 315h460L425 165 328 270l-64-72z' fill='%23d7c7b7'/%3E%3Ccircle cx='216' cy='145' r='38' fill='%23e7d8c8'/%3E%3Ctext x='320' y='365' text-anchor='middle' font-family='Arial' font-size='28' fill='%23705a4b'%3ECategory Image%3C/text%3E%3C/svg%3E";
@@ -169,9 +172,10 @@ function Categories({
 
                 <img
 
-                  src={category.image || CATEGORY_PLACEHOLDER}
+                  src={getImageList(category)[0] || CATEGORY_PLACEHOLDER}
 
                   alt={category.name}
+                  loading="lazy"
                   onError={handleImageError}
 
                 />

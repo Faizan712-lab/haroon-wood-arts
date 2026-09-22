@@ -7,10 +7,17 @@ const {
   updateCategory,
   deleteCategory
 } = require("../controllers/categoryController");
+const {
+  createImageUpload,
+  validateUploadedImages
+} = require("../middleware/imageUpload");
+const { requireAdminAuth } = require("../controllers/adminAuthController");
+
+const categoryImagesUpload = createImageUpload("categories");
 
 router.get("/", getCategories);
-router.post("/", addCategory);
-router.put("/:id", updateCategory);
-router.delete("/:id", deleteCategory);
+router.post("/", requireAdminAuth, categoryImagesUpload.array("images", 8), validateUploadedImages, addCategory);
+router.put("/:id", requireAdminAuth, categoryImagesUpload.array("images", 8), validateUploadedImages, updateCategory);
+router.delete("/:id", requireAdminAuth, deleteCategory);
 
 module.exports = router;

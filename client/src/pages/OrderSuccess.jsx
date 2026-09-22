@@ -2,6 +2,7 @@ import "./OrderSuccess.css";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 } from "../utils/imageFallback";
 
@@ -168,6 +169,8 @@ function OrderSuccess() {
 
         <div className="success-divider"></div>
 
+        <h2 className="success-section-title">Order Summary</h2>
+
         <div className="success-products">
           {order.items.map(item => (
             <div
@@ -175,8 +178,9 @@ function OrderSuccess() {
               className="success-item"
             >
               <img
-                src={item.image || PRODUCT_PLACEHOLDER}
+                src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
                 alt={item.name}
+                loading="lazy"
                 onError={handleImageFallback}
               />
 
@@ -187,12 +191,22 @@ function OrderSuccess() {
                 <span className="product-qty">
                   Qty: {item.quantity}
                 </span>
+                {(item.variantLabel || item.variantDimensions) && (
+                  <span className="product-variant">
+                    {item.variantLabel || item.variantDimensions}
+                  </span>
+                )}
               </div>
+
+              <strong className="success-item-price">
+                Rs. {item.price}
+              </strong>
             </div>
           ))}
         </div>
 
         <div className="success-total">
+          <h2 className="success-section-title">Payment Information</h2>
           <p className="total-amount">
             <span>Total Amount</span>
             <strong>Rs. {order.total}</strong>
@@ -206,7 +220,13 @@ function OrderSuccess() {
           {order.paymentMode === "COD" && (
             <p className="remaining-amount">
               <span>Remaining on Delivery</span>
-              <strong>Rs. {order.remaining}</strong>
+              <strong>Rs. {order.codRemainingOnDelivery ?? order.remaining}</strong>
+            </p>
+          )}
+          {order.paymentMode === "COD" && (
+            <p className="paid-amount">
+              <span>Required Online Advance (10%)</span>
+              <strong>Rs. {order.codAdvance}</strong>
             </p>
           )}
         </div>

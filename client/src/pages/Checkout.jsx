@@ -10,6 +10,7 @@ import { CartContext } from "../context/CartContext";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 } from "../utils/imageFallback";
 
@@ -251,7 +252,7 @@ function Checkout() {
       0
     );
 
-  const advance = 500;
+  const advance = Math.round(finalTotal * 10) / 100;
 
   const remaining =
     Math.max(
@@ -574,7 +575,7 @@ function Checkout() {
                   Cash on Delivery
                 </strong>
                 <small>
-                  Pay Rs.500 advance now
+                  10% advance online: Rs. {advance.toFixed(2)}. Remaining on delivery: Rs. {remaining.toFixed(2)}
                 </small>
               </span>
             </label>
@@ -632,8 +633,9 @@ function Checkout() {
               className="summary-item"
             >
               <img
-                src={item.image || PRODUCT_PLACEHOLDER}
+                src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
                 alt={item.name}
+                loading="lazy"
                 onError={handleImageFallback}
               />
 
@@ -681,11 +683,11 @@ function Checkout() {
 
             <>
               <p>
-                Advance: Rs.500
+                Required online advance (10%): Rs. {advance.toFixed(2)}
               </p>
 
               <p>
-                Remaining: Rs. {remaining}
+                Payable on delivery (90%): Rs. {remaining.toFixed(2)}
               </p>
             </>
 

@@ -185,6 +185,14 @@
   text-align: left;
 }
 
+.success-section-title {
+  margin: 0 0 12px;
+  color: #3e2723;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: left;
+}
+
 .success-item {
   display: flex;
   align-items: center;
@@ -215,10 +223,29 @@
   font-size: 13px;
 }
 
+.item-details .product-variant {
+  display: block;
+  margin-top: 3px;
+  color: #8b5a3c;
+  font-weight: 700;
+}
+
+.success-item-price {
+  margin-left: auto;
+  color: #3e2723;
+  font-size: 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .success-total {
   margin-top: 20px;
   display: grid;
   gap: 9px;
+}
+
+.success-total .success-section-title {
+  margin-bottom: 1px;
 }
 
 .success-total p {
@@ -348,5 +375,13 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .success-item {
+    align-items: flex-start;
+  }
+
+  .success-item-price {
+    font-size: 13px;
   }
 }

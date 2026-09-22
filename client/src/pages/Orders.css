@@ -308,6 +308,52 @@
 
 }
 
+/* Mobile-only order hierarchy polish */
+@media (max-width: 520px) {
+  .orders-page {
+    padding: 18px 14px calc(66px + env(safe-area-inset-bottom));
+  }
+
+  .orders-page h1 {
+    font-size: 26px;
+  }
+
+  .order-card {
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .order-header h3 {
+    font-size: 18px;
+  }
+
+  .order-total {
+    font-size: 22px;
+  }
+
+  .order-item {
+    min-height: 78px;
+    padding: 8px;
+    gap: 9px;
+  }
+
+  .order-item img {
+    width: 58px;
+    height: 58px;
+    border-radius: 9px;
+    object-fit: contain;
+    background: #fbf7f2;
+  }
+
+  .order-item p {
+    font-size: 13px;
+  }
+
+  .order-actions button {
+    min-height: 44px;
+  }
+}
+
 .order-card-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;

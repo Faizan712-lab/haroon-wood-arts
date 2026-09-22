@@ -2,8 +2,16 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const {
+  sendWelcomeEmail,
+  sendLoginNotificationEmail
+} = require("../services/emailService");
 
 const db = require("../config/db");
+const {
+  uploadedImagePaths,
+  deleteCloudinaryImages
+} = require("../middleware/imageUpload");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -17,23 +25,31 @@ function runQuery(sql, params = []) {
   return db.promise().execute(sql, params);
 }
 
+function cookieBaseOptions() {
+  const sameSite = String(process.env.COOKIE_SAME_SITE || "lax").toLowerCase();
+  const options = {
+    httpOnly: true,
+    sameSite: ["lax", "strict", "none"].includes(sameSite) ? sameSite : "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/"
+  };
+
+  if (process.env.COOKIE_DOMAIN) {
+    options.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  return options;
+}
+
 function authCookieOptions() {
   return {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: COOKIE_MAX_AGE,
-    path: "/"
+    ...cookieBaseOptions(),
+    maxAge: COOKIE_MAX_AGE
   };
 }
 
 function clearCookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/"
-  };
+  return cookieBaseOptions();
 }
 
 function sanitizeUser(user) {
@@ -64,6 +80,16 @@ function createToken(payload) {
 
 function normalizeEmail(email) {
   return (email || "").trim().toLowerCase();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+}
+
+function hasValidCustomerFields({ name, email, phone, password }) {
+  return String(name || "").trim().length >= 2 && String(name || "").trim().length <= 100 &&
+    isValidEmail(normalizeEmail(email)) && String(phone || "").trim().length >= 7 &&
+    String(phone || "").trim().length <= 30 && String(password || "").length >= 6 && String(password || "").length <= 128;
 }
 
 function generateOtp() {
@@ -155,17 +181,10 @@ async function register(req, res) {
       password
     } = req.body;
 
-    if (!name || !email || !phone || !password) {
+    if (!hasValidCustomerFields({ name, email, phone, password })) {
       return res.status(400).json({
         success: false,
         message: "Please fill all required fields."
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters."
       });
     }
 
@@ -225,6 +244,8 @@ async function register(req, res) {
       authCookieOptions()
     );
 
+    await sendWelcomeEmail(user);
+
     res.status(201).json({
       success: true,
       user: sanitizeUser(user)
@@ -241,16 +262,27 @@ async function register(req, res) {
 
 async function login(req, res) {
   try {
+    if (process.env.NODE_ENV !== "production") {
+      console.log("Customer login request:", {
+        origin: req.headers.origin || "(none)",
+        host: req.headers.host,
+        contentType: req.headers["content-type"],
+        hasBody: Boolean(req.body && typeof req.body === "object"),
+        identifierType: req.body?.identifier || req.body?.email || req.body?.phone
+          ? "provided"
+          : "missing"
+      });
+    }
+
     const {
       email,
-      phone,
       identifier,
       username,
       password,
       role
     } = req.body;
 
-    if (!password) {
+    if (!password || String(password).length > 128) {
       return res.status(400).json({
         success: false,
         message: "Password is required."
@@ -264,13 +296,12 @@ async function login(req, res) {
       });
     }
 
-    const normalizedIdentifier =
-      (identifier || email || phone || "").trim();
+    const normalizedEmail = (email || identifier || "").trim().toLowerCase();
 
-    if (!normalizedIdentifier) {
+    if (!isValidEmail(normalizedEmail)) {
       return res.status(400).json({
         success: false,
-        message: "Email or phone number is required."
+        message: "A valid email is required."
       });
     }
 
@@ -278,12 +309,11 @@ async function login(req, res) {
       `
         SELECT *
         FROM users
-        WHERE email = ? OR phone = ?
+        WHERE email = ?
         LIMIT 1
       `,
       [
-        normalizedIdentifier.toLowerCase(),
-        normalizedIdentifier
+        normalizedEmail
       ]
     );
 
@@ -299,7 +329,7 @@ async function login(req, res) {
     if (!isValid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email/phone or password."
+        message: "Invalid email or password."
       });
     }
 
@@ -315,6 +345,8 @@ async function login(req, res) {
       authCookieOptions()
     );
 
+    await sendLoginNotificationEmail(user);
+
     res.json({
       success: true,
       user: sanitizeUser(user)
@@ -324,7 +356,9 @@ async function login(req, res) {
 
     res.status(500).json({
       success: false,
-      message: "Login failed"
+      message: process.env.NODE_ENV === "production"
+        ? "Login failed"
+        : `Login failed: ${error.message || "Unknown server error"}`
     });
   }
 }
@@ -382,6 +416,8 @@ async function me(req, res) {
 }
 
 async function updateMe(req, res) {
+  let uploadedProfileImage = "";
+
   try {
     if (req.auth.role !== "user") {
       return res.status(403).json({
@@ -394,7 +430,6 @@ async function updateMe(req, res) {
       name,
       email,
       phone,
-      password,
       profileImage
     } = req.body;
 
@@ -424,28 +459,28 @@ async function updateMe(req, res) {
       });
     }
 
-    let passwordSql = "";
+    const [currentRows] = await runQuery(
+      "SELECT profile_image FROM users WHERE id = ? LIMIT 1",
+      [req.auth.id]
+    );
+
+    if (!currentRows[0]) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    if (req.file) {
+      [uploadedProfileImage] = await uploadedImagePaths(req, "user-profiles");
+    }
+
     const params = [
       (name || "").trim(),
       normalizedEmail,
       normalizedPhone,
-      profileImage || ""
+      uploadedProfileImage || (typeof profileImage === "string" ? profileImage : null)
     ];
-
-    if (password) {
-      if (password.length < 6) {
-        return res.status(400).json({
-          success: false,
-          message: "Password must be at least 6 characters."
-        });
-      }
-
-      const passwordHash =
-        await bcrypt.hash(password, 10);
-
-      passwordSql = ", password_hash = ?";
-      params.push(passwordHash);
-    }
 
     params.push(req.auth.id);
 
@@ -455,8 +490,7 @@ async function updateMe(req, res) {
         SET name = ?,
             email = ?,
             phone = ?,
-            profile_image = ?
-            ${passwordSql}
+            profile_image = COALESCE(?, profile_image)
         WHERE id = ?
       `,
       params
@@ -472,11 +506,18 @@ async function updateMe(req, res) {
       [req.auth.id]
     );
 
+    if (uploadedProfileImage) {
+      await deleteCloudinaryImages([currentRows[0].profile_image]);
+    }
+
     res.json({
       success: true,
       user: sanitizeUser(rows[0])
     });
   } catch (error) {
+    if (uploadedProfileImage) {
+      await deleteCloudinaryImages([uploadedProfileImage]);
+    }
     console.error("Profile update failed:", error);
 
     res.status(500).json({
@@ -512,17 +553,10 @@ async function requestRegistrationOtp(req, res) {
       password
     } = req.body;
 
-    if (!name || !email || !phone || !password) {
+    if (!hasValidCustomerFields({ name, email, phone, password })) {
       return res.status(400).json({
         success: false,
         message: "Please fill all required fields."
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters."
       });
     }
 
@@ -643,6 +677,8 @@ async function verifyRegistrationOtp(req, res) {
     res.cookie("userToken", token, authCookieOptions());
 
     await runQuery("DELETE FROM registration_otps WHERE email = ?", [normalizedEmail]);
+
+    await sendWelcomeEmail(user);
 
     res.status(201).json({
       success: true,

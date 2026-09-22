@@ -19,6 +19,7 @@ from "../utils/api";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 }
 from "../utils/imageFallback";
@@ -42,6 +43,10 @@ function Orders() {
 
   const [returnImage,
     setReturnImage] =
+    useState({});
+
+  const [returnImageFile,
+    setReturnImageFile] =
     useState({});
 
   const [openReturnForms,
@@ -281,11 +286,11 @@ function Orders() {
 
     if (
       file.size >
-      10 * 1024 * 1024
+      5 * 1024 * 1024
     ) {
 
       setPopupMessage(
-        "Image too large. Use image under 10MB."
+        "Image too large. Use image under 5MB."
       );
 
       setShowPopup(true);
@@ -348,33 +353,33 @@ function Orders() {
 
         );
 
-        const compressedImage =
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            setPopupMessage("Unable to process image.");
+            setShowPopup(true);
+            return;
+          }
 
-          canvas.toDataURL(
-            "image/jpeg",
-            0.5
+          const key = String(orderId);
+          const compressedFile = new File(
+            [blob],
+            "return-evidence.jpg",
+            { type: "image/jpeg" }
           );
 
-        setReturnImage(prev => ({
+          setReturnImageFile(prev => ({
+            ...prev,
+            [key]: compressedFile
+          }));
+          setReturnImage(prev => ({
+            ...prev,
+            [key]: URL.createObjectURL(blob)
+          }));
 
-          ...prev,
-
-          [String(orderId)]:
-            compressedImage
-
-        }));
-
-        setPopupMessage(
-          "Image Uploaded Successfully"
-        );
-
-        setShowPopup(true);
-
-        setTimeout(() => {
-
-          setShowPopup(false);
-
-        }, 2000);
+          setPopupMessage("Image Uploaded Successfully");
+          setShowPopup(true);
+          setTimeout(() => setShowPopup(false), 2000);
+        }, "image/jpeg", 0.5);
 
       };
 
@@ -463,7 +468,7 @@ function Orders() {
 
     const image =
 
-      returnImage[
+      returnImageFile[
         String(orderId)
       ];
 
@@ -505,14 +510,23 @@ function Orders() {
 
     try {
 
-      await patchOrder(
-        orderId,
-        "/return-request",
+      const payload = new FormData();
+      payload.append("reason", reason);
+      payload.append("image", image, image.name || "return-evidence.jpg");
+
+      const response = await fetch(
+        getApiUrl(`/api/orders/${orderId}/return-request`),
         {
-          reason,
-          image
+          method: "PATCH",
+          credentials: "include",
+          body: payload
         }
       );
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to request return");
+      }
 
     } catch (error) {
 
@@ -1373,9 +1387,10 @@ function Orders() {
 
                     <img
 
-                      src={item.image || PRODUCT_PLACEHOLDER}
+                      src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
 
                       alt={item.name}
+                      loading="lazy"
 
                       onError={handleImageFallback}
 

@@ -1,26 +1,23 @@
 const express = require("express");
-const rateLimit = require("express-rate-limit");
 
 const {
   forgotPassword,
   verifyOtp,
-  resetPassword
+  resetPassword,
+  requestAuthenticatedPasswordChange,
+  confirmAuthenticatedPasswordChange
 } = require("../controllers/passwordResetController");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { sensitiveRateLimiter } = require("../middleware/securityMiddleware");
 
 const router = express.Router();
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many attempts. Please try again later."
-  }
-});
+const requestLimiter = sensitiveRateLimiter("PASSWORD_REQUEST", 5);
+const verifyLimiter = sensitiveRateLimiter("PASSWORD_VERIFY", 10);
 
-router.post("/forgot", authLimiter, forgotPassword);
-router.post("/verify", verifyOtp);
-router.post("/reset", resetPassword);
+router.post("/forgot", requestLimiter, forgotPassword);
+router.post("/verify", verifyLimiter, verifyOtp);
+router.post("/reset", verifyLimiter, resetPassword);
+router.post("/change/request", requireAuth(["user"]), requestLimiter, requestAuthenticatedPasswordChange);
+router.post("/change/confirm", requireAuth(["user"]), verifyLimiter, confirmAuthenticatedPasswordChange);
 
 module.exports = router;

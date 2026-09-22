@@ -19,15 +19,16 @@ function mapAddress(row) {
 }
 
 function normalizeAddress(body) {
+  const clean = (value, maxLength) => String(value || "").trim().slice(0, maxLength);
   return {
-    fullName: (body.name || body.fullName || "").trim(),
-    phone: (body.phone || "").trim(),
-    street: (body.street || "").trim(),
-    locality: (body.locality || "").trim(),
-    city: (body.city || "").trim(),
-    state: (body.state || "").trim(),
-    pincode: (body.pincode || "").trim(),
-    landmark: (body.landmark || "").trim()
+    fullName: clean(body.name || body.fullName, 100),
+    phone: clean(body.phone, 30),
+    street: clean(body.street, 255),
+    locality: clean(body.locality, 255),
+    city: clean(body.city, 100),
+    state: clean(body.state, 100),
+    pincode: clean(body.pincode, 20),
+    landmark: clean(body.landmark, 255)
   };
 }
 
@@ -39,7 +40,9 @@ function validateAddress(address) {
     address.locality &&
     address.city &&
     address.state &&
-    address.pincode
+    address.pincode &&
+    /^[0-9A-Za-z -]{3,20}$/.test(address.pincode) &&
+    /^[+0-9() -]{7,30}$/.test(address.phone)
   );
 }
 

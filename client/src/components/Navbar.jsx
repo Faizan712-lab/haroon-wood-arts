@@ -42,6 +42,7 @@ from "../utils/api";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 }
 from "../utils/imageFallback";
@@ -397,9 +398,10 @@ function Navbar() {
 
                 <img
 
-                  src={product.image || PRODUCT_PLACEHOLDER}
+                  src={getPrimaryImage(product) || PRODUCT_PLACEHOLDER}
 
                   alt={product.name}
+                  loading="lazy"
 
                   onError={handleImageFallback}
 

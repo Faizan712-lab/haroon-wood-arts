@@ -39,13 +39,18 @@ function AdminAddProduct() {
     setImage] =
     useState("");
 
+  const [productImages,
+    setProductImages] =
+    useState([]);
+
   const [variants,
     setVariants] =
     useState([
       {
         size: "",
         price: "",
-        stock: ""
+        stock: "",
+        images: []
       }
     ]);
 
@@ -120,28 +125,123 @@ function AdminAddProduct() {
 
   /* PRODUCT IMAGE */
 
-  function handleImage(e) {
+  function readImageFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        reject(new Error("Only JPG, PNG, and WEBP images are allowed."));
+        return;
+      }
 
-    const file =
-      e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        reject(new Error("Each image must be 5MB or smaller."));
+        return;
+      }
 
-    if (!file) return;
+      resolve({
+        file,
+        preview: URL.createObjectURL(file)
+      });
+    });
+  }
 
-    const reader =
-      new FileReader();
+  function readImageDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        reject(new Error("Only JPG, PNG, and WEBP images are allowed."));
+        return;
+      }
 
-    reader.onloadend = () => {
+      if (file.size > 5 * 1024 * 1024) {
+        reject(new Error("Each image must be 5MB or smaller."));
+        return;
+      }
 
-      setImage(
-        reader.result
-      );
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Failed to read image."));
+      reader.readAsDataURL(file);
+    });
+  }
 
-    };
+  async function appendVariantImages(payload, sourceVariants) {
+    let uploadIndex = 0;
+    const resolved = [];
 
-    reader.readAsDataURL(
-      file
-    );
+    for (const variant of sourceVariants) {
+      const images = [];
 
+      for (const image of variant.images || []) {
+        if (String(image || "").startsWith("data:image/")) {
+          const response = await fetch(image);
+          const blob = await response.blob();
+          const extension = blob.type === "image/png"
+            ? "png"
+            : blob.type === "image/webp"
+              ? "webp"
+              : "jpg";
+          payload.append("variantImages", blob, `variant-image-${uploadIndex + 1}.${extension}`);
+          images.push(`upload:${uploadIndex}`);
+          uploadIndex += 1;
+        } else if (image) {
+          images.push(image);
+        }
+      }
+
+      resolved.push({ ...variant, images });
+    }
+
+    return resolved;
+  }
+
+  async function handleImage(e) {
+
+    const files =
+      Array.from(e.target.files || []);
+
+    if (files.length === 0) return;
+
+    try {
+      const slots =
+        Math.max(0, 8 - productImages.length);
+
+      const previews =
+        await Promise.all(
+          files.slice(0, slots).map(readImageFile)
+        );
+
+      setProductImages(previous => {
+        const next = [...previous, ...previews].slice(0, 8);
+        setImage(next[0]?.preview || "");
+        return next;
+      });
+    } catch (error) {
+      toast.error(error.message || "Unable to read image");
+    } finally {
+      e.target.value = "";
+    }
+  }
+
+  function removeProductImage(index) {
+    setProductImages(previous => {
+      const next = previous.filter((_, currentIndex) => currentIndex !== index);
+      setImage(next[0]?.preview || "");
+      return next;
+    });
+  }
+
+  function moveProductImage(index, direction) {
+    setProductImages(previous => {
+      const next = [...previous];
+      const target = index + direction;
+
+      if (target < 0 || target >= next.length) {
+        return previous;
+      }
+
+      [next[index], next[target]] = [next[target], next[index]];
+      setImage(next[0]?.preview || "");
+      return next;
+    });
   }
 
   /* CATEGORY IMAGE */
@@ -260,51 +360,46 @@ function AdminAddProduct() {
     try {
       setIsAddingProduct(true);
 
+      const payload = new FormData();
+      payload.append("name", name);
+      payload.append("price", price);
+      payload.append("discountPercent", discountPercent);
+      payload.append("category", category);
+      payload.append("description", description);
+      payload.append("stock", "100");
+      payload.append("stockStatus", stockStatus);
+      const resolvedVariants = await appendVariantImages(payload, variants);
+      payload.append(
+        "variants",
+        JSON.stringify(
+          resolvedVariants
+            .filter(variant =>
+              variant.size.trim()
+            )
+            .map(variant => ({
+              size: variant.size.trim(),
+              price:
+                variant.price === ""
+                  ? Number(price || 0)
+                  : Number(variant.price),
+              stock:
+                variant.stock === ""
+                  ? 100
+                  : Number(variant.stock),
+              images: variant.images || []
+            }))
+        )
+      );
+
+      productImages.forEach(item => {
+        payload.append("images", item.file);
+      });
+
       const response = await fetch(
         getApiUrl("/api/products"),
         {
           method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-
-            name,
-
-            price,
-
-            discountPercent,
-
-            category,
-
-            description,
-
-            image,
-
-            stock: 100,
-
-            stockStatus,
-
-            variants:
-              variants
-                .filter(variant =>
-                  variant.size.trim()
-                )
-                .map(variant => ({
-                  size: variant.size.trim(),
-                  price:
-                    variant.price === ""
-                      ? Number(price || 0)
-                      : Number(variant.price),
-                  stock:
-                    variant.stock === ""
-                      ? 100
-                      : Number(variant.stock)
-                }))
-
-          })
+          body: payload
 
         }
       );
@@ -328,12 +423,14 @@ function AdminAddProduct() {
         setDescription("");
 
         setImage("");
+        setProductImages([]);
 
         setVariants([
           {
             size: "",
             price: "",
-            stock: ""
+            stock: "",
+            images: []
           }
         ]);
 
@@ -377,11 +474,12 @@ function AdminAddProduct() {
   function addSizeRow() {
     setVariants(previous => [
       ...previous,
-      {
-        size: "",
-        price: "",
-        stock: ""
-      }
+          {
+            size: "",
+            price: "",
+            stock: "",
+            images: []
+          }
     ]);
   }
 
@@ -393,6 +491,49 @@ function AdminAddProduct() {
             currentIndex !== index
           )
     );
+  }
+
+  async function addVariantImages(index, event) {
+    const files = Array.from(event.target.files || []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    try {
+      const currentImages = variants[index]?.images || [];
+      const slots = Math.max(0, 8 - currentImages.length);
+      const images = await Promise.all(
+        files.slice(0, slots).map(readImageDataUrl)
+      );
+
+      updateSize(index, "images", [...currentImages, ...images].slice(0, 8));
+    } catch (error) {
+      toast.error(error.message || "Unable to read image");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function removeVariantImage(variantIndex, imageIndex) {
+    const images = variants[variantIndex]?.images || [];
+    updateSize(
+      variantIndex,
+      "images",
+      images.filter((_, currentIndex) => currentIndex !== imageIndex)
+    );
+  }
+
+  function moveVariantImage(variantIndex, imageIndex, direction) {
+    const images = [...(variants[variantIndex]?.images || [])];
+    const target = imageIndex + direction;
+
+    if (target < 0 || target >= images.length) {
+      return;
+    }
+
+    [images[imageIndex], images[target]] = [images[target], images[imageIndex]];
+    updateSize(variantIndex, "images", images);
   }
 
   return (
@@ -636,6 +777,72 @@ function AdminAddProduct() {
               >
                 Remove
               </button>
+
+              <div className="variant-image-manager">
+                <div className="variant-image-manager-header">
+                  <strong>
+                    Upload Images
+                  </strong>
+                  <span>
+                    {(variant.images || []).length}/8
+                  </span>
+                </div>
+
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={(event) =>
+                    addVariantImages(index, event)
+                  }
+                  disabled={(variant.images || []).length >= 8}
+                />
+
+                {(variant.images || []).length > 0 && (
+                  <div className="variant-image-thumbs">
+                    {(variant.images || []).map((preview, imageIndex) => (
+                      <div
+                        key={`${preview}-${imageIndex}`}
+                        className="variant-image-thumb"
+                      >
+                        <img
+                          src={preview}
+                          alt={`Variant preview ${imageIndex + 1}`}
+                          loading="lazy"
+                        />
+                        <div className="variant-image-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              moveVariantImage(index, imageIndex, -1)
+                            }
+                            disabled={imageIndex === 0}
+                          >
+                            Up
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              moveVariantImage(index, imageIndex, 1)
+                            }
+                            disabled={imageIndex === (variant.images || []).length - 1}
+                          >
+                            Down
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeVariantImage(index, imageIndex)
+                            }
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
           ))}
@@ -707,19 +914,57 @@ function AdminAddProduct() {
           </label>
         </section>
 
-        {/* PRODUCT IMAGE */}
+        <section className="admin-form-section admin-image-manager">
+          <div className="admin-image-manager-header">
+            <h2>Product Images</h2>
+            <span>{productImages.length}/8</span>
+          </div>
 
-        <input
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={handleImage}
+            required={productImages.length === 0}
+          />
 
-          type="file"
-
-          accept="image/*"
-
-          onChange={handleImage}
-
-          required
-
-        />
+          <div className="admin-image-thumbs">
+            {productImages.map((preview, index) => (
+              <div
+                key={`${preview.preview}-${index}`}
+                className="admin-image-thumb"
+              >
+                <img
+                  src={preview.preview}
+                  alt={`Product preview ${index + 1}`}
+                  loading="lazy"
+                />
+                <div className="admin-image-thumb-actions">
+                  <button
+                    type="button"
+                    onClick={() => moveProductImage(index, -1)}
+                    disabled={index === 0}
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveProductImage(index, 1)}
+                    disabled={index === productImages.length - 1}
+                  >
+                    Down
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeProductImage(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <button
           type="submit"

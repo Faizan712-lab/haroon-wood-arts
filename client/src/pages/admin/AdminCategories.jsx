@@ -10,6 +10,9 @@ import toast from "react-hot-toast";
 import {
   getApiUrl
 } from "../../utils/api";
+import {
+  getImageList
+} from "../../utils/imageFallback";
 
 import ConfirmModal from "../../components/ConfirmModal";
 
@@ -149,7 +152,7 @@ function AdminCategories() {
   function openEditCategory(category) {
     setEditingCategory(category);
     setEditName(category.name || "");
-    setEditImage(category.image || "");
+    setEditImage(getImageList(category)[0] || "");
   }
 
   function closeEditCategory() {
@@ -192,17 +195,27 @@ function AdminCategories() {
 
     try {
       setIsSavingEdit(true);
+      const payload = new FormData();
+      payload.append("name", name);
+
+      if (editImage.startsWith("data:image/")) {
+        const imageResponse = await fetch(editImage);
+        const blob = await imageResponse.blob();
+        const extension = blob.type === "image/png"
+          ? "png"
+          : blob.type === "image/webp"
+            ? "webp"
+            : "jpg";
+        payload.append("images", blob, `category-image.${extension}`);
+      } else {
+        payload.append("image", editImage);
+      }
+
       const response = await fetch(
         getApiUrl(`/api/categories/${editingCategory.id}`),
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name,
-            image: editImage
-          })
+          body: payload
         }
       );
 
@@ -297,8 +310,9 @@ function AdminCategories() {
 
               <div className="admin-card-image-frame admin-category-image-frame">
                 <img
-                  src={category.image || CATEGORY_PLACEHOLDER}
+                  src={getImageList(category)[0] || CATEGORY_PLACEHOLDER}
                   alt={category.name}
+                  loading="lazy"
                   onError={handleImageError}
                 />
               </div>

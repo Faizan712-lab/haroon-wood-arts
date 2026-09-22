@@ -198,7 +198,7 @@ function UserAuth() {
     try {
       setIsLoading(true);
       await loginUser({
-        identifier: form.identifier.trim(),
+        email: form.identifier.trim(),
         password: form.password
       });
 
@@ -425,11 +425,11 @@ function UserAuth() {
 
           {mode === "login" ? (
             <label>
-              Email or Phone Number
+              Email
               <input
-                type="text"
+                type="email"
                 name="identifier"
-                placeholder="Email or phone number"
+                placeholder="Enter email"
                 value={form.identifier}
                 onChange={updateField}
                 disabled={isLoading}

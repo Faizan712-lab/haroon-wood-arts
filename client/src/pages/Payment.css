@@ -150,14 +150,15 @@
 
 .accepted-payments {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(54px, 1fr));
+  gap: 8px;
   margin-bottom: 18px;
 }
 
 .accepted-payments span {
-  min-height: 40px;
-  border-radius: 8px;
+  min-height: 42px;
+  padding: 5px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,8 +167,8 @@
 }
 
 .accepted-payments img {
-  width: 44px;
-  max-height: 20px;
+  width: min(100%, 48px);
+  max-height: 21px;
   object-fit: contain;
 }
 
@@ -273,12 +274,36 @@
   transition: 0.25s;
 }
 
-.payment-choice:hover,
+.payment-choice:hover {
+  border-color: #d9b692;
+  background: #fffaf6;
+}
+
 .payment-choice.active {
   border-color: #e8904a;
-  background: #fffaf6;
+  background: #fff0dc;
   box-shadow:
-    0 6px 18px rgba(232,144,74,0.10);
+    0 0 0 2px rgba(232,144,74,0.18),
+    0 8px 20px rgba(232,144,74,0.12);
+}
+
+.payment-choice.active .choice-icon {
+  border-color: #e8904a;
+  background: #fff;
+}
+
+.payment-choice.active strong {
+  color: #6d371c;
+}
+
+.payment-choice.active small {
+  color: #8b542e;
+  font-weight: 700;
+}
+
+.payment-choice:focus-visible {
+  outline: 3px solid rgba(232,144,74,0.24);
+  outline-offset: 2px;
 }
 
 .choice-icon {
@@ -478,7 +503,7 @@
   }
 
   .trust-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .pay-btn,

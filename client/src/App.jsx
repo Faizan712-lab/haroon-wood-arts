@@ -52,6 +52,7 @@ import Contact from "./pages/Contact";
 import UserAuth from "./pages/UserAuth";
 
 import UserProfile from "./pages/UserProfile";
+import UserSettings from "./pages/UserSettings";
 
 import Wishlist from "./pages/Wishlist";
 
@@ -224,6 +225,8 @@ function App() {
           }
 
         />
+
+        <Route path="/settings" element={<><Navbar /><ProtectedUserRoute><UserSettings /></ProtectedUserRoute></>} />
 
         <Route
 

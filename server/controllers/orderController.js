@@ -1,30 +1,20 @@
 const db = require("../config/db");
-
-let orderSchemaReady = false;
-
-async function ensureOrderSchema() {
-  if (orderSchemaReady) {
-    return;
-  }
-
-  const statements = [
-    "ALTER TABLE order_items ADD COLUMN variant_id INT NULL AFTER product_image",
-    "ALTER TABLE order_items ADD COLUMN variant_label VARCHAR(120) NULL AFTER product_image",
-    "ALTER TABLE order_items ADD COLUMN variant_dimensions VARCHAR(160) NULL AFTER variant_label"
-  ];
-
-  for (const statement of statements) {
-    try {
-      await db.promise().execute(statement);
-    } catch (error) {
-      if (error.code !== "ER_DUP_FIELDNAME") {
-        throw error;
-      }
-    }
-  }
-
-  orderSchemaReady = true;
-}
+const {
+  uploadedImagePaths,
+  deleteCloudinaryImages
+} = require("../middleware/imageUpload");
+const {
+  sendOrderConfirmationEmail,
+  sendAdminNewOrderEmail,
+  sendOrderProcessingEmail,
+  sendOrderShippedEmail,
+  sendOrderDeliveredEmail,
+  sendReturnRequestedEmail,
+  sendAdminReturnRequestedEmail,
+  sendReturnApprovedEmail,
+  sendReturnRejectedEmail,
+  sendOrderCancelledEmail
+} = require("../services/emailService");
 
 function runQuery(sql, params = []) {
   return db.promise().execute(sql, params);
@@ -38,6 +28,18 @@ function generateOrderCode() {
       Math.random() * 900000
     )
   );
+}
+
+function finalProductPrice(product, basePrice) {
+  const price = Number(basePrice || product.price || 0);
+  const percent = Math.min(90, Math.max(0, Number(product.discount_percent || 0)));
+  const legacyDiscount = Number(product.discount_price || 0);
+
+  if (percent > 0) {
+    return Math.round((price * (100 - percent)) * 100) / 10000;
+  }
+
+  return legacyDiscount > 0 && legacyDiscount < price ? legacyDiscount : price;
 }
 
 function toSqlDate(value) {
@@ -114,7 +116,22 @@ function isAllowedTransition(currentStatus, allowedStatuses) {
   );
 }
 
+function codPaymentBreakdown(totalAmount) {
+  const totalPaise = Math.round(Number(totalAmount || 0) * 100);
+  const advancePaise = Math.round(totalPaise * 10 / 100);
+
+  return {
+    advance: advancePaise / 100,
+    remainingOnDelivery: (totalPaise - advancePaise) / 100
+  };
+}
+
 function mapOrderRow(row, items = []) {
+  const total = Number(row.total_amount || 0);
+  const codBreakdown = row.payment_mode === "COD"
+    ? codPaymentBreakdown(total)
+    : null;
+
   return {
     id: row.order_code,
     databaseId: row.id,
@@ -125,10 +142,12 @@ function mapOrderRow(row, items = []) {
     customer: row.customer_name,
     phone: row.customer_phone,
     address: row.delivery_address,
-    total: Number(row.total_amount || 0),
+    total,
     paid: Number(row.paid_amount || 0),
     remaining: Number(row.remaining_amount || 0),
     paymentMode: row.payment_mode,
+    codAdvance: codBreakdown?.advance || 0,
+    codRemainingOnDelivery: codBreakdown?.remainingOnDelivery || 0,
     status: row.status,
     deliveryDate: formatDateValue(row.delivery_date),
     deliveredDate: formatDateValue(row.delivered_date),
@@ -159,25 +178,96 @@ async function findOrderRow(id) {
   return orders[0] || null;
 }
 
+async function findOrderCustomer(userId) {
+  const [users] = await runQuery(
+    "SELECT id, name, email, phone FROM users WHERE id = ? LIMIT 1",
+    [userId]
+  );
+
+  return users[0] || null;
+}
+
+async function notifyOrderTransition(previousOrder, order) {
+  try {
+    if (!previousOrder || normalizeStatus(previousOrder.status) === normalizeStatus(order.status)) {
+      return;
+    }
+
+    const user = await findOrderCustomer(order.userId);
+    if (!user?.email) return;
+
+    switch (normalizeStatus(order.status)) {
+      case "processing":
+        await sendOrderProcessingEmail(user, order);
+        break;
+      case "shipped":
+        await sendOrderShippedEmail(user, order);
+        break;
+      case "delivered":
+        await sendOrderDeliveredEmail(user, order);
+        break;
+      case "cancelled":
+        await sendOrderCancelledEmail(user, order);
+        break;
+      case "return requested":
+        await sendReturnRequestedEmail(user, order);
+        await sendAdminReturnRequestedEmail(user, order);
+        break;
+      case "pickup scheduled":
+        await sendReturnApprovedEmail(user, order);
+        break;
+      case "return rejected":
+        await sendReturnRejectedEmail(user, order);
+        break;
+      default:
+        break;
+    }
+  } catch (error) {
+    console.error("Order notification processing failed", {
+      code: error?.code || "unknown",
+      message: error?.message || "unknown"
+    });
+  }
+}
+
+async function notifyOrderCreated(userId, order) {
+  try {
+    const user = await findOrderCustomer(userId);
+    if (!user?.email) return;
+
+    await sendOrderConfirmationEmail(user, order);
+    await sendAdminNewOrderEmail(user, order);
+  } catch (error) {
+    console.error("New order notification processing failed", {
+      code: error?.code || "unknown",
+      message: error?.message || "unknown"
+    });
+  }
+}
+
 async function updateOrderById(
   orderId,
   updates,
-  allowedStatuses
+  allowedStatuses,
+  ownerUserId = null
 ) {
   const connection = db.promise();
 
   try {
     await connection.beginTransaction();
 
+    const ownershipSql = ownerUserId === null ? "" : " AND user_id = ?";
     const [orders] = await connection.execute(
       `
         SELECT *
         FROM orders
-        WHERE id = ? OR order_code = ?
+        WHERE (id = ? OR order_code = ?)${ownershipSql}
         LIMIT 1
         FOR UPDATE
       `,
-      [orderId, orderId]
+      ownerUserId === null
+        ? [orderId, orderId]
+        : [orderId, orderId, ownerUserId]
     );
 
     const order = orders[0];
@@ -244,7 +334,8 @@ async function updateOrderById(
       body: {
         success: true,
         order: updatedOrder
-      }
+      },
+      previousOrder: order
     };
   } catch (error) {
     await connection.rollback();
@@ -263,8 +354,13 @@ async function sendOrderUpdate(
       await updateOrderById(
         req.params.id,
         updates,
-        allowedStatuses
+        allowedStatuses,
+        req.auth?.role === "user" ? req.auth.id : null
       );
+
+    if (result.body.success) {
+      await notifyOrderTransition(result.previousOrder, result.body.order);
+    }
 
     res.status(result.statusCode).json(result.body);
   } catch (error) {
@@ -294,7 +390,6 @@ function mapItemRow(row) {
 }
 
 async function getOrderWithItems(whereSql, params) {
-  await ensureOrderSchema();
 
   const [orders] = await runQuery(
     `
@@ -330,24 +425,8 @@ async function createOrder(req, res) {
   const connection = db.promise();
 
   try {
-    await ensureOrderSchema();
 
-    const {
-      id,
-      userId,
-      customer,
-      phone,
-      address,
-      total,
-      paid,
-      remaining,
-      paymentMode,
-      status,
-      deliveryDate,
-      deliveredDate,
-      cancelUntil,
-      items
-    } = req.body;
+    const { customer, phone, address, paymentMode, items } = req.body;
 
     if (!req.auth?.id || req.auth.role !== "user") {
       return res.status(401).json({
@@ -369,10 +448,86 @@ async function createOrder(req, res) {
       });
     }
 
-    const orderCode =
-      id || generateOrderCode();
-
     await connection.beginTransaction();
+
+    const authoritativeItems = [];
+
+    for (const requestedItem of items) {
+      const productId = Number(requestedItem.productId || requestedItem.id);
+      const variantId = requestedItem.variantId ? Number(requestedItem.variantId) : null;
+      const quantity = Number(requestedItem.quantity || 0);
+
+      if (!Number.isInteger(productId) || productId <= 0 || !Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
+        throw new Error("Invalid product or quantity.");
+      }
+
+      const [productRows] = await connection.execute(
+        "SELECT * FROM products WHERE id = ? LIMIT 1 FOR UPDATE",
+        [productId]
+      );
+      const product = productRows[0];
+
+      if (!product || product.stock_status === "out_of_stock") {
+        throw new Error("A selected product is unavailable.");
+      }
+
+      const [productVariants] = await connection.execute(
+        "SELECT * FROM product_variants WHERE product_id = ? FOR UPDATE",
+        [productId]
+      );
+
+      let unitPrice;
+      let availableStock;
+      let variant = null;
+
+      if (variantId) {
+        variant = productVariants.find(row => Number(row.id) === variantId);
+        if (!variant) {
+          throw new Error("Selected product variant is unavailable.");
+        }
+        unitPrice = finalProductPrice(product, variant.price || product.price);
+        availableStock = Number(variant.stock || 0);
+      } else {
+        if (productVariants.length > 0) {
+          throw new Error("Please select a product variant.");
+        }
+        unitPrice = finalProductPrice(product, product.price);
+        availableStock = Number(product.stock || 0);
+      }
+
+      if (!Number.isFinite(unitPrice) || unitPrice < 0 || availableStock < quantity) {
+        throw new Error("Insufficient stock for a selected product.");
+      }
+
+      if (variant) {
+        await connection.execute(
+          "UPDATE product_variants SET stock = stock - ? WHERE id = ? AND stock >= ?",
+          [quantity, variant.id, quantity]
+        );
+      } else {
+        await connection.execute(
+          "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?",
+          [quantity, product.id, quantity]
+        );
+      }
+
+      authoritativeItems.push({
+        productId: product.id,
+        name: product.name,
+        image: product.image || null,
+        variantId: variant?.id || null,
+        variantLabel: variant?.size_label || variant?.size || null,
+        quantity,
+        unitPrice,
+        lineTotal: Math.round(unitPrice * quantity * 100) / 100
+      });
+    }
+
+    const total = Math.round(
+      authoritativeItems.reduce((sum, item) => sum + item.lineTotal, 0) * 100
+    ) / 100;
+    const orderCode = generateOrderCode();
+    const normalizedPaymentMode = paymentMode === "COD" ? "COD" : "Online Payment";
 
     const [orderResult] = await connection.execute(
       `
@@ -400,24 +555,20 @@ async function createOrder(req, res) {
         customer,
         phone,
         address,
-        Number(total || 0),
-        Number(paid || total || 0),
-        Number(remaining || 0),
-        paymentMode || "Online Payment",
-        status || "Processing",
-        toSqlDate(deliveryDate),
-        toSqlDate(deliveredDate),
-        toSqlDateTime(cancelUntil)
+        total,
+        0,
+        total,
+        normalizedPaymentMode,
+        "Processing",
+        null,
+        null,
+        toSqlDateTime(addDaysDate(2))
       ]
     );
 
     const orderId = orderResult.insertId;
 
-    for (const item of items) {
-      const quantity =
-        Number(item.quantity || 1);
-      const unitPrice =
-        Number(item.price || 0);
+    for (const item of authoritativeItems) {
 
       await connection.execute(
         `
@@ -438,15 +589,15 @@ async function createOrder(req, res) {
         `,
         [
           orderId,
-          item.productId || item.id || null,
-          item.name || "Product",
-          item.image || null,
-          item.variantId || null,
-          item.variantLabel || item.selectedSize || null,
-          item.variantDimensions || item.dimensions || null,
-          quantity,
-          unitPrice,
-          quantity * unitPrice
+          item.productId,
+          item.name,
+          item.image,
+          item.variantId,
+          item.variantLabel,
+          null,
+          item.quantity,
+          item.unitPrice,
+          item.lineTotal
         ]
       );
     }
@@ -458,6 +609,8 @@ async function createOrder(req, res) {
         "WHERE id = ?",
         [orderId]
       );
+
+    await notifyOrderCreated(req.auth.id, order);
 
     res.status(201).json({
       success: true,
@@ -478,7 +631,6 @@ async function createOrder(req, res) {
 
 async function getOrders(req, res) {
   try {
-    await ensureOrderSchema();
 
     const [orders] = await runQuery(
       `
@@ -587,7 +739,6 @@ async function getOrderById(req, res) {
 
 async function getMyOrders(req, res) {
   try {
-    await ensureOrderSchema();
 
     const [users] = await runQuery(
       `
@@ -793,9 +944,6 @@ async function requestReturn(req, res) {
   const reason =
     String(req.body.reason || "").trim();
 
-  const image =
-    req.body.image || "";
-
   if (!reason) {
     return res.status(400).json({
       success: false,
@@ -803,24 +951,42 @@ async function requestReturn(req, res) {
     });
   }
 
-  if (!image) {
+  if (!req.file) {
     return res.status(400).json({
       success: false,
       message: "Return image is required."
     });
   }
 
-  return sendOrderUpdate(
-    req,
-    res,
-    {
-      status: "Return Requested",
-      return_reason: reason,
-      return_image: image,
-      refund_status: "Pending Approval"
-    },
-    ["delivered"]
-  );
+  let image = "";
+
+  try {
+    [image] = await uploadedImagePaths(req, "returns");
+    const result = await updateOrderById(
+      req.params.id,
+      {
+        status: "Return Requested",
+        return_reason: reason,
+        return_image: image,
+        refund_status: "Pending Approval"
+      },
+      ["delivered"],
+      req.auth.id
+    );
+
+    if (!result.body.success) {
+      await deleteCloudinaryImages([image]);
+      return res.status(result.statusCode).json(result.body);
+    }
+
+    await deleteCloudinaryImages([result.previousOrder.return_image]);
+    await notifyOrderTransition(result.previousOrder, result.body.order);
+    return res.status(result.statusCode).json(result.body);
+  } catch (error) {
+    await deleteCloudinaryImages([image]);
+    console.error("Failed to request return:", error);
+    return res.status(500).json({ success: false, message: "Failed to request return" });
+  }
 }
 
 async function approveReturn(req, res) {

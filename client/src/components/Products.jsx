@@ -33,6 +33,7 @@ from "../utils/api";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 }
 from "../utils/imageFallback";
@@ -442,7 +443,7 @@ function Products({
       variants[selectedVariants[sizePickerProduct.id]];
 
     if (!selectedVariant) {
-      toast.error("Please select a size");
+      toast.error("Please select a size before adding this product.");
       return;
     }
 
@@ -505,6 +506,14 @@ function Products({
 
           {isShopPage && (
             <div className="shop-filter-shell">
+              {filtersOpen && (
+                <button
+                  type="button"
+                  className="shop-filter-backdrop"
+                  aria-label="Close filters"
+                  onClick={() => setFiltersOpen(false)}
+                />
+              )}
               <button
                 type="button"
                 className="shop-filter-toggle"
@@ -523,6 +532,16 @@ function Products({
                     : "shop-filters"
                 }
               >
+                <div className="shop-filter-sheet-header">
+                  <h3>Filters</h3>
+                  <button
+                    type="button"
+                    aria-label="Close filters"
+                    onClick={() => setFiltersOpen(false)}
+                  >
+                    ×
+                  </button>
+                </div>
                 <label className="filter-control">
                   <span>Category</span>
                   <select
@@ -546,11 +565,12 @@ function Products({
                   </select>
                 </label>
 
-                <label className="filter-control">
-                  <span>Min price</span>
+                <label className="filter-control filter-price-control">
+                  <span>Price</span>
+                  <span className="filter-price-inputs">
                   <input
                     type="number"
-                    placeholder="Min price"
+                    placeholder="Min"
                     value={filters.min}
                     onChange={(event) =>
                       setFilters(previous => ({
@@ -559,13 +579,9 @@ function Products({
                       }))
                     }
                   />
-                </label>
-
-                <label className="filter-control">
-                  <span>Max price</span>
                   <input
                     type="number"
-                    placeholder="Max price"
+                    placeholder="Max"
                     value={filters.max}
                     onChange={(event) =>
                       setFilters(previous => ({
@@ -574,6 +590,7 @@ function Products({
                       }))
                     }
                   />
+                  </span>
                 </label>
 
               <label className="filter-check">
@@ -639,6 +656,30 @@ function Products({
                 <option value="discount">Discount %</option>
                   </select>
                 </label>
+                <div className="shop-filter-actions">
+                  <button
+                    type="button"
+                    className="filter-clear-btn"
+                    onClick={() => setFilters({
+                      category: "",
+                      min: "",
+                      max: "",
+                      inStock: false,
+                      onSale: false,
+                      rating: "",
+                      sort: "newest"
+                    })}
+                  >
+                    Clear All
+                  </button>
+                  <button
+                    type="button"
+                    className="filter-apply-btn"
+                    onClick={() => setFiltersOpen(false)}
+                  >
+                    Apply Filters
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -713,9 +754,10 @@ function Products({
                     <div className="image-container product-image-container">
                       <img
 
-                      src={item.image || PRODUCT_PLACEHOLDER}
+                      src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
 
                       alt={item.name}
+                      loading="lazy"
 
                       onError={handleImageFallback}
 

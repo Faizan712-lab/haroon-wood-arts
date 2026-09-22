@@ -5,6 +5,11 @@ const {
   requireAuth,
   optionalAuth
 } = require("../middleware/authMiddleware");
+const { requireAdminAuth } = require("../controllers/adminAuthController");
+const {
+  createImageUpload,
+  validateUploadedImages
+} = require("../middleware/imageUpload");
 
 const {
   createOrder,
@@ -23,19 +28,21 @@ const {
   markRefundCompleted
 } = require("../controllers/orderController");
 
+const returnEvidenceUpload = createImageUpload("returns");
+
 router.post("/", requireAuth(["user"]), createOrder);
-router.get("/", optionalAuth(["admin"]), getOrders);
-router.get("/:id", optionalAuth(["user", "admin"]), getOrderById);
-router.patch("/:id/status", updateStatus);
-router.patch("/:id/cancel-request", requestCancellation);
-router.patch("/:id/cancel-approve", approveCancellation);
-router.patch("/:id/cancel-reject", rejectCancellation);
-router.patch("/:id/return-request", requestReturn);
-router.patch("/:id/return-approve", approveReturn);
-router.patch("/:id/return-reject", rejectReturn);
-router.patch("/:id/pickup-scheduled", markPickupScheduled);
-router.patch("/:id/pickup-completed", markPickupCompleted);
-router.patch("/:id/return-completed", markReturnCompleted);
-router.patch("/:id/refund-completed", markRefundCompleted);
+router.get("/", requireAdminAuth, getOrders);
+router.get("/:id", requireAuth(["user", "admin"]), getOrderById);
+router.patch("/:id/status", requireAdminAuth, updateStatus);
+router.patch("/:id/cancel-request", requireAuth(["user"]), requestCancellation);
+router.patch("/:id/cancel-approve", requireAdminAuth, approveCancellation);
+router.patch("/:id/cancel-reject", requireAdminAuth, rejectCancellation);
+router.patch("/:id/return-request", requireAuth(["user"]), returnEvidenceUpload.single("image"), validateUploadedImages, requestReturn);
+router.patch("/:id/return-approve", requireAdminAuth, approveReturn);
+router.patch("/:id/return-reject", requireAdminAuth, rejectReturn);
+router.patch("/:id/pickup-scheduled", requireAdminAuth, markPickupScheduled);
+router.patch("/:id/pickup-completed", requireAdminAuth, markPickupCompleted);
+router.patch("/:id/return-completed", requireAdminAuth, markReturnCompleted);
+router.patch("/:id/refund-completed", requireAdminAuth, markRefundCompleted);
 
 module.exports = router;

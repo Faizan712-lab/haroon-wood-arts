@@ -4,22 +4,51 @@ import {
 from "./api";
 
 async function authRequest(path, options = {}) {
-  const response = await fetch(
-    getApiUrl(path),
-    {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {})
-      },
-      ...options
-    }
-  );
+  let response;
+  const isMultipart = options.body instanceof FormData;
+  const headers = {
+    ...(options.headers || {})
+  };
+
+  if (!isMultipart && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  try {
+    response = await fetch(
+      getApiUrl(path),
+      {
+        credentials: "include",
+        ...options,
+        headers
+      }
+    );
+  } catch (error) {
+    throw new Error(
+      "Unable to reach the authentication server. Check that the backend is running and reachable on this network."
+    );
+  }
 
   const data =
     await response.json().catch(() => ({}));
 
+  if (!response.ok && import.meta.env.DEV) {
+    console.error("Authentication API error:", {
+      status: response.status,
+      url: getApiUrl(path),
+      body: data
+    });
+  }
+
   if (!response.ok || data.success === false) {
+    if (response.status === 401) {
+      throw new Error(data.message || "Your session is not authorized.");
+    }
+
+    if (response.status >= 500) {
+      throw new Error("The authentication server encountered an error. Please try again.");
+    }
+
     throw new Error(
       data.message || "Authentication request failed"
     );
@@ -245,7 +274,9 @@ export async function updateUserAccount(updates) {
     "/api/auth/me",
     {
       method: "PUT",
-      body: JSON.stringify(updates)
+      body: updates instanceof FormData
+        ? updates
+        : JSON.stringify(updates)
     }
   );
 
@@ -288,6 +319,20 @@ export async function verifyPasswordOtp(payload) {
   );
 }
 
+export async function requestAuthenticatedPasswordChange(payload) {
+  return authRequest("/api/password/change/request", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function confirmAuthenticatedPasswordChange(payload) {
+  return authRequest("/api/password/change/confirm", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function logoutUser() {
   await authRequest(
     "/api/auth/logout",
@@ -319,7 +364,9 @@ export async function updateAdminAccount(payload) {
     "/api/admin/account",
     {
       method: "PUT",
-      body: JSON.stringify(payload)
+      body: payload instanceof FormData
+        ? payload
+        : JSON.stringify(payload)
     }
   );
 

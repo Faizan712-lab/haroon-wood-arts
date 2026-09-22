@@ -8,6 +8,7 @@ from "../context/CartContext";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 }
 from "../utils/imageFallback";
@@ -61,8 +62,9 @@ function Cart() {
               <div className="cart-left">
 
                 <img
-                  src={item.image || PRODUCT_PLACEHOLDER}
+                  src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
                   alt={item.name}
+                  loading="lazy"
                   onError={handleImageFallback}
                 />
 

@@ -4508,6 +4508,74 @@ body{
   min-width: 0;
 }
 
+.variant-image-manager {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #ead8c7;
+  border-radius: 10px;
+  background: #fffaf6;
+}
+
+.variant-image-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #3e2723;
+}
+
+.variant-image-manager-header span {
+  color: #8a7668;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.variant-image-thumbs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-behavior: smooth;
+}
+
+.variant-image-thumb {
+  flex: 0 0 118px;
+  display: grid;
+  gap: 6px;
+}
+
+.variant-image-thumb img {
+  width: 118px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid #ead8c7;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.variant-image-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.variant-image-actions button:last-child {
+  grid-column: 1 / -1;
+}
+
+.variant-image-actions button {
+  min-height: 28px;
+  border: 1px solid #e3c6ad;
+  border-radius: 6px;
+  background: #fff;
+  color: #5d4037;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .variant-remove-btn {
   min-height: 42px;
   border-radius: 11px;
@@ -4984,4 +5052,73 @@ body{
   .admin-secret-row .admin-ghost-btn {
     width: 48px;
   }
+}
+.admin-image-manager,
+.admin-edit-gallery,
+.admin-image-thumbs {
+  width: 100%;
+}
+
+.admin-image-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-image-thumbs,
+.admin-edit-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.admin-image-thumb,
+.admin-edit-gallery-item {
+  border: 1px solid #eadfd5;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px;
+}
+
+.admin-image-thumb img,
+.admin-edit-gallery-item img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.admin-image-thumb-actions,
+.admin-edit-gallery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.admin-image-thumb-actions button,
+.admin-edit-gallery-actions button,
+.admin-edit-gallery-actions label,
+.admin-upload-more {
+  border: 1px solid #d8c8ba;
+  border-radius: 6px;
+  background: #fff;
+  color: #4a2c16;
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 7px 9px;
+}
+
+.admin-edit-gallery-actions input,
+.admin-upload-more input {
+  display: none;
+}
+
+.admin-upload-more {
+  display: inline-flex;
+  margin-top: 14px;
 }

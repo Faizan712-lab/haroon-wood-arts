@@ -37,6 +37,7 @@ import {
 
 import {
   PRODUCT_PLACEHOLDER,
+  getPrimaryImage,
   handleImageFallback
 } from "../utils/imageFallback";
 
@@ -111,8 +112,7 @@ function UserProfile() {
     useState({
       name: "",
       email: "",
-      phone: "",
-      password: ""
+      phone: ""
     });
 
   const [addresses, setAddresses] =
@@ -148,6 +148,9 @@ function UserProfile() {
   const [isLoggingOut, setIsLoggingOut] =
     useState(false);
 
+  const [isAddressEditorOpen, setIsAddressEditorOpen] =
+    useState(false);
+
   const [showWishlist, setShowWishlist] =
     useState(false);
 
@@ -165,8 +168,7 @@ function UserProfile() {
       setSettings({
         name: currentSession?.name || "",
         email: currentSession?.email || "",
-        phone: currentSession?.phone || "",
-        password: ""
+        phone: currentSession?.phone || ""
       });
 
       if (!currentSession) {
@@ -228,12 +230,18 @@ function UserProfile() {
   const userOrders =
     orders;
 
-  const totalSpent =
+  const totalSpentPaise =
     userOrders.reduce(
       (sum, order) =>
-        sum + Number(order.total || 0),
+        sum + Math.round(Number(order.total || 0) * 100),
       0
     );
+
+  const totalSpent = totalSpentPaise / 100;
+  const formatCurrency = amount => new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 
   const totalPurchased =
     userOrders.reduce(
@@ -255,31 +263,29 @@ function UserProfile() {
       return;
     }
 
-    const reader =
-      new FileReader();
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setMessage("Only JPG, PNG, and WEBP images are allowed.");
+      return;
+    }
 
-    reader.onload = async () => {
-      try {
-        const updatedUser =
-          await updateUserAccount({
-            name: session.name,
-            email: session.email,
-            phone: session.phone,
-            profileImage:
-              reader.result
-          });
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage("Profile image must be 5MB or smaller.");
+      return;
+    }
 
-        setSession(updatedUser);
+    const payload = new FormData();
+    payload.append("name", session.name || "");
+    payload.append("email", session.email || "");
+    payload.append("phone", session.phone || "");
+    payload.append("profileImage", file);
 
-        setMessage(
-          "Profile picture updated."
-        );
-      } catch (error) {
-        setMessage(error.message);
-      }
-    };
-
-    reader.readAsDataURL(file);
+    try {
+      const updatedUser = await updateUserAccount(payload);
+      setSession(updatedUser);
+      setMessage("Profile picture updated.");
+    } catch (error) {
+      setMessage(error.message);
+    }
   }
 
   function handleSettingsChange(e) {
@@ -307,32 +313,17 @@ function UserProfile() {
         settings.phone.trim()
     };
 
-    if (settings.password) {
-      if (settings.password.length < 6) {
-        setMessage("Password must be at least 6 characters.");
-        return;
-      }
-
-      updates.password =
-        settings.password;
-    }
-
     try {
       setIsSavingProfile(true);
       const nextSession =
-        await updateUserAccount({
-          ...updates,
-          profileImage:
-            session.profileImage || ""
-        });
+        await updateUserAccount(updates);
 
       setSession(nextSession);
 
       setSettings({
         name: nextSession?.name || "",
         email: nextSession?.email || "",
-        phone: nextSession?.phone || "",
-        password: ""
+        phone: nextSession?.phone || ""
       });
 
       setMessage("");
@@ -354,6 +345,7 @@ function UserProfile() {
   }
 
   function editAddress(item) {
+    setIsAddressEditorOpen(true);
     setEditingAddressId(String(item.id));
     setAddress({
       name: item.name || "",
@@ -369,6 +361,7 @@ function UserProfile() {
   }
 
   function cancelAddressEdit() {
+    setIsAddressEditorOpen(false);
     setEditingAddressId("");
     setAddress(emptyAddress);
     setMessage("");
@@ -424,6 +417,7 @@ function UserProfile() {
 
       setEditingAddressId("");
       setAddress(emptyAddress);
+      setIsAddressEditorOpen(false);
     } catch (error) {
       setMessage(error.message);
       toast.error(error.message || "Failed to save address");
@@ -506,11 +500,17 @@ function UserProfile() {
           <button
             type="button"
             className="profile-wishlist-shortcut"
-            onClick={() =>
-              setShowWishlist(prev => !prev)
-            }
+            onClick={() => navigate("/wishlist")}
           >
-            {showWishlist ? "Hide Wishlist" : "Wishlist"}
+            Wishlist
+          </button>
+
+          <button
+            type="button"
+            className="profile-settings-shortcut"
+            onClick={() => navigate("/settings")}
+          >
+            Settings
           </button>
         </div>
       </section>
@@ -522,22 +522,22 @@ function UserProfile() {
       )}
 
       <section className="profile-stats">
-        <div>
+        <button type="button" onClick={() => navigate("/orders")}>
           <span>Total Orders</span>
           <strong>{userOrders.length}</strong>
-        </div>
-        <div>
+        </button>
+        <button type="button" onClick={() => navigate("/orders")}>
           <span>Total Purchased</span>
           <strong>{totalPurchased}</strong>
-        </div>
-        <div>
+        </button>
+        <button type="button" onClick={() => navigate("/orders")}>
           <span>Total Spend</span>
-          <strong>Rs. {totalSpent}</strong>
-        </div>
-        <div>
+          <strong>Rs. {formatCurrency(totalSpent)}</strong>
+        </button>
+        <button type="button" onClick={() => navigate("/wishlist")}>
           <span>Wishlist Items</span>
           <strong>{wishlistCount}</strong>
-        </div>
+        </button>
       </section>
 
       <div className="profile-grid">
@@ -545,7 +545,11 @@ function UserProfile() {
           <h2>Saved Addresses</h2>
 
           <form
-            className="profile-address-form"
+            className={
+              isAddressEditorOpen
+                ? "profile-address-form is-open"
+                : "profile-address-form"
+            }
             onSubmit={addAddress}
           >
             <input
@@ -613,10 +617,14 @@ function UserProfile() {
             {editingAddressId && (
               <button
                 type="button"
+                className="profile-danger-btn"
                 onClick={cancelAddressEdit}
               >
                 Cancel
               </button>
+            )}
+            {!editingAddressId && (
+              <button type="button" className="profile-danger-btn" onClick={cancelAddressEdit}>Cancel</button>
             )}
           </form>
 
@@ -662,15 +670,29 @@ function UserProfile() {
               ))
             )}
           </div>
+          <button
+            type="button"
+            className="profile-add-address-btn"
+            onClick={() => {
+              cancelAddressEdit();
+              setIsAddressEditorOpen(true);
+            }}
+          >
+            + Add Address
+          </button>
         </section>
 
-        <section className="profile-panel">
+        <section
+          id="profile-settings"
+          className="profile-panel"
+        >
           <h2>Settings</h2>
 
           <form
             className="profile-settings-form"
             onSubmit={saveSettings}
           >
+            <p className="profile-settings-group">Profile Information</p>
             <label>
               Name
               <input
@@ -696,16 +718,15 @@ function UserProfile() {
                 onChange={handleSettingsChange}
               />
             </label>
-            <label>
-              New Password
-              <input
-                type="password"
-                name="password"
-                placeholder="Leave blank to keep current"
-                value={settings.password}
-                onChange={handleSettingsChange}
-              />
-            </label>
+            <p className="profile-settings-group">Security</p>
+
+            <button
+              type="button"
+              className="profile-change-password-btn"
+              onClick={() => navigate("/settings#security")}
+            >
+              Change Password
+            </button>
 
             <button
               type="submit"
@@ -728,7 +749,7 @@ function UserProfile() {
         </section>
       </div>
 
-      {showWishlist && (
+      {false && showWishlist && (
         <section
           ref={wishlistRef}
           className="profile-panel profile-wishlist-panel profile-wishlist-section"
@@ -747,8 +768,9 @@ function UserProfile() {
                   className="profile-wishlist-card"
                 >
                   <img
-                    src={product.image || PRODUCT_PLACEHOLDER}
+                    src={getPrimaryImage(product) || PRODUCT_PLACEHOLDER}
                     alt={product.name}
+                    loading="lazy"
                     onError={handleImageFallback}
                   />
 

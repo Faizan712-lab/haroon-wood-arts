@@ -108,6 +108,14 @@ function Payment() {
   const checkoutData =
     location.state?.checkoutData || {};
 
+  const checkoutTotal = Math.max(
+    getTotalPrice() - Number(checkoutData.discount || 0),
+    0
+  );
+  const codAdvance = Math.round(checkoutTotal * 10) / 100;
+  const codRemaining = Math.round((checkoutTotal - codAdvance) * 100) / 100;
+  const amountToPay = isCod ? codAdvance : amount;
+
   const [selectedMethod,
     setSelectedMethod] =
     useState(
@@ -218,15 +226,11 @@ function Payment() {
 
     const paid =
 
-      isCod
-        ? Math.min(500, total)
-        : total;
+      isCod ? 0 : total;
 
     const remaining =
 
-      isCod
-        ? Math.max(total - paid, 0)
-        : 0;
+      isCod ? total : 0;
 
     const deliveryDate =
       getDeliveryDate();
@@ -388,7 +392,7 @@ function Payment() {
           </p>
 
           <h2 className="payment-amount">
-            Rs. {amount}
+            Rs. {amountToPay.toFixed(2)}
           </h2>
 
           <div className="payment-mode-pill">
@@ -483,7 +487,7 @@ function Payment() {
               </span>
               <span>
                 <strong>Cash on Delivery</strong>
-                <small>Pay Rs.500 advance now</small>
+                <small>10% advance: Rs. {codAdvance.toFixed(2)}</small>
               </span>
             </button>
 
@@ -626,7 +630,7 @@ function Payment() {
             <div className="cod-panel">
               <strong>Cash on Delivery selected</strong>
               <p>
-                Pay Rs.500 now to confirm your order. The remaining amount is payable on delivery.
+                Required online advance: Rs. {codAdvance.toFixed(2)} (10%). Rs. {codRemaining.toFixed(2)} is payable on delivery. Payment is not recorded until a payment provider verifies it.
               </p>
             </div>
 
@@ -640,7 +644,7 @@ function Payment() {
           >
             {isSubmitting
               ? "Processing..."
-              : `Pay Rs. ${amount}`}
+              : `Pay Rs. ${amountToPay.toFixed(2)}`}
           </button>
 
         </section>

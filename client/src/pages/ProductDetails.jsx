@@ -27,6 +27,7 @@ from "../utils/api";
 
 import {
   PRODUCT_PLACEHOLDER,
+  getImageList,
   handleImageFallback
 }
 from "../utils/imageFallback";
@@ -144,6 +145,18 @@ function ProductDetails() {
   const [loadError,
     setLoadError] =
     useState("");
+
+  const [selectedImageIndex,
+    setSelectedImageIndex] =
+    useState(0);
+
+  const [galleryKey,
+    setGalleryKey] =
+    useState(0);
+
+  const [previewOpen,
+    setPreviewOpen] =
+    useState(false);
 
   /* GET PRODUCT */
 
@@ -300,6 +313,16 @@ function ProductDetails() {
   const selectedSize =
     variants[selectedSizeIndex];
 
+  const productImages =
+    selectedSize?.images?.length > 0
+      ? getImageList(selectedSize)
+      : getImageList(product);
+
+  const activeImage =
+    productImages[selectedImageIndex] ||
+    productImages[0] ||
+    PRODUCT_PLACEHOLDER;
+
   const displayPrice =
     selectedSize?.finalPrice ||
     selectedSize?.discountedPrice ||
@@ -322,7 +345,7 @@ function ProductDetails() {
     }
 
     if (variants.length > 0 && !selectedSize) {
-      toast.error("Please select a size");
+      toast.error("Please select a size before adding this product.");
       return;
     }
 
@@ -390,12 +413,21 @@ function ProductDetails() {
 
         <div className="product-left">
 
-          <div className="image-container product-details-image-container">
-            <img
-              src={product.image || PRODUCT_PLACEHOLDER}
-              alt={product.name}
-              onError={handleImageFallback}
-            />
+          <div className="product-gallery">
+            <div className="image-container product-details-image-container">
+              <button
+                key={galleryKey}
+                type="button"
+                className="product-main-image-button"
+                onClick={() => setPreviewOpen(true)}
+                aria-label="Open product image preview"
+              >
+                <img
+                  src={activeImage}
+                  alt={product.name}
+                  onError={handleImageFallback}
+                />
+              </button>
 
             {getStockLabel(product) && (
               <span
@@ -423,6 +455,38 @@ function ProductDetails() {
             >
               {isWishlisted(product.id) ? "♥" : "♡"}
             </button>
+          </div>
+
+            <p className="product-image-count">
+              Image {Math.min(selectedImageIndex + 1, productImages.length || 1)} / {productImages.length || 1}
+            </p>
+
+            {productImages.length > 1 && (
+              <div className="product-gallery-thumbs">
+                {productImages.map((image, index) => (
+                  <button
+                    key={`${image}-${index}`}
+                    type="button"
+                    className={
+                      selectedImageIndex === index
+                        ? "gallery-thumb active"
+                        : "gallery-thumb"
+                    }
+                    onClick={() =>
+                      setSelectedImageIndex(index)
+                    }
+                    aria-label={`View image ${index + 1}`}
+                  >
+                    <img
+                      src={image}
+                      alt=""
+                      loading="lazy"
+                      onError={handleImageFallback}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
@@ -478,9 +542,11 @@ function ProductDetails() {
                         ? "size-option active"
                         : "size-option"
                     }
-                    onClick={() =>
-                      setSelectedSizeIndex(index)
-                    }
+                    onClick={() => {
+                      setSelectedSizeIndex(index);
+                      setSelectedImageIndex(0);
+                      setGalleryKey(previous => previous + 1);
+                    }}
                   >
                     <strong>
                       {size.size || size.label}
@@ -506,12 +572,6 @@ function ProductDetails() {
 
               </div>
 
-              {selectedSizeIndex === null && (
-                <p className="size-warning">
-                  Please select a size
-                </p>
-              )}
-
             </div>
 
           )}
@@ -528,11 +588,7 @@ function ProductDetails() {
 
             onClick={handleAddToCart}
             disabled={
-              isOutOfStock(product) ||
-              (
-                variants.length > 0 &&
-                !selectedSize
-              )
+              isOutOfStock(product)
             }
 
           >
@@ -656,6 +712,28 @@ function ProductDetails() {
         </div>
 
       </div>
+
+      {previewOpen && (
+        <div
+          className="image-preview-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPreviewOpen(false)}
+        >
+          <button
+            type="button"
+            className="image-preview-close"
+            onClick={() => setPreviewOpen(false)}
+          >
+            Close
+          </button>
+          <img
+            src={activeImage}
+            alt={product.name}
+            onError={handleImageFallback}
+          />
+        </div>
+      )}
 
     </div>
 
