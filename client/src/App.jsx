@@ -20,6 +20,7 @@ import {
 /* ================= USER COMPONENTS ================= */
 
 import Navbar from "./components/Navbar";
+import ScrollToTop from "./components/ScrollToTop";
 
 import Hero from "./components/Hero";
 
@@ -170,6 +171,8 @@ function App() {
     <Router>
 
       <WishlistProvider>
+
+      <ScrollToTop />
 
       <Toaster
         position="top-right"

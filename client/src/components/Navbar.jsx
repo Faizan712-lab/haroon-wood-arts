@@ -64,10 +64,6 @@ function Navbar() {
     setSearch] =
     useState("");
 
-  const [products,
-    setProducts] =
-    useState([]);
-
   const [filteredProducts,
     setFilteredProducts] =
     useState([]);
@@ -88,47 +84,6 @@ function Navbar() {
     setIsLoggingOut] =
     useState(false);
 
-  /* LOAD PRODUCTS */
-
-  useEffect(() => {
-
-    async function fetchProducts() {
-
-      try {
-
-        const response = await fetch(
-          getApiUrl("/api/products"),
-          {
-            cache: "no-store"
-          }
-        );
-
-        const data =
-          await response.json();
-
-        if (response.ok && data.success) {
-
-          setProducts(
-            data.products
-          );
-
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Failed to load search products:",
-          error
-        );
-
-      }
-
-    }
-
-    fetchProducts();
-
-  }, []);
-
   /* FILTER SEARCH */
 
   useEffect(() => {
@@ -141,29 +96,26 @@ function Navbar() {
 
     }
 
-    const filtered =
+    const controller = new AbortController();
+    const timeout = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ search: search.trim(), page: "1", limit: "5" });
+        const response = await fetch(getApiUrl(`/api/products?${params}`), {
+          cache: "no-store",
+          signal: controller.signal
+        });
+        const data = await response.json();
+        if (response.ok && data.success) setFilteredProducts(data.products || []);
+      } catch (error) {
+        if (error.name !== "AbortError") console.error("Failed to load search products:", error);
+      }
+    }, 250);
 
-      products.filter(product =>
-
-        product.name
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          ) ||
-
-        product.category
-          ?.toLowerCase()
-          .includes(
-            search.toLowerCase()
-          )
-
-      );
-
-    setFilteredProducts(
-      filtered.slice(0, 5)
-    );
-
-  }, [search, products]);
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [search]);
 
   useEffect(() => {
 

@@ -331,6 +331,98 @@ async function saveVariants(productId, variants, fallbackPrice, fallbackStock) {
 // GET ALL PRODUCTS
 const getProducts = async (req, res) => {
   try {
+    const positiveInteger = (value, fallback, maximum) => {
+      const parsed = Number(value);
+      return Number.isInteger(parsed) && parsed > 0
+        ? Math.min(parsed, maximum)
+        : fallback;
+    };
+    const optionalNonNegativeNumber = (value) => {
+      if (value === undefined || value === null || String(value).trim() === "") {
+        return null;
+      }
+
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    };
+    const paginationRequested = req.query.page !== undefined || req.query.limit !== undefined;
+    const requestedPage = positiveInteger(req.query.page, 1, 100000);
+    const limit = positiveInteger(req.query.limit, 12, 50);
+    const where = [];
+    const params = [];
+    const category = String(req.query.category || "").trim();
+    const search = String(req.query.search || "").trim();
+    const min = optionalNonNegativeNumber(req.query.min);
+    const max = optionalNonNegativeNumber(req.query.max);
+    const rating = Number(req.query.rating);
+    const finalPriceSql = `CASE
+      WHEN products.discount_percent > 0 THEN ROUND(products.price * (100 - products.discount_percent) / 100, 2)
+      WHEN products.discount_price IS NOT NULL AND products.discount_price > 0 AND products.discount_price < products.price THEN products.discount_price
+      ELSE products.price
+    END`;
+
+    if (category) {
+      where.push("products.category = ?");
+      params.push(category);
+    }
+    if (search) {
+      where.push("(products.name LIKE ? OR products.category LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (min !== null) {
+      where.push(`${finalPriceSql} >= ?`);
+      params.push(min);
+    }
+    if (max !== null) {
+      where.push(`${finalPriceSql} <= ?`);
+      params.push(max);
+    }
+    if (String(req.query.stock || "").toLowerCase() === "in_stock") {
+      where.push("products.stock_status <> 'out_of_stock' AND products.stock > 0");
+    }
+    if (String(req.query.sale || "") === "1") {
+      where.push("products.discount_percent > 0");
+    }
+
+    const having = [];
+    const havingParams = [];
+    if (Number.isFinite(rating) && rating > 0 && rating <= 5) {
+      having.push("COALESCE(AVG(product_reviews.rating), 0) >= ?");
+      havingParams.push(rating);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const havingSql = having.length ? `HAVING ${having.join(" AND ")}` : "";
+    const sortOptions = {
+      price_asc: `${finalPriceSql} ASC, products.id DESC`,
+      price_desc: `${finalPriceSql} DESC, products.id DESC`,
+      rating: "average_rating DESC, products.id DESC",
+      reviewed: "review_count DESC, products.id DESC",
+      discount: "products.discount_percent DESC, products.id DESC",
+      newest: "products.id DESC"
+    };
+    const sort = String(req.query.sort || "newest");
+    const orderBy = sortOptions[sort] || sortOptions.newest;
+
+    const [countRows] = await db.promise().execute(
+      `SELECT COUNT(*) AS total FROM (
+        SELECT products.id
+        FROM products
+        LEFT JOIN product_reviews ON product_reviews.product_id = products.id
+        ${whereSql}
+        GROUP BY products.id
+        ${havingSql}
+      ) AS filtered_products`,
+      [...params, ...havingParams]
+    );
+    const total = Number(countRows[0]?.total || 0);
+    const totalPages = paginationRequested
+      ? Math.max(1, Math.ceil(total / limit))
+      : 1;
+    const page = paginationRequested ? Math.min(requestedPage, totalPages) : 1;
+    const offset = (page - 1) * limit;
+    const paginationSql = paginationRequested ? "LIMIT ? OFFSET ?" : "";
+    const paginationParams = paginationRequested ? [limit, offset] : [];
 
     const [products] = await db.promise().execute(
       `
@@ -341,14 +433,26 @@ const getProducts = async (req, res) => {
         FROM products
         LEFT JOIN product_reviews
           ON product_reviews.product_id = products.id
+        ${whereSql}
         GROUP BY products.id
-        ORDER BY products.id DESC
-      `
+        ${havingSql}
+        ORDER BY ${orderBy}
+        ${paginationSql}
+      `,
+      [...params, ...havingParams, ...paginationParams]
     );
 
     res.status(200).json({
       success: true,
-      products: await attachVariants(products.map(mapProduct))
+      products: await attachVariants(products.map(mapProduct)),
+      pagination: {
+        page,
+        limit: paginationRequested ? limit : total,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
     });
   } catch (err) {
     console.error("Failed to get products:", err);
