@@ -72,6 +72,10 @@ function AdminAddProduct() {
     setNewCategoryImage] =
     useState("");
 
+  const [newCategoryImageFile,
+    setNewCategoryImageFile] =
+    useState(null);
+
   const [isAddingCategory,
     setIsAddingCategory] =
     useState(false);
@@ -253,6 +257,8 @@ function AdminAddProduct() {
 
     if (!file) return;
 
+    setNewCategoryImageFile(file);
+
     const reader =
       new FileReader();
 
@@ -292,18 +298,19 @@ function AdminAddProduct() {
 
     try {
       setIsAddingCategory(true);
+      const payload = new FormData();
+      payload.append("name", newCategoryName);
+
+      if (newCategoryImageFile) {
+        payload.append("images", newCategoryImageFile);
+      }
+
       const response = await fetch(
         getApiUrl("/api/categories"),
         {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: newCategoryName,
-            image: newCategoryImage
-          })
+          body: payload
         }
       );
 
@@ -332,6 +339,7 @@ function AdminAddProduct() {
       setCategory(newCategoryName);
       setNewCategoryName("");
       setNewCategoryImage("");
+      setNewCategoryImageFile(null);
 
       toast.success("Category added successfully");
     } catch (error) {
