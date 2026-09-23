@@ -296,6 +296,7 @@ function AdminAddProduct() {
         getApiUrl("/api/categories"),
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json"
           },
@@ -399,6 +400,7 @@ function AdminAddProduct() {
         getApiUrl("/api/products"),
         {
           method: "POST",
+          credentials: "include",
           body: payload
 
         }

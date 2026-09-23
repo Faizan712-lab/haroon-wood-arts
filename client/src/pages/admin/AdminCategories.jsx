@@ -110,7 +110,8 @@ function AdminCategories() {
       const response = await fetch(
         getApiUrl(`/api/categories/${id}`),
         {
-          method: "DELETE"
+          method: "DELETE",
+          credentials: "include"
         }
       );
 
@@ -215,6 +216,7 @@ function AdminCategories() {
         getApiUrl(`/api/categories/${editingCategory.id}`),
         {
           method: "PUT",
+          credentials: "include",
           body: payload
         }
       );

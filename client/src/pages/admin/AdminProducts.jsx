@@ -106,7 +106,8 @@ function AdminProducts() {
       const response = await fetch(
         getApiUrl(`/api/products/${id}`),
         {
-          method: "DELETE"
+          method: "DELETE",
+          credentials: "include"
         }
       );
 
@@ -465,6 +466,7 @@ function AdminProducts() {
         getApiUrl(`/api/products/${editingProduct.id}`),
         {
           method: "PUT",
+          credentials: "include",
           body: payload
         }
       );
