@@ -1,9 +1,9 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
 
 const db = require("../config/db");
+const { sendEmail } = require("../services/emailService");
 const {
   uploadedImagePaths,
   deleteCloudinaryImages
@@ -127,33 +127,17 @@ function sanitizeAdmin(admin) {
   };
 }
 
-function createMailTransporter() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-}
-
 async function sendAdminOtpEmail(email, otp, label) {
-  const transporter = createMailTransporter();
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+  const sent = await sendEmail({
     to: email,
     subject: `Haroon Stores Admin ${label} OTP`,
-    text: `Hello,
-
-Your Haroon Stores admin OTP is: ${otp}
-
-This OTP expires in 10 minutes.
-
-If you did not request this, please secure your account.
-
-Haroon Stores Team`
+    html: `<p>Hello,</p><p>Your Haroon Stores admin OTP is: <strong>${otp}</strong></p><p>This OTP expires in 10 minutes.</p><p>If you did not request this, please secure your account.</p><p>Haroon Stores Team</p>`
   });
+
+  if (!sent) {
+    console.error("Admin OTP email delivery failed", { label });
+    throw new Error("Admin OTP email delivery failed");
+  }
 }
 
 async function countActiveAdmins() {

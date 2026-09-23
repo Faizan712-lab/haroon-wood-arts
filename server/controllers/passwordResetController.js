@@ -1,8 +1,8 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
-const nodemailer = require("nodemailer");
 
 const db = require("../config/db");
+const { sendEmail } = require("../services/emailService");
 
 const OTP_TTL_MINUTES = 10;
 const FORGOT_RESPONSE = {
@@ -20,16 +20,6 @@ function normalizeEmail(email) {
 
 function generateOtp() {
   return String(crypto.randomInt(100000, 1000000));
-}
-
-function createTransporter() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
 }
 
 async function findUserByEmail(email) {
@@ -67,22 +57,16 @@ async function findValidReset(userId, otp) {
 }
 
 async function sendOtpEmail(email, otp) {
-  const transporter = createTransporter();
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+  const sent = await sendEmail({
     to: email,
     subject: "Haroon Stores Password Reset OTP",
-    text: `Hello,
-
-Your OTP is: ${otp}
-
-This OTP expires in 10 minutes.
-
-If you did not request this password reset, please ignore this email.
-
-Haroon Stores Team`
+    html: `<p>Hello,</p><p>Your OTP is: <strong>${otp}</strong></p><p>This OTP expires in 10 minutes.</p><p>If you did not request this password reset, please ignore this email.</p><p>Haroon Stores Team</p>`
   });
+
+  if (!sent) {
+    console.error("Customer password OTP email delivery failed");
+    throw new Error("Customer password OTP email delivery failed");
+  }
 }
 
 async function forgotPassword(req, res) {
