@@ -594,7 +594,7 @@ function UserAuth() {
                 size="large"
                 shape="pill"
                 logo_alignment="left"
-                width="100%"
+                width={400}
               />
             </div>
           )}
