@@ -186,16 +186,17 @@
 .auth-google {
   position: relative;
   display: flex;
+  align-items: center;
   justify-content: center;
   width: 100%;
   min-height: 54px;
+  padding: 7px 0;
   margin-top: 0;
-  overflow: hidden;
-  border: 1px solid #e5e7eb;
+  overflow: visible;
+  border: 0;
   border-radius: 14px;
-  background: white;
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.06);
+  background: transparent;
+  box-shadow: none;
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease,
@@ -204,15 +205,12 @@
 
 .auth-google:hover {
   transform: translateY(-2px);
-  border-color: #dfd4cc;
-  box-shadow:
-    0 12px 24px rgba(62,39,35,0.12);
+  box-shadow: none;
 }
 
 .auth-google:active {
   transform: translateY(1px);
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: none;
 }
 
 .auth-google:focus-within {

@@ -419,8 +419,9 @@ async function updateMe(req, res) {
 
     const normalizedEmail =
       (email || "").trim().toLowerCase();
-    const normalizedPhone =
+    const submittedPhone =
       (phone || "").trim();
+    const normalizedPhone = submittedPhone || null;
 
     const [duplicates] = await runQuery(
       `

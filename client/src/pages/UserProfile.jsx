@@ -484,7 +484,7 @@ function UserProfile() {
         <div className="profile-header-text">
           <h1>{session?.name}</h1>
           <p>{session?.email}</p>
-          <p>{session?.phone}</p>
+          <p>{session?.phone || "Phone not provided"}</p>
         </div>
 
         <div className="profile-header-actions">

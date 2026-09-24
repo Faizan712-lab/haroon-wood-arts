@@ -67,8 +67,6 @@ async function createGoogleUser(profile) {
   const passwordHash =
     await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
 
-  const fallbackPhone = `google:${profile.googleId}`.slice(0, 30);
-
   const [result] = await runQuery(
     `
       INSERT INTO users
@@ -78,7 +76,7 @@ async function createGoogleUser(profile) {
     [
       profile.name.trim(),
       profile.email,
-      fallbackPhone,
+      null,
       passwordHash,
       profile.googleId,
       profile.profileImage
@@ -89,7 +87,7 @@ async function createGoogleUser(profile) {
     id: result.insertId,
     name: profile.name.trim(),
     email: profile.email,
-    phone: fallbackPhone,
+    phone: null,
     profile_image: profile.profileImage
   };
 }
@@ -99,6 +97,7 @@ async function updateExistingGoogleUser(user, profile) {
     `
       UPDATE users
       SET google_id = COALESCE(google_id, ?),
+          phone = CASE WHEN phone LIKE 'google:%' THEN NULL ELSE phone END,
           profile_image = COALESCE(NULLIF(profile_image, ''), ?),
           is_email_verified = TRUE
       WHERE id = ?
