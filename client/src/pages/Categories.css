@@ -589,4 +589,24 @@
     height: auto;
     min-height: 0;
   }
+
+  .category-overlay,
+  .home-categories-section .category-overlay {
+    min-width: 0;
+    padding: 10px 11px 12px;
+  }
+
+  .category-overlay h2,
+  .home-categories-section .category-overlay h2 {
+    margin: 0 0 3px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .category-overlay p,
+  .home-categories-section .category-overlay p {
+    margin: 0;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
 }

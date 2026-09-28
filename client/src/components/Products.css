@@ -1112,26 +1112,79 @@
   }
 
   .cart-toast {
-
-    left: 16px;
-
-    right: 16px;
+    left: 50%;
+    right: auto;
 
     bottom: calc(16px + env(safe-area-inset-bottom));
-
+    width: min(calc(100vw - 28px), 320px);
     min-width: 0;
-
-    transform: none;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    padding: 17px 14px 14px;
+    max-width: calc(100vw - 28px);
+    transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 13px;
+    overflow: hidden;
 
   }
 
   .cart-toast-btn {
+    width: auto;
+    min-height: 32px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
 
-    width: 100%;
+  .cart-toast-close {
+    top: 7px;
+    right: 7px;
+    left: auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 7px;
+    font-size: 15px;
+    box-shadow: none;
+  }
 
+  .cart-toast-text {
+    min-width: 0;
+    gap: 4px;
+    padding-right: 18px;
+  }
+
+  .cart-toast-text strong {
+    font-size: 13px;
+  }
+
+  .cart-toast-text span {
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cart-toast-qty {
+    gap: 2px;
+    padding: 3px;
+    border-radius: 10px;
+  }
+
+  .cart-toast-qty button {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    font-size: 16px;
+  }
+
+  .cart-toast-qty strong {
+    min-width: 43px;
+    padding: 0 4px;
+    font-size: 12px;
   }
 
   @keyframes cartToastUp {

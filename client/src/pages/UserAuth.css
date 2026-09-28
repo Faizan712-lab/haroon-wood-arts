@@ -290,22 +290,41 @@
   .auth-page {
     padding: 28px 14px;
     align-items: flex-start;
+    overflow-x: hidden;
   }
 
   .auth-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 18px;
     border-radius: 16px;
+    overflow-x: hidden;
+  }
+
+  .auth-form,
+  .auth-form label,
+  .auth-tabs,
+  .auth-google {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .auth-form input,
+  .auth-submit {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .auth-google {
     min-height: 52px;
     border-radius: 14px;
-  }
-
-  .auth-google-face {
-    gap: 10px;
+    margin: 0 auto;
     padding: 0 14px;
-    font-size: 15px;
+    overflow: hidden;
   }
 
   .auth-tabs button,
@@ -316,6 +335,16 @@
 
   .auth-form input {
     font-size: 16px;
+  }
+
+  .auth-google > div,
+  .auth-google > div > div,
+  .auth-google iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0 auto !important;
   }
 
   .auth-google iframe {
