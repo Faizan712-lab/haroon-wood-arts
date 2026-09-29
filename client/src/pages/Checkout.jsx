@@ -515,10 +515,6 @@ function Checkout() {
             <strong>Rs. {totalPrice.toFixed(2)}</strong>
           </div>
 
-          <p className="summary-payment-note">
-            Choose your payment method and apply a coupon on the next step.
-          </p>
-
         </div>
 
       </div>

@@ -84,33 +84,18 @@
   border-top: 4px solid #e8904a;
 }
 
-.secure-heading {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 26px;
+.payment-page-heading {
+  margin-bottom: 20px;
 }
 
-.secure-heading > span {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff3e8;
-  color: #e8904a;
-  font-size: 20px;
-}
-
-.secure-heading h1 {
+.payment-page-heading h1 {
   margin: 0 0 4px;
   color: #3e2723;
-  font-size: 24px;
-  line-height: 1.1;
+  font-size: 22px;
+  font-weight: 800;
 }
 
-.secure-heading p,
+.payment-page-heading p,
 .amount-label {
   margin: 0;
   color: #777;
@@ -219,32 +204,11 @@
   padding: 28px;
 }
 
-.payment-box-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 20px;
-}
-
-.payment-box-header p {
-  margin: 0 0 6px;
-  color: #e8904a;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.payment-box-header h2 {
-  margin: 0;
+.payment-box-title {
+  margin: 0 0 18px;
   color: #3e2723;
-  font-size: 24px;
-}
-
-.payment-box-header > svg {
-  color: #e8904a;
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 800;
 }
 
 .payment-choice-grid {
@@ -482,9 +446,9 @@
     border-radius: 16px;
   }
 
-  .secure-heading h1,
-  .payment-box-header h2 {
-    font-size: 23px;
+  .payment-page-heading h1,
+  .payment-box-title {
+    font-size: 20px;
   }
 
   .payment-amount {
@@ -547,7 +511,7 @@
 .payment-coupon-row input {
   min-width: 0;
   flex: 1;
-  height: 42px;
+  height: 48px;
   padding: 0 12px;
   border: 1px solid #ddd;
   border-radius: 9px;
@@ -558,6 +522,8 @@
 
 .payment-coupon-row button {
   min-width: 76px;
+  min-height: 48px;
+  padding: 0 20px;
   border: 0;
   border-radius: 9px;
   background: #e8904a;

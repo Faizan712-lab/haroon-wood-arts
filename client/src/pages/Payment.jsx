@@ -1,10 +1,7 @@
 import "./Payment.css";
 
 import {
-  FaCreditCard,
-  FaLock,
-  FaShieldAlt,
-  FaTruck
+  FaCreditCard
 } from "react-icons/fa";
 
 import {
@@ -392,14 +389,9 @@ function Payment() {
 
         <aside className="payment-summary-card">
 
-          <div className="secure-heading">
-            <span>
-              <FaLock />
-            </span>
-            <div>
-              <h1>Secure Payment</h1>
-              <p>Encrypted checkout</p>
-            </div>
+          <div className="payment-page-heading">
+            <h1>Payment</h1>
+            <p>Choose your preferred payment method.</p>
           </div>
 
           <p className="amount-label">
@@ -415,74 +407,17 @@ function Payment() {
             <strong>{isCod ? "Cash on Delivery" : "Online Payment"}</strong>
           </div>
 
-          <div className="accepted-payments">
-            <span>
-              <img
-                src={paymentLogos.gpay}
-                alt="Google Pay"
-              />
-            </span>
-            <span>
-              <img
-                src={paymentLogos.paytm}
-                alt="Paytm"
-              />
-            </span>
-            <span>
-              <img
-                src={paymentLogos.phonepe}
-                alt="PhonePe"
-              />
-            </span>
-            <span>
-              <img
-                src={paymentLogos.visa}
-                alt="Visa"
-              />
-            </span>
-            <span>
-              <img
-                src={paymentLogos.mastercard}
-                alt="Mastercard"
-              />
-            </span>
-          </div>
 
-          <p className="delivery-date">
-            Estimated Delivery:
-            <strong>
-              {getDeliveryDate()}
-            </strong>
-          </p>
 
-          <div className="trust-grid">
-            <div>
-              <FaShieldAlt />
-              <span>Secure</span>
-            </div>
-            <div>
-              <FaCreditCard />
-              <span>Safe Payment</span>
-            </div>
-            <div>
-              <FaTruck />
-              <span>Fast Delivery</span>
-            </div>
-          </div>
+
 
         </aside>
 
         <section className="payment-box">
 
-          <div className="payment-box-header">
-            <div>
-              <p>Choose payment method</p>
-              <h2>
-                How would you like to pay?
-              </h2>
-            </div>
-            <FaLock />
-          </div>
+          <h2 className="payment-box-title">
+            Payment Method
+          </h2>
 
           <div className="payment-method-choice-grid">
             <button
@@ -514,8 +449,8 @@ function Payment() {
                 <FaCreditCard />
               </span>
               <span>
-                <strong>Online Payment</strong>
-                <small>Pay the full amount now</small>
+                <strong>Pay Online</strong>
+                <small>Pay the full amount online</small>
               </span>
             </button>
           </div>
@@ -693,9 +628,10 @@ function Payment() {
           {isCod && (
 
             <div className="cod-panel">
-              <strong>Cash on Delivery selected</strong>
+              <strong>Cash on Delivery</strong>
               <p>
-                Required online advance: Rs. {codAdvance.toFixed(2)} (10%). Rs. {codRemaining.toFixed(2)} is payable on delivery. Payment is not recorded until a payment provider verifies it.
+                Advance payment: Rs. {codAdvance.toFixed(2)}<br />
+                Payable on delivery: Rs. {codRemaining.toFixed(2)}
               </p>
             </div>
 
@@ -710,8 +646,8 @@ function Payment() {
             {isSubmitting
               ? "Processing..."
               : isCod
-                ? `Continue with COD advance Rs. ${amountToPay.toFixed(2)}`
-                : `Pay Rs. ${amountToPay.toFixed(2)}`}
+                ? `Continue — Pay Rs. ${amountToPay.toFixed(2)}`
+                : `Continue to Payment — Rs. ${amountToPay.toFixed(2)}`}
           </button>
 
         </section>
