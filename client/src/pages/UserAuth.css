@@ -323,8 +323,8 @@
     min-height: 52px;
     border-radius: 14px;
     margin: 0 auto;
-    padding: 0 14px;
-    overflow: hidden;
+    padding: 0;
+    overflow: visible;
   }
 
   .auth-tabs button,
@@ -337,17 +337,14 @@
     font-size: 16px;
   }
 
-  .auth-google > div,
-  .auth-google > div > div,
-  .auth-google iframe {
-    width: 100% !important;
-    max-width: 100% !important;
+  .auth-google > div {
+    width: auto !important;
+    max-width: none !important;
     min-width: 0;
     box-sizing: border-box;
     margin: 0 auto !important;
-  }
-
-  .auth-google iframe {
-    min-height: 52px !important;
+    display: block;
+    flex: 0 0 auto;
+    overflow: visible;
   }
 }

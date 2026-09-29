@@ -1,6 +1,6 @@
 import "./UserAuth.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   GoogleLogin
 } from "@react-oauth/google";
@@ -35,6 +35,20 @@ const emptyForm = {
   password: "",
   confirmPassword: ""
 };
+
+const DESKTOP_GOOGLE_BUTTON_WIDTH = 400;
+const MOBILE_GOOGLE_BUTTON_WIDTH = 300;
+
+function getGoogleButtonWidth() {
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 520px)").matches
+  ) {
+    return MOBILE_GOOGLE_BUTTON_WIDTH;
+  }
+
+  return DESKTOP_GOOGLE_BUTTON_WIDTH;
+}
 
 function getAuthErrorMessage(error) {
   const message =
@@ -99,11 +113,39 @@ function UserAuth() {
   const [isGoogleLoading, setIsGoogleLoading] =
     useState(false);
 
+  const [googleButtonWidth, setGoogleButtonWidth] =
+    useState(getGoogleButtonWidth);
+
   const [resetStep, setResetStep] =
     useState(1);
 
   const [signupStep, setSignupStep] =
     useState(1);
+
+  useEffect(() => {
+    const mobileQuery =
+      window.matchMedia("(max-width: 520px)");
+
+    const updateGoogleButtonWidth = () => {
+      setGoogleButtonWidth(
+        mobileQuery.matches
+          ? MOBILE_GOOGLE_BUTTON_WIDTH
+          : DESKTOP_GOOGLE_BUTTON_WIDTH
+      );
+    };
+
+    mobileQuery.addEventListener(
+      "change",
+      updateGoogleButtonWidth
+    );
+
+    return () => {
+      mobileQuery.removeEventListener(
+        "change",
+        updateGoogleButtonWidth
+      );
+    };
+  }, []);
 
   const redirectTo =
     new URLSearchParams(location.search)
@@ -557,7 +599,7 @@ function UserAuth() {
                 size="large"
                 shape="pill"
                 logo_alignment="left"
-                width={400}
+                width={googleButtonWidth}
               />
             </div>
           )}

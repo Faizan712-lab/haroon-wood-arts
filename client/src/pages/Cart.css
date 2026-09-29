@@ -452,3 +452,43 @@
   }
 
 }
+
+@media(max-width: 520px) {
+  .quantity {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .quantity button {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    flex: 0 0 28px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+
+  .quantity span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 28px;
+    font-size: 13px;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .remove-btn {
+    min-height: 28px;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+}
