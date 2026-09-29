@@ -46,6 +46,7 @@ function OrderDetails() {
   const [returnReason, setReturnReason] = useState("");
   const [returnImageFile, setReturnImageFile] = useState(null);
   const [returnImagePreview, setReturnImagePreview] = useState("");
+  const [returnImageName, setReturnImageName] = useState("");
   const [returnFormOpen, setReturnFormOpen] = useState(false);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 
@@ -243,6 +244,7 @@ function OrderDetails() {
           );
           setReturnImageFile(compressedFile);
           setReturnImagePreview(URL.createObjectURL(blob));
+          setReturnImageName(file.name);
         }, "image/jpeg", 0.5);
       };
     };
@@ -289,6 +291,7 @@ function OrderDetails() {
       setReturnReason("");
       setReturnImageFile(null);
       setReturnImagePreview("");
+      setReturnImageName("");
       setReturnFormOpen(false);
       toast.success("Return Requested Successfully");
     } catch (error) {
@@ -755,7 +758,10 @@ function OrderDetails() {
           <section className="details-actions" aria-label="Order actions">
             {canCancel && (
               <div className="details-action-box">
-                <h3>Request Cancellation</h3>
+                <h3>Cancel Order</h3>
+                <p className="details-action-description">
+                  Please tell us why you want to cancel this order.
+                </p>
                 <textarea
                   value={cancelReason}
                   onChange={(event) => setCancelReason(event.target.value)}
@@ -787,24 +793,39 @@ function OrderDetails() {
                 {returnFormOpen && (
                   <div className="details-return-form">
                     <h3>Request Return</h3>
+                    <p className="details-action-description">
+                      Tell us why you want to return this item.
+                    </p>
                     <textarea
                       value={returnReason}
                       onChange={(event) => setReturnReason(event.target.value)}
                       placeholder="Reason for return/refund..."
                       disabled={isUpdatingOrder}
                     />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleReturnImageUpload}
-                      disabled={isUpdatingOrder}
-                    />
-                    {returnImagePreview && (
-                      <img
-                        className="details-return-preview"
-                        src={returnImagePreview}
-                        alt="Return evidence preview"
+                    <label className="details-return-upload">
+                      <span className="details-return-upload-title">
+                        Add return evidence
+                      </span>
+                      <small>JPG, PNG or WebP · Max 5MB</small>
+                      <span className="details-return-upload-button">
+                        Choose Image
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleReturnImageUpload}
+                        disabled={isUpdatingOrder}
                       />
+                    </label>
+                    {returnImagePreview && (
+                      <div className="details-return-preview-row">
+                        <img
+                          className="details-return-preview"
+                          src={returnImagePreview}
+                          alt="Return evidence preview"
+                        />
+                        <span>{returnImageName || "Evidence image selected"}</span>
+                      </div>
                     )}
                     <button
                       type="button"

@@ -542,13 +542,15 @@
   margin-top: 28px;
   padding-top: 22px;
   border-top: 1px solid #eee;
+  max-width: 640px;
 }
 
 .details-action-box {
   padding: 16px;
   border: 1px solid #f0d6bd;
   border-radius: 14px;
-  background: #fffaf6;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(62, 39, 35, 0.04);
 }
 
 .details-action-box h3 {
@@ -557,9 +559,16 @@
   font-size: 17px;
 }
 
+.details-action-description {
+  margin: -4px 0 12px;
+  color: #6f625b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .details-action-box textarea {
   width: 100%;
-  min-height: 82px;
+  min-height: 100px;
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -597,8 +606,47 @@
   margin-top: 12px;
 }
 
-.details-return-form input[type="file"] {
-  max-width: 100%;
+.details-return-upload {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px dashed #d9a879;
+  border-radius: 10px;
+  background: #fffaf6;
+  color: #3e2723;
+  cursor: pointer;
+}
+
+.details-return-upload-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.details-return-upload small {
+  color: #776a62;
+  font-size: 12px;
+}
+
+.details-return-upload-button {
+  width: fit-content;
+  margin-top: 5px;
+  padding: 7px 10px;
+  border: 1px solid #d9a879;
+  border-radius: 7px;
+  background: #fff;
+  color: #6d371c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.details-return-upload input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .details-return-preview {
@@ -607,6 +655,21 @@
   border: 1px solid #f0d6bd;
   border-radius: 10px;
   object-fit: cover;
+}
+
+.details-return-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.details-return-preview-row span {
+  min-width: 0;
+  color: #5d4037;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .details-action-box button:disabled,
@@ -804,6 +867,15 @@
 
   .details-action-box {
     padding: 14px;
+  }
+
+  .details-action-box textarea {
+    min-height: 96px;
+  }
+
+  .details-return-preview {
+    width: 80px;
+    height: 80px;
   }
 
   .details-cancel-btn,

@@ -52,6 +52,8 @@
 
   transition: 0.25s;
 
+  border: 1px solid #f0e2d6;
+
 }
 
 /* HOVER EFFECT */
@@ -81,9 +83,11 @@
 
 .cart-left img {
 
-  width: 80px;
+  width: 120px;
 
-  height: 80px;
+  height: 120px;
+
+  flex: 0 0 120px;
 
   object-fit: contain;
 
@@ -381,8 +385,8 @@
   .cart-left img {
     grid-column: 1;
     grid-row: 1 / span 2;
-    width: 94px;
-    height: 104px;
+    width: 90px;
+    height: 100px;
     padding: 5px;
     border-radius: 10px;
     object-fit: contain;

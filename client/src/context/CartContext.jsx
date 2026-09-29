@@ -1,13 +1,46 @@
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 
 export const CartContext =
   createContext();
+
+const CART_STORAGE_KEY = "haroonStoresCartItems";
+
+function getStoredCartItems() {
+
+  try {
+    const storedCart =
+      window.localStorage.getItem(CART_STORAGE_KEY);
+
+    const parsedCart =
+      storedCart ? JSON.parse(storedCart) : [];
+
+    return Array.isArray(parsedCart)
+      ? parsedCart
+      : [];
+  } catch {
+    return [];
+  }
+
+}
 
 export function CartProvider({ children }) {
 
   const [cartItems,
     setCartItems] =
-    useState([]);
+    useState(getStoredCartItems);
+
+  useEffect(() => {
+
+    try {
+      window.localStorage.setItem(
+        CART_STORAGE_KEY,
+        JSON.stringify(cartItems)
+      );
+    } catch {
+      // Keep cart interactions available when browser storage is unavailable.
+    }
+
+  }, [cartItems]);
 
   /* ADD PRODUCT */
   function getCartKey(product) {
