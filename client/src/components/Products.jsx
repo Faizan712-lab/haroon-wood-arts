@@ -218,6 +218,11 @@ function Products({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        if (response.status === 404) {
+          setProducts([]);
+          setPagination(null);
+          return;
+        }
         throw new Error(data.message || "Unable to load products.");
       }
 
@@ -746,13 +751,18 @@ function Products({
 
               <h3>
                 {filters.search.trim()
-                  ? "Product Not Found"
+                  ? "No Products Found"
                   : "No Products Available"}
               </h3>
 
               <p>
                 {filters.search.trim()
-                  ? "No products match your search. Try a different product name or keyword."
+                  ? (
+                    <>
+                      Sorry, we couldn't find any products matching your search.<br />
+                      Try searching for a different product name or keyword.
+                    </>
+                  )
                   : "No products match the current selection. Try adjusting your filters or browse again later."}
               </p>
 

@@ -51,6 +51,14 @@ function RatingStars({
   const roundedRating =
     Math.round(safeRating);
 
+  if (count === 0) {
+    return (
+      <div className="product-rating-summary">
+        <span>No reviews yet</span>
+      </div>
+    );
+  }
+
   return (
     <div className="product-rating-summary">
       <span
@@ -72,9 +80,7 @@ function RatingStars({
       </span>
 
       <span>
-        {count > 0
-          ? `${safeRating.toFixed(1)} (${count} ${count === 1 ? "review" : "reviews"})`
-          : "No reviews yet"}
+        {`${safeRating.toFixed(1)} (${count} ${count === 1 ? "review" : "reviews"})`}
       </span>
     </div>
   );
@@ -494,6 +500,9 @@ function ProductDetails() {
         {/* RIGHT INFO */}
 
         <div className="product-right">
+          <p className="product-description">
+            {product.description}
+          </p>
 
           <h1>
             {product.name}
@@ -576,11 +585,11 @@ function ProductDetails() {
 
           )}
 
-          <p className="product-description">
+          {/* old description removed */}
 
-            {product.description}
 
-          </p>
+
+
 
           <button
 

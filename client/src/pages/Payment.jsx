@@ -159,28 +159,11 @@ function Payment() {
   }
 
   function getPaymentLabel() {
-
-    if (selectedMethod === "cod") {
-      return "COD";
-    }
-
-    const selected =
-      paymentOptions.find(
-        option =>
-          option.id === selectedMethod
-      );
-
-    return selected?.label || "Online Payment";
-
+    return isCod ? "COD" : "Online Payment";
   }
 
   function selectPaymentMode(nextMode) {
     setPaymentMode(nextMode);
-    setSelectedMethod(
-      nextMode === "COD"
-        ? "cod"
-        : "gpay"
-    );
   }
 
   function applyCoupon() {
@@ -195,28 +178,7 @@ function Payment() {
   }
 
   function validatePayment() {
-
-    if (selectedMethod !== "card") {
-      return true;
-    }
-
-    if (
-      !cardDetails.number ||
-      !cardDetails.name ||
-      !cardDetails.expiry ||
-      !cardDetails.cvv
-    ) {
-
-      toast.error(
-        "Please complete your card details"
-      );
-
-      return false;
-
-    }
-
     return true;
-
   }
 
   async function handlePayment() {
@@ -475,167 +437,30 @@ function Payment() {
           </div>
 
           <div className="payment-price-summary">
-            <div>
-              <span>Order Total</span>
-              <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
-            </div>
-            {isCod && (
+            {isCod ? (
               <>
                 <div>
-                  <span>Online advance (10%)</span>
+                  <span>Cash on Delivery</span>
+                  <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span>Advance payment</span>
                   <strong>Rs. {codAdvance.toFixed(2)}</strong>
                 </div>
                 <div>
-                  <span>Payable on delivery (90%)</span>
+                  <span>Payable on delivery</span>
                   <strong>Rs. {codRemaining.toFixed(2)}</strong>
                 </div>
               </>
+            ) : (
+              <div>
+                <span>Order Total</span>
+                <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
+              </div>
             )}
           </div>
 
-          {!isCod && (
 
-            <div className="payment-choice-grid">
-
-              {paymentOptions.map(
-                option => (
-
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={
-                      selectedMethod === option.id
-                        ? "payment-choice active"
-                        : "payment-choice"
-                    }
-                    onClick={() =>
-                      setSelectedMethod(option.id)
-                    }
-                  >
-                    <span className="choice-icon">
-                      <img
-                        src={option.logo}
-                        alt={option.label}
-                      />
-                    </span>
-                    <span>
-                      <strong>{option.label}</strong>
-                      <small>{option.type}</small>
-                    </span>
-                  </button>
-
-                )
-              )}
-
-            </div>
-
-          )}
-
-          {!isCod && selectedMethod !== "card" && (
-
-            <div className="upi-panel">
-              <label htmlFor="upi-id">
-                UPI ID / Mobile Number
-              </label>
-              <input
-                id="upi-id"
-                type="text"
-                placeholder="example@upi or mobile number"
-              />
-              <p>
-                A secure payment request will be created for the selected app.
-              </p>
-            </div>
-
-          )}
-
-          {!isCod && selectedMethod === "card" && (
-
-            <div className="card-panel">
-              <label htmlFor="card-number">
-                Card Number
-              </label>
-              <input
-                id="card-number"
-                name="number"
-                type="text"
-                inputMode="numeric"
-                maxLength="19"
-                placeholder="1234 5678 9012 3456"
-                value={cardDetails.number}
-                onChange={handleCardChange}
-              />
-
-              <label htmlFor="card-name">
-                Name on Card
-              </label>
-              <input
-                id="card-name"
-                name="name"
-                type="text"
-                placeholder="Card holder name"
-                value={cardDetails.name}
-                onChange={handleCardChange}
-              />
-
-              <div className="card-row">
-                <div>
-                  <label htmlFor="card-expiry">
-                    Expiry
-                  </label>
-                  <input
-                    id="card-expiry"
-                    name="expiry"
-                    type="text"
-                    placeholder="MM/YY"
-                    maxLength="5"
-                    value={cardDetails.expiry}
-                    onChange={handleCardChange}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="card-cvv">
-                    CVV
-                  </label>
-                  <input
-                    id="card-cvv"
-                    name="cvv"
-                    type="password"
-                    inputMode="numeric"
-                    placeholder="123"
-                    maxLength="4"
-                    value={cardDetails.cvv}
-                    onChange={handleCardChange}
-                  />
-                </div>
-              </div>
-
-              <div className="card-logos">
-                <img
-                  src={paymentLogos.visa}
-                  alt="Visa"
-                />
-                <img
-                  src={paymentLogos.mastercard}
-                  alt="Mastercard"
-                />
-              </div>
-            </div>
-
-          )}
-
-          {isCod && (
-
-            <div className="cod-panel">
-              <strong>Cash on Delivery</strong>
-              <p>
-                Advance payment: Rs. {codAdvance.toFixed(2)}<br />
-                Payable on delivery: Rs. {codRemaining.toFixed(2)}
-              </p>
-            </div>
-
-          )}
 
           <button
             className="pay-btn"
@@ -643,11 +468,7 @@ function Payment() {
             onClick={handlePayment}
             disabled={isSubmitting}
           >
-            {isSubmitting
-              ? "Processing..."
-              : isCod
-                ? `Continue — Pay Rs. ${amountToPay.toFixed(2)}`
-                : `Continue to Payment — Rs. ${amountToPay.toFixed(2)}`}
+            {isSubmitting ? "Processing..." : "Continue to Pay"}
           </button>
 
         </section>
