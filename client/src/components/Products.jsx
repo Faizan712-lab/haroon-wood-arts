@@ -179,6 +179,7 @@ function Products({
   const [filters,
     setFilters] =
     useState({
+      search: searchParams.get("search") || "",
       category: selectedCategory || searchParams.get("category") || "",
       min: searchParams.get("min") || "",
       max: searchParams.get("max") || "",
@@ -193,9 +194,10 @@ function Products({
   const fetchProducts = useCallback(async (signal) => {
     const params = new URLSearchParams();
     params.set("page", String(isShopPage ? page : 1));
-    params.set("limit", String(isShopPage ? 12 : 12));
+    params.set("limit", "10");
 
     if (isShopPage) {
+      if (filters.search) params.set("search", filters.search);
       if (filters.category) params.set("category", filters.category);
       if (filters.min) params.set("min", filters.min);
       if (filters.max) params.set("max", filters.max);
@@ -262,6 +264,7 @@ function Products({
     const params = new URLSearchParams(location.search);
     setPage(Math.max(1, Number(params.get("page")) || 1));
     setFilters({
+      search: params.get("search") || "",
       category: selectedCategory || params.get("category") || "",
       min: params.get("min") || "",
       max: params.get("max") || "",
@@ -282,6 +285,7 @@ function Products({
     const params =
       new URLSearchParams();
 
+    if (filters.search) params.set("search", filters.search);
     if (filters.category) params.set("category", filters.category);
     if (filters.min) params.set("min", filters.min);
     if (filters.max) params.set("max", filters.max);
@@ -313,6 +317,11 @@ function Products({
     if (!pagination || nextPage < 1 || nextPage > pagination.totalPages || nextPage === page) {
       return;
     }
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
 
     setPage(nextPage);
   }
@@ -689,6 +698,7 @@ function Products({
                     type="button"
                     className="filter-clear-btn"
                     onClick={() => updateFilters({
+                      search: "",
                       category: "",
                       min: "",
                       max: "",
@@ -732,19 +742,18 @@ function Products({
 
           ) : filteredProducts.length === 0 ? (
 
-            <div className="empty-products">
+            <div className="empty-products" role="status">
 
               <h3>
-
-                No Products Available
-
+                {filters.search.trim()
+                  ? "Product Not Found"
+                  : "No Products Available"}
               </h3>
 
               <p>
-
-                Products added by admin
-                will appear here.
-
+                {filters.search.trim()
+                  ? "No products match your search. Try a different product name or keyword."
+                  : "No products match the current selection. Try adjusting your filters or browse again later."}
               </p>
 
             </div>

@@ -91,38 +91,34 @@ function Payment() {
       location.search
     );
 
-  const amount =
-
-    Number(
-      params.get("amount")
-    ) || 0;
-
-  const paymentMode =
-
-    params.get("mode") ||
-    "Online";
-
-  const isCod =
-    paymentMode === "COD";
+  const initialPaymentMode =
+    params.get("mode") === "Online"
+      ? "Online"
+      : "COD";
 
   const checkoutData =
     location.state?.checkoutData || {};
 
+  const [coupon, setCoupon] = useState("");
+
+  const [discount, setDiscount] =
+    useState(Number(checkoutData.discount || 0));
+
+  const [paymentMode, setPaymentMode] =
+    useState(initialPaymentMode);
+
   const checkoutTotal = Math.max(
-    getTotalPrice() - Number(checkoutData.discount || 0),
+    getTotalPrice() - discount,
     0
   );
   const codAdvance = Math.round(checkoutTotal * 10) / 100;
   const codRemaining = Math.round((checkoutTotal - codAdvance) * 100) / 100;
-  const amountToPay = isCod ? codAdvance : amount;
+  const isCod = paymentMode === "COD";
+  const amountToPay = isCod ? codAdvance : checkoutTotal;
 
   const [selectedMethod,
     setSelectedMethod] =
-    useState(
-      isCod
-        ? "cod"
-        : "gpay"
-    );
+    useState(isCod ? "cod" : "gpay");
 
   const [cardDetails,
     setCardDetails] =
@@ -181,6 +177,26 @@ function Payment() {
 
   }
 
+  function selectPaymentMode(nextMode) {
+    setPaymentMode(nextMode);
+    setSelectedMethod(
+      nextMode === "COD"
+        ? "cod"
+        : "gpay"
+    );
+  }
+
+  function applyCoupon() {
+    if (coupon.trim().toUpperCase() === "HAROON250") {
+      setDiscount(250);
+      toast.success("Coupon Applied! Rs.250 Discount");
+      return;
+    }
+
+    setDiscount(0);
+    toast.error("Invalid Coupon");
+  }
+
   function validatePayment() {
 
     if (selectedMethod !== "card") {
@@ -219,8 +235,7 @@ function Payment() {
     const total =
 
       Math.max(
-        getTotalPrice() -
-        Number(checkoutData.discount || 0),
+        getTotalPrice() - discount,
         0
       );
 
@@ -397,7 +412,7 @@ function Payment() {
 
           <div className="payment-mode-pill">
             <span>Mode</span>
-            <strong>{paymentMode}</strong>
+            <strong>{isCod ? "Cash on Delivery" : "Online Payment"}</strong>
           </div>
 
           <div className="accepted-payments">
@@ -469,29 +484,79 @@ function Payment() {
             <FaLock />
           </div>
 
-          {isCod && (
+          <div className="payment-method-choice-grid">
+            <button
+              type="button"
+              className={
+                isCod
+                  ? "payment-choice active"
+                  : "payment-choice"
+              }
+              onClick={() => selectPaymentMode("COD")}
+            >
+              <span className="choice-icon cod-icon">COD</span>
+              <span>
+                <strong>Cash on Delivery</strong>
+                <small>10% advance, 90% on delivery</small>
+              </span>
+            </button>
 
             <button
               type="button"
               className={
-                selectedMethod === "cod"
+                !isCod
                   ? "payment-choice active"
                   : "payment-choice"
               }
-              onClick={() =>
-                setSelectedMethod("cod")
-              }
+              onClick={() => selectPaymentMode("Online")}
             >
-              <span className="choice-icon cod-icon">
-                COD
+              <span className="choice-icon">
+                <FaCreditCard />
               </span>
               <span>
-                <strong>Cash on Delivery</strong>
-                <small>10% advance: Rs. {codAdvance.toFixed(2)}</small>
+                <strong>Online Payment</strong>
+                <small>Pay the full amount now</small>
               </span>
             </button>
+          </div>
 
-          )}
+          <div className="payment-coupon">
+            <label htmlFor="payment-coupon-code">Coupon Code</label>
+            <div className="payment-coupon-row">
+              <input
+                id="payment-coupon-code"
+                type="text"
+                placeholder="Enter coupon code"
+                value={coupon}
+                onChange={(event) => setCoupon(event.target.value)}
+              />
+              <button type="button" onClick={applyCoupon}>Apply</button>
+            </div>
+            {discount > 0 && (
+              <p className="payment-coupon-success">
+                Coupon applied: Rs. {discount.toFixed(2)} saved
+              </p>
+            )}
+          </div>
+
+          <div className="payment-price-summary">
+            <div>
+              <span>Order Total</span>
+              <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
+            </div>
+            {isCod && (
+              <>
+                <div>
+                  <span>Online advance (10%)</span>
+                  <strong>Rs. {codAdvance.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span>Payable on delivery (90%)</span>
+                  <strong>Rs. {codRemaining.toFixed(2)}</strong>
+                </div>
+              </>
+            )}
+          </div>
 
           {!isCod && (
 
@@ -644,7 +709,9 @@ function Payment() {
           >
             {isSubmitting
               ? "Processing..."
-              : `Pay Rs. ${amountToPay.toFixed(2)}`}
+              : isCod
+                ? `Continue with COD advance Rs. ${amountToPay.toFixed(2)}`
+                : `Pay Rs. ${amountToPay.toFixed(2)}`}
           </button>
 
         </section>

@@ -55,18 +55,6 @@ function Checkout() {
     setSelectedAddressId] =
     useState("");
 
-  const [paymentMethod,
-    setPaymentMethod] =
-    useState("COD");
-
-  const [coupon,
-    setCoupon] =
-    useState("");
-
-  const [discount,
-    setDiscount] =
-    useState(0);
-
   const [isSavingAddress,
     setIsSavingAddress] =
     useState(false);
@@ -219,46 +207,8 @@ function Checkout() {
 
   }
 
-  function applyCoupon() {
-
-    if (coupon === "HAROON250") {
-
-      setDiscount(250);
-
-      toast.success(
-        "Coupon Applied! Rs.250 Discount"
-      );
-
-    }
-
-    else {
-
-      toast.error(
-        "Invalid Coupon"
-      );
-
-      setDiscount(0);
-
-    }
-
-  }
-
   const totalPrice =
     getTotalPrice();
-
-  const finalTotal =
-    Math.max(
-      totalPrice - discount,
-      0
-    );
-
-  const advance = Math.round(finalTotal * 10) / 100;
-
-  const remaining =
-    Math.max(
-      finalTotal - advance,
-      0
-    );
 
   const today =
     new Date();
@@ -306,28 +256,14 @@ function Checkout() {
         address.phone,
       address:
         deliveryAddress,
-      paymentMethod:
-        paymentMethod,
-      discount:
-        discount,
       createdAt:
         createdAt,
       cancelUntil:
         cancelUntil
     };
 
-    const mode =
-
-      paymentMethod === "COD"
-        ? "COD"
-        : "Online";
-
     navigate(
-      `/payment?amount=${
-        paymentMethod === "COD"
-          ? advance
-          : finalTotal
-      }&mode=${mode}`,
+      `/payment?amount=${totalPrice}&mode=COD`,
       {
         state: {
           checkoutData
@@ -518,98 +454,6 @@ function Checkout() {
 
           </div>
 
-          <div className="coupon-box">
-
-            <input
-              type="text"
-              placeholder="Enter Coupon Code"
-              value={coupon}
-              onChange={(e) =>
-                setCoupon(e.target.value)
-              }
-            />
-
-            <button
-              type="button"
-              onClick={applyCoupon}
-            >
-              Apply
-            </button>
-
-          </div>
-
-          {discount > 0 && (
-
-            <div className="coupon-success">
-              Coupon applied successfully
-            </div>
-
-          )}
-
-          <h2>
-            Payment Method
-          </h2>
-
-          <div className="payment-method">
-
-            <label
-              className={
-                paymentMethod === "COD"
-                  ? "payment-option active"
-                  : "payment-option"
-              }
-            >
-              <input
-                type="radio"
-                value="COD"
-                checked={
-                  paymentMethod === "COD"
-                }
-                onChange={(e) =>
-                  setPaymentMethod(e.target.value)
-                }
-              />
-
-              <span className="payment-option-text">
-                <strong>
-                  Cash on Delivery
-                </strong>
-                <small>
-                  10% advance online: Rs. {advance.toFixed(2)}. Remaining on delivery: Rs. {remaining.toFixed(2)}
-                </small>
-              </span>
-            </label>
-
-            <label
-              className={
-                paymentMethod === "ONLINE"
-                  ? "payment-option active"
-                  : "payment-option"
-              }
-            >
-              <input
-                type="radio"
-                value="ONLINE"
-                checked={
-                  paymentMethod === "ONLINE"
-                }
-                onChange={(e) =>
-                  setPaymentMethod(e.target.value)
-                }
-              />
-
-              <span className="payment-option-text">
-                <strong>
-                  Online Payment
-                </strong>
-                <small>
-                  Pay the full amount now
-                </small>
-              </span>
-            </label>
-
-          </div>
-
           <button
             className="continue-btn"
             type="button"
@@ -649,7 +493,7 @@ function Checkout() {
                 <span>Qty: {item.quantity}</span>
               </div>
 
-              <div>
+              <div className="summary-price">
                 Rs. {item.price * item.quantity}
               </div>
             </div>
@@ -666,32 +510,14 @@ function Checkout() {
             </strong>
           </p>
 
-          {discount > 0 && (
+          <div className="summary-total-row">
+            <span>Order Total</span>
+            <strong>Rs. {totalPrice.toFixed(2)}</strong>
+          </div>
 
-            <div className="discount-row">
-              <span>Discount</span>
-              <span>-Rs. {discount}</span>
-            </div>
-
-          )}
-
-          <h3>
-            Total: Rs. {finalTotal}
-          </h3>
-
-          {paymentMethod === "COD" && (
-
-            <>
-              <p>
-                Required online advance (10%): Rs. {advance.toFixed(2)}
-              </p>
-
-              <p>
-                Payable on delivery (90%): Rs. {remaining.toFixed(2)}
-              </p>
-            </>
-
-          )}
+          <p className="summary-payment-note">
+            Choose your payment method and apply a coupon on the next step.
+          </p>
 
         </div>
 

@@ -1021,3 +1021,65 @@
   }
 
 }
+
+.summary-price {
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.summary-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid #eadfd6;
+  color: #3e2723;
+}
+
+.summary-total-row span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.summary-total-row strong {
+  color: #c8742d;
+  font-size: 22px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.summary-payment-note {
+  margin: 9px 0 0;
+  color: #7b6b61;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+  .summary-item {
+    gap: 10px;
+    margin-bottom: 11px;
+    padding-bottom: 10px;
+  }
+
+  .summary-item img {
+    width: 58px;
+    height: 58px;
+    border-radius: 10px;
+  }
+
+  .summary-price {
+    font-size: 13px;
+  }
+
+  .summary-total-row {
+    margin-top: 13px;
+    padding-top: 13px;
+  }
+
+  .summary-total-row strong {
+    font-size: 20px;
+  }
+}

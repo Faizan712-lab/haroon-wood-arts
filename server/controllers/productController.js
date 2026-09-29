@@ -347,7 +347,7 @@ const getProducts = async (req, res) => {
     };
     const paginationRequested = req.query.page !== undefined || req.query.limit !== undefined;
     const requestedPage = positiveInteger(req.query.page, 1, 100000);
-    const limit = positiveInteger(req.query.limit, 12, 50);
+    const limit = positiveInteger(req.query.limit, 10, 50);
     const where = [];
     const params = [];
     const category = String(req.query.category || "").trim();
