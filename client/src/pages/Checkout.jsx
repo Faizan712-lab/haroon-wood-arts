@@ -262,6 +262,11 @@ function Checkout() {
         cancelUntil
     };
 
+    sessionStorage.setItem(
+      "haroonCheckoutData",
+      JSON.stringify(checkoutData)
+    );
+
     navigate(
       `/payment?amount=${totalPrice}&mode=COD`,
       {

@@ -536,6 +536,86 @@
 
 }
 
+.details-actions {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid #eee;
+}
+
+.details-action-box {
+  padding: 16px;
+  border: 1px solid #f0d6bd;
+  border-radius: 14px;
+  background: #fffaf6;
+}
+
+.details-action-box h3 {
+  margin: 0 0 10px;
+  color: #3e2723;
+  font-size: 17px;
+}
+
+.details-action-box textarea {
+  width: 100%;
+  min-height: 82px;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-sizing: border-box;
+  resize: vertical;
+  font: inherit;
+}
+
+.details-cancel-btn,
+.details-return-toggle,
+.details-return-btn {
+  min-height: 42px;
+  margin-top: 10px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 9px;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.details-cancel-btn {
+  background: #c62828;
+}
+
+.details-return-toggle,
+.details-return-btn {
+  background: #c8742d;
+}
+
+.details-return-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.details-return-form input[type="file"] {
+  max-width: 100%;
+}
+
+.details-return-preview {
+  width: 92px;
+  height: 92px;
+  border: 1px solid #f0d6bd;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.details-action-box button:disabled,
+.details-action-box textarea:disabled,
+.details-action-box input:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 /* FOOTER */
 
 .details-footer {
@@ -720,6 +800,16 @@
   .details-item img {
     width: 64px;
     height: 64px;
+  }
+
+  .details-action-box {
+    padding: 14px;
+  }
+
+  .details-cancel-btn,
+  .details-return-toggle,
+  .details-return-btn {
+    width: 100%;
   }
 
 }

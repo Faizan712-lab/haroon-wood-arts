@@ -94,7 +94,16 @@ function Payment() {
       : "COD";
 
   const checkoutData =
-    location.state?.checkoutData || {};
+    location.state?.checkoutData ||
+    (() => {
+      try {
+        return JSON.parse(
+          sessionStorage.getItem("haroonCheckoutData") || "{}"
+        );
+      } catch {
+        return {};
+      }
+    })();
 
   const [coupon, setCoupon] = useState("");
 
@@ -308,6 +317,8 @@ function Payment() {
       }
 
       clearCart();
+
+      sessionStorage.removeItem("haroonCheckoutData");
 
       navigate(
         "/order-success",
