@@ -399,7 +399,84 @@
   }
 }
 
+.upi-panel,
+.card-panel,
+.cod-panel {
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #f0d6bd;
+  background: #fff;
+}
+
+.upi-panel label,
+.card-panel label {
+  display: block;
+  margin-bottom: 8px;
+  color: #3e2723;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.upi-panel input,
+.card-panel input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: 0.2s;
+}
+
+.upi-panel input:focus,
+.card-panel input:focus {
+  outline: none;
+  border-color: #e8904a;
+  box-shadow: 0 0 0 3px rgba(232,144,74,0.15);
+}
+
+.upi-panel p,
+.cod-panel p {
+  margin: 8px 0 0;
+  color: #777;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cod-panel strong {
+  color: #3e2723;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.card-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.card-logos {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.card-logos img {
+  width: 48px;
+  height: 26px;
+  object-fit: contain;
+}
+
 .payment-method-choice-grid {
+
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
