@@ -177,12 +177,14 @@ function OrderSuccess() {
               key={item.id}
               className="success-item"
             >
-              <img
-                src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
-                alt={item.name}
-                loading="lazy"
-                onError={handleImageFallback}
-              />
+              <div className="success-item-image">
+                <img
+                  src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
+                  alt={item.name}
+                  loading="lazy"
+                  onError={handleImageFallback}
+                />
+              </div>
 
               <div className="item-details">
                 <p className="product-name">

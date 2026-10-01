@@ -385,3 +385,59 @@
     font-size: 13px;
   }
 }
+
+/* Fixed order-success thumbnail dimensions */
+.success-item-image {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #fffdf9;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.success-item .success-item-image img {
+  width: 80px;
+  height: 80px;
+  max-width: 80px;
+  max-height: 80px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .success-item-image {
+    width: 88px;
+    height: 88px;
+    flex-basis: 88px;
+  }
+
+  .success-item .success-item-image img {
+    width: 72px;
+    height: 72px;
+    max-width: 72px;
+    max-height: 72px;
+  }
+}
+
+@media (max-width: 520px) {
+  .success-item-image {
+    width: 80px;
+    height: 80px;
+    flex-basis: 80px;
+  }
+
+  .success-item .success-item-image img {
+    width: 68px;
+    height: 68px;
+    max-width: 68px;
+    max-height: 68px;
+  }
+}

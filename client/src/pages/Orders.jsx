@@ -621,12 +621,14 @@ function Orders() {
               <div className="order-items">
                 {order.items.map(item => (
                   <div key={String(item.id)} className="order-item">
-                    <img
-                      src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
-                      alt={item.name}
-                      loading="lazy"
-                      onError={handleImageFallback}
-                    />
+                    <div className="order-item-image">
+                      <img
+                        src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
+                        alt={item.name}
+                        loading="lazy"
+                        onError={handleImageFallback}
+                      />
+                    </div>
                     <div className="order-item-details">
                       <p>{item.name}</p>
                       <div className="order-item-meta">

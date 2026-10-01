@@ -674,12 +674,14 @@ function OrderDetails() {
               className="details-item"
             >
 
-              <img
-                src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
-                alt={item.name}
-                loading="lazy"
-                onError={handleImageFallback}
-              />
+              <div className="details-item-image">
+                <img
+                  src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
+                  alt={item.name}
+                  loading="lazy"
+                  onError={handleImageFallback}
+                />
+              </div>
 
               <div className="item-info">
 
