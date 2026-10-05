@@ -2373,6 +2373,9 @@
   width: 72px;
   height: 72px;
   flex: 0 0 72px;
+  flex-grow: 0;
+  flex-shrink: 0;
+  align-self: flex-start;
   min-width: 72px;
   max-width: 72px;
   display: flex;
@@ -2498,8 +2501,8 @@
 
 .order-tracking-step.delivered .order-tracking-icon {
   border-color: #2e7d32;
-  background: #eaf6ec;
-  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12);
+  background: #f2faf4;
+  box-shadow: none;
 }
 
 .order-tracking-line {

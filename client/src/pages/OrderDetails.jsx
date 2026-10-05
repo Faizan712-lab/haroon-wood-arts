@@ -564,12 +564,6 @@ function OrderDetails() {
             })}
           </div>
 
-          {hasDeliveredStatus && order.deliveredDate && (
-            <p className="details-delivered-date">
-              Delivered on {formatOrderDate(order.deliveredDate)}
-            </p>
-          )}
-
           {status === "processing" && (
 
             <div className="details-timeline-card processing-card">
