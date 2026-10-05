@@ -28,6 +28,80 @@ import {
   getVariantLabel
 } from "../utils/productDisplay";
 
+import {
+  FaBoxOpen,
+  FaCheck,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaUndo,
+  FaTruck
+} from "react-icons/fa";
+
+const ORDER_TRACKING_STEPS = [
+  { label: "Order Placed", Icon: FaBoxOpen },
+  { label: "Processing", Icon: FaBoxOpen },
+  { label: "Shipped", Icon: FaTruck },
+  { label: "Delivered", Icon: FaCheckCircle }
+];
+
+function getTrackingStage(status) {
+  const normalisedStatus = (status || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+
+  if (normalisedStatus === "shipped") return 2;
+
+  if ([
+    "delivered",
+    "return requested",
+    "pickup scheduled",
+    "pickup completed",
+    "return completed",
+    "refund completed"
+  ].includes(normalisedStatus)) return 3;
+
+  if (["processing", "cancellation requested"].includes(normalisedStatus)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function formatOrderDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  }).format(date);
+}
+
+function getOrderStatusIcon(status) {
+  const normalisedStatus = (status || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+
+  if (["cancelled", "cancellation requested"].includes(normalisedStatus)) {
+    return FaTimesCircle;
+  }
+
+  if (normalisedStatus.includes("return") || normalisedStatus.includes("pickup")) {
+    return FaUndo;
+  }
+
+  if (normalisedStatus === "delivered") return FaCheckCircle;
+  if (normalisedStatus === "shipped") return FaTruck;
+
+  return FaBoxOpen;
+}
+
 function Orders() {
 
   const [orders, setOrders] =
@@ -609,12 +683,19 @@ function Orders() {
               <div className="order-header">
                 <div className="order-main-info">
                   <h3>Order ID: <span>{order.id}</span></h3>
-                  <p className="order-date">Ordered on {order.date}</p>
+                  <p className="order-date">Ordered on {formatOrderDate(order.date)}</p>
                 </div>
                 <div className="order-header-right">
+                  {(() => {
+                    const StatusIcon = getOrderStatusIcon(order.status);
+
+                    return (
                   <div className={`user-order-status ${getStatusClass(order.status)}`}>
+                    <StatusIcon aria-hidden="true" />
                     {order.status || "Processing"}
                   </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -644,6 +725,45 @@ function Orders() {
                   </div>
                 ))}
               </div>
+
+              <div className="order-tracking" aria-label="Order tracking">
+                {ORDER_TRACKING_STEPS.map(({ label, Icon }, index) => {
+                  const currentStage = getTrackingStage(order.status);
+                  const isComplete = index < currentStage;
+                  const isCurrent = index === currentStage;
+                  const isDelivered = index === 3 && currentStage === 3;
+
+                  return (
+                    <div className="order-tracking-segment" key={label}>
+                      <div
+                        className={`order-tracking-step ${
+                          isComplete ? "complete" : ""
+                        } ${isCurrent ? "current" : ""} ${
+                          isDelivered ? "delivered" : ""
+                        }`}
+                      >
+                        <span className="order-tracking-icon">
+                          {isComplete ? <FaCheck /> : <Icon />}
+                        </span>
+                        <span className="order-tracking-label">{label}</span>
+                      </div>
+                      {index < ORDER_TRACKING_STEPS.length - 1 && (
+                        <span
+                          className={`order-tracking-line ${
+                            index < currentStage ? "complete" : ""
+                          }`}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {getTrackingStage(order.status) === 3 && order.deliveredDate && (
+                <p className="order-delivered-date">
+                  Delivered on {formatOrderDate(order.deliveredDate)}
+                </p>
+              )}
 
               <div className="order-card-footer">
                 <div className="order-total-compact">

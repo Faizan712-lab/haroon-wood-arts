@@ -29,6 +29,36 @@ import {
 
 import toast from "react-hot-toast";
 
+import {
+  FaBoxOpen,
+  FaCheck,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaUndo,
+  FaTruck
+} from "react-icons/fa";
+
+const ORDER_TRACKING_STEPS = [
+  { label: "Order Placed", Icon: FaBoxOpen },
+  { label: "Processing", Icon: FaBoxOpen },
+  { label: "Shipped", Icon: FaTruck },
+  { label: "Delivered", Icon: FaCheckCircle }
+];
+
+function formatOrderDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  }).format(date);
+}
+
 function OrderDetails() {
 
   const location =
@@ -152,6 +182,78 @@ function OrderDetails() {
     "refund completed"
 
   ].includes(status);
+
+  const trackingStage = (() => {
+    if (status === "shipped") return 2;
+
+    if (hasDeliveredStatus) return 3;
+
+    if (["processing", "cancellation requested"].includes(status)) {
+      return 1;
+    }
+
+    return 0;
+  })();
+
+  const statusSummary = (() => {
+    if (status === "cancellation requested") {
+      return {
+        title: "Cancellation Requested",
+        message: "Your cancellation request is being reviewed.",
+        Icon: FaTimesCircle,
+        className: "cancellation"
+      };
+    }
+
+    if (status === "cancelled") {
+      return {
+        title: "Cancelled",
+        message: "Your order has been cancelled.",
+        Icon: FaTimesCircle,
+        className: "cancellation"
+      };
+    }
+
+    if ([
+      "return requested",
+      "pickup scheduled",
+      "pickup completed",
+      "return completed",
+      "refund completed"
+    ].includes(status)) {
+      return {
+        title: order.status || "Return Update",
+        message: "There is an update to your return request.",
+        Icon: FaUndo,
+        className: "return"
+      };
+    }
+
+    if (status === "shipped") {
+      return {
+        title: "Shipped",
+        message: "Your order is on the way.",
+        Icon: FaTruck,
+        className: "shipped"
+      };
+    }
+
+    if (hasDeliveredStatus) {
+      return {
+        title: "Delivered",
+        message: "Your order was delivered successfully.",
+        Icon: FaCheckCircle,
+        className: "delivered"
+      };
+    }
+
+    return {
+      title: "Processing",
+      message: "Your order has been confirmed and is being prepared.",
+      Icon: FaBoxOpen,
+      className: "processing"
+    };
+  })();
 
   const canCancel = ["processing", "shipped"].includes(status);
 
@@ -331,7 +433,7 @@ function OrderDetails() {
               Date:
             </strong>
 
-            {order.date}
+            {formatOrderDate(order.date)}
 
           </p>
 
@@ -387,7 +489,7 @@ function OrderDetails() {
 
               <span className="delivery-date">
 
-                {order.deliveryDate}
+                {formatOrderDate(order.deliveryDate)}
 
               </span>
 
@@ -406,7 +508,7 @@ function OrderDetails() {
 
               <span className="delivery-date delivered-date">
 
-                {order.deliveredDate}
+                {formatOrderDate(order.deliveredDate)}
 
               </span>
 
@@ -419,6 +521,54 @@ function OrderDetails() {
         {/* STATUS TIMELINE */}
 
         <div className="details-timeline">
+
+          <div className={`details-status-summary ${statusSummary.className}`}>
+            <span className="details-status-summary-icon">
+              <statusSummary.Icon />
+            </span>
+            <div>
+              <h4>{statusSummary.title}</h4>
+              <p>{statusSummary.message}</p>
+            </div>
+          </div>
+
+          <div className="details-order-tracking" aria-label="Order tracking">
+            {ORDER_TRACKING_STEPS.map(({ label, Icon }, index) => {
+              const isComplete = index < trackingStage;
+              const isCurrent = index === trackingStage;
+              const isDelivered = index === 3 && trackingStage === 3;
+
+              return (
+                <div className="details-order-tracking-segment" key={label}>
+                  <div
+                    className={`details-order-tracking-step ${
+                      isComplete ? "complete" : ""
+                    } ${isCurrent ? "current" : ""} ${
+                      isDelivered ? "delivered" : ""
+                    }`}
+                  >
+                    <span className="details-order-tracking-icon">
+                      {isComplete ? <FaCheck /> : <Icon />}
+                    </span>
+                    <span>{label}</span>
+                  </div>
+                  {index < ORDER_TRACKING_STEPS.length - 1 && (
+                    <span
+                      className={`details-order-tracking-line ${
+                        index < trackingStage ? "complete" : ""
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {hasDeliveredStatus && order.deliveredDate && (
+            <p className="details-delivered-date">
+              Delivered on {formatOrderDate(order.deliveredDate)}
+            </p>
+          )}
 
           {status === "processing" && (
 
@@ -486,7 +636,7 @@ function OrderDetails() {
                 <p>
                   Your order was delivered on
                   <strong>
-                    {order.deliveredDate}
+                    {formatOrderDate(order.deliveredDate)}
                   </strong>
                 </p>
 
@@ -592,7 +742,7 @@ function OrderDetails() {
                 <p>
                   Your return was completed on
                   <strong>
-                    {order.returnCompletedDate}
+                    {formatOrderDate(order.returnCompletedDate)}
                   </strong>
                 </p>
 
@@ -621,7 +771,7 @@ function OrderDetails() {
                 <p>
                   Expected refund by
                   <strong>
-                    {order.refundDate}
+                    {formatOrderDate(order.refundDate)}
                   </strong>
                 </p>
 
@@ -649,7 +799,7 @@ function OrderDetails() {
                 <p>
                   Refund processed on
                   <strong>
-                    {order.refundCompletedDate}
+                    {formatOrderDate(order.refundCompletedDate)}
                   </strong>
                 </p>
 
