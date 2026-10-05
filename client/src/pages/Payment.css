@@ -61,11 +61,12 @@
 }
 
 .payment-shell {
-  width: min(960px, 100%);
+  width: min(1080px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+  grid-template-areas: "methods summary";
+  gap: 20px;
   align-items: start;
 }
 
@@ -78,6 +79,7 @@
 }
 
 .payment-summary-card {
+  grid-area: summary;
   position: sticky;
   top: 110px;
   padding: 20px;
@@ -201,7 +203,13 @@
 }
 
 .payment-box {
+  grid-area: methods;
   padding: 20px;
+}
+
+.payment-method-heading {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0e2d6;
 }
 
 .payment-box-title {
@@ -329,6 +337,9 @@
 @media(max-width: 900px) {
   .payment-shell {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "methods"
+      "summary";
   }
 
   .payment-summary-card {
@@ -484,7 +495,7 @@
 }
 
 .payment-coupon {
-  margin: 0 0 16px;
+  margin: 0;
   padding: 12px;
   border: 1px dashed #e0a16b;
   border-radius: 8px;

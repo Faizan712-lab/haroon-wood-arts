@@ -377,8 +377,8 @@ function Payment() {
         <aside className="payment-summary-card">
 
           <div className="payment-page-heading">
-            <h1>Payment</h1>
-            <p>Choose your preferred payment method.</p>
+            <h1>Order Summary</h1>
+            <p>Review your payable amount before placing the order.</p>
           </div>
 
           <p className="amount-label">
@@ -394,6 +394,49 @@ function Payment() {
             <strong>{isCod ? "Cash on Delivery" : "Online Payment"}</strong>
           </div>
 
+          <div className="payment-price-summary">
+            {isCod ? (
+              <>
+                <div>
+                  <span>Cash on Delivery</span>
+                  <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span>Advance payment</span>
+                  <strong>Rs. {codAdvance.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span>Payable on delivery</span>
+                  <strong>Rs. {codRemaining.toFixed(2)}</strong>
+                </div>
+              </>
+            ) : (
+              <div>
+                <span>Order Total</span>
+                <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
+              </div>
+            )}
+          </div>
+
+          <div className="payment-coupon">
+            <label htmlFor="payment-coupon-code">Coupon Code</label>
+            <div className="payment-coupon-row">
+              <input
+                id="payment-coupon-code"
+                type="text"
+                placeholder="Enter coupon code"
+                value={coupon}
+                onChange={(event) => setCoupon(event.target.value)}
+              />
+              <button type="button" onClick={applyCoupon}>Apply</button>
+            </div>
+            {discount > 0 && (
+              <p className="payment-coupon-success">
+                Coupon applied: Rs. {discount.toFixed(2)} saved
+              </p>
+            )}
+          </div>
+
 
 
 
@@ -402,9 +445,12 @@ function Payment() {
 
         <section className="payment-box">
 
-          <h2 className="payment-box-title">
-            Payment Method
-          </h2>
+          <div className="payment-page-heading payment-method-heading">
+            <h1>Secure Payment</h1>
+            <p>Choose your preferred payment method.</p>
+          </div>
+
+          <h2 className="payment-box-title">Choose Payment Method</h2>
 
           <div className="payment-method-choice-grid">
             <button
@@ -442,48 +488,6 @@ function Payment() {
             </button>
           </div>
 
-          <div className="payment-coupon">
-            <label htmlFor="payment-coupon-code">Coupon Code</label>
-            <div className="payment-coupon-row">
-              <input
-                id="payment-coupon-code"
-                type="text"
-                placeholder="Enter coupon code"
-                value={coupon}
-                onChange={(event) => setCoupon(event.target.value)}
-              />
-              <button type="button" onClick={applyCoupon}>Apply</button>
-            </div>
-            {discount > 0 && (
-              <p className="payment-coupon-success">
-                Coupon applied: Rs. {discount.toFixed(2)} saved
-              </p>
-            )}
-          </div>
-
-          <div className="payment-price-summary">
-            {isCod ? (
-              <>
-                <div>
-                  <span>Cash on Delivery</span>
-                  <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
-                </div>
-                <div>
-                  <span>Advance payment</span>
-                  <strong>Rs. {codAdvance.toFixed(2)}</strong>
-                </div>
-                <div>
-                  <span>Payable on delivery</span>
-                  <strong>Rs. {codRemaining.toFixed(2)}</strong>
-                </div>
-              </>
-            ) : (
-              <div>
-                <span>Order Total</span>
-                <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
-              </div>
-            )}
-          </div>
           {!isCod && (
             <div className="payment-choice-grid">
               {paymentOptions.map(option => (
