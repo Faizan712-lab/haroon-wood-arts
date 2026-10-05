@@ -2543,6 +2543,88 @@
   font-size: 13px;
 }
 
+/* Keep tracker steps transparent; only their circular icons carry status color. */
+.order-tracking-step,
+.order-tracking-step.current,
+.order-tracking-step.complete,
+.order-tracking-step.delivered {
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.order-tracking-step.delivered .order-tracking-icon,
+.order-tracking-step.delivered.current .order-tracking-icon {
+  width: 30px;
+  height: 30px;
+  border-color: #2e9b45;
+  border-radius: 50%;
+  background: #f2faf4;
+  color: #2e9b45;
+  box-shadow: none;
+}
+
+.user-order-status {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid #f6d8a8;
+  border-radius: 16px;
+  background: #fff8ed;
+  color: #b86624;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.user-order-status.processing {
+  border-color: #f6d8a8;
+  background: #fff8ed;
+  color: #b86624;
+}
+
+.user-order-status.shipped {
+  border-color: #d9e0e8;
+  background: #f7f9fc;
+  color: #5f6772;
+}
+
+.user-order-status.delivered,
+.user-order-status.refund-completed {
+  border-color: #c8e6cf;
+  background: #eaf7ee;
+  color: #278a3d;
+}
+
+.user-order-status.cancelled,
+.user-order-status.cancellation-requested {
+  border-color: #f0caca;
+  background: #fff4f4;
+  color: #b83232;
+}
+
+.user-order-status.return-requested,
+.user-order-status.pickup-scheduled,
+.user-order-status.pickup-completed,
+.user-order-status.return-completed {
+  border-color: #e5d8ef;
+  background: #faf7fc;
+  color: #76508d;
+}
+
+.order-main-info h3 span {
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .order-tracking-step.delivered .order-tracking-icon,
+  .order-tracking-step.delivered.current .order-tracking-icon {
+    width: 26px;
+    height: 26px;
+  }
+}
+
 @media (max-width: 520px) {
   .order-tracking {
     overflow-x: auto;

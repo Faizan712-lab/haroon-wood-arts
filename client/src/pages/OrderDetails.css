@@ -955,9 +955,9 @@
 }
 
 .details-status-summary-icon {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1132,6 +1132,100 @@
 .details-return-toggle:hover,
 .details-return-btn:hover {
   background: #b71c1c;
+}
+
+/* Keep tracker steps transparent; only their circular icons carry status color. */
+.details-order-tracking-step,
+.details-order-tracking-step.current,
+.details-order-tracking-step.complete,
+.details-order-tracking-step.delivered {
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.details-order-tracking-step.delivered .details-order-tracking-icon,
+.details-order-tracking-step.delivered.current .details-order-tracking-icon {
+  width: 32px;
+  height: 32px;
+  border-color: #2e9b45;
+  border-radius: 50%;
+  background: #f2faf4;
+  color: #2e9b45;
+  box-shadow: none;
+}
+
+.details-status {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid #f6d8a8;
+  border-radius: 16px;
+  background: #fff8ed;
+  color: #b86624;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.details-status.processing {
+  border-color: #f6d8a8;
+  background: #fff8ed;
+  color: #b86624;
+}
+
+.details-status.shipped {
+  border-color: #d9e0e8;
+  background: #f7f9fc;
+  color: #5f6772;
+}
+
+.details-status.delivered,
+.details-status.refund-completed {
+  border-color: #c8e6cf;
+  background: #eaf7ee;
+  color: #278a3d;
+}
+
+.details-status.cancelled,
+.details-status.cancellation-requested {
+  border-color: #f0caca;
+  background: #fff4f4;
+  color: #b83232;
+}
+
+.details-status.return-requested,
+.details-status.pickup-scheduled,
+.details-status.pickup-completed,
+.details-status.return-completed {
+  border-color: #e5d8ef;
+  background: #faf7fc;
+  color: #76508d;
+}
+
+.payment-badge {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid #f3d2b0;
+  border-radius: 16px;
+  background: #fff4e8;
+  color: #b86624;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.order-id-value {
+  margin-left: 4px;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .details-order-tracking-step.delivered .details-order-tracking-icon,
+  .details-order-tracking-step.delivered.current .details-order-tracking-icon {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 @media (max-width: 520px) {

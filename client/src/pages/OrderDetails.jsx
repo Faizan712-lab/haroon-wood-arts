@@ -423,7 +423,9 @@ function OrderDetails() {
               Order ID:
             </strong>
 
-            {order.id}
+            <span className="order-id-value">
+              {order.id}
+            </span>
 
           </p>
 
