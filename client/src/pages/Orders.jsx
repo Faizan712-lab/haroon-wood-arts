@@ -32,6 +32,7 @@ import {
   FaBoxOpen,
   FaCheck,
   FaCheckCircle,
+  FaRupeeSign,
   FaTimesCircle,
   FaUndo,
   FaTruck
@@ -49,6 +50,11 @@ const CANCELLED_TRACKING_STEPS = [
   { label: "Cancelled", Icon: FaTimesCircle }
 ];
 
+const REFUND_COMPLETED_TRACKING_STEPS = [
+  ...ORDER_TRACKING_STEPS,
+  { label: "Refund Completed", Icon: FaRupeeSign }
+];
+
 function getTrackingStage(status) {
   const normalisedStatus = (status || "")
     .toLowerCase()
@@ -58,6 +64,8 @@ function getTrackingStage(status) {
   if (normalisedStatus === "cancelled") return 1;
 
   if (normalisedStatus === "shipped") return 2;
+
+  if (normalisedStatus === "refund completed") return 4;
 
   if ([
     "delivered",
@@ -737,13 +745,17 @@ function Orders() {
                 className={`order-tracking ${
                   normaliseStatus(order.status) === "cancelled"
                     ? "cancelled-tracking"
-                    : ""
+                    : normaliseStatus(order.status) === "refund completed"
+                      ? "refund-completed-tracking"
+                      : ""
                 }`}
                 aria-label="Order tracking"
               >
                 {(normaliseStatus(order.status) === "cancelled"
                   ? CANCELLED_TRACKING_STEPS
-                  : ORDER_TRACKING_STEPS
+                  : normaliseStatus(order.status) === "refund completed"
+                    ? REFUND_COMPLETED_TRACKING_STEPS
+                    : ORDER_TRACKING_STEPS
                 ).map(({ label, Icon }, index, steps) => {
                   const currentStage = getTrackingStage(order.status);
                   const isComplete = index < currentStage;

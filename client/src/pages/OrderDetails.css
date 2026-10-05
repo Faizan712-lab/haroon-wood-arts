@@ -1434,7 +1434,25 @@
 }
 
 .details-return-tracking-step.refund-completed {
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   color: #27783a;
+}
+
+.details-return-tracking-step.refund-completed.current {
+  background: transparent;
+  box-shadow: none;
+}
+
+.details-return-tracking-step.refunded.refund-completed .details-return-tracking-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: none;
 }
 
 @media (max-width: 520px) {
