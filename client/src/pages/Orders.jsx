@@ -44,11 +44,18 @@ const ORDER_TRACKING_STEPS = [
   { label: "Delivered", Icon: FaCheckCircle }
 ];
 
+const CANCELLED_TRACKING_STEPS = [
+  { label: "Order Placed", Icon: FaBoxOpen },
+  { label: "Cancelled", Icon: FaTimesCircle }
+];
+
 function getTrackingStage(status) {
   const normalisedStatus = (status || "")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ");
+
+  if (normalisedStatus === "cancelled") return 1;
 
   if (normalisedStatus === "shipped") return 2;
 
@@ -726,8 +733,18 @@ function Orders() {
                 ))}
               </div>
 
-              <div className="order-tracking" aria-label="Order tracking">
-                {ORDER_TRACKING_STEPS.map(({ label, Icon }, index) => {
+              <div
+                className={`order-tracking ${
+                  normaliseStatus(order.status) === "cancelled"
+                    ? "cancelled-tracking"
+                    : ""
+                }`}
+                aria-label="Order tracking"
+              >
+                {(normaliseStatus(order.status) === "cancelled"
+                  ? CANCELLED_TRACKING_STEPS
+                  : ORDER_TRACKING_STEPS
+                ).map(({ label, Icon }, index, steps) => {
                   const currentStage = getTrackingStage(order.status);
                   const isComplete = index < currentStage;
                   const isCurrent = index === currentStage;
@@ -747,7 +764,7 @@ function Orders() {
                         </span>
                         <span className="order-tracking-label">{label}</span>
                       </div>
-                      {index < ORDER_TRACKING_STEPS.length - 1 && (
+                      {index < steps.length - 1 && (
                         <span
                           className={`order-tracking-line ${
                             index < currentStage ? "complete" : ""

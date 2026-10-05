@@ -33,6 +33,7 @@ import {
   FaBoxOpen,
   FaCheck,
   FaCheckCircle,
+  FaRupeeSign,
   FaTimesCircle,
   FaUndo,
   FaTruck
@@ -43,6 +44,26 @@ const ORDER_TRACKING_STEPS = [
   { label: "Processing", Icon: FaBoxOpen },
   { label: "Shipped", Icon: FaTruck },
   { label: "Delivered", Icon: FaCheckCircle }
+];
+
+const CANCELLED_TRACKING_STEPS = [
+  { label: "Order Placed", Icon: FaBoxOpen },
+  { label: "Cancelled", Icon: FaTimesCircle }
+];
+
+const RETURN_TRACKING_STATUSES = [
+  "return requested",
+  "pickup scheduled",
+  "pickup completed",
+  "return completed",
+  "refund completed"
+];
+
+const RETURN_TRACKING_STEPS = [
+  { label: "Return Requested", Icon: FaUndo, key: "requested" },
+  { label: "Product Picked Up", Icon: FaBoxOpen, key: "pickedUp" },
+  { label: "Return Completed", Icon: FaCheckCircle, key: "completed" },
+  { label: "Refund Completed", Icon: FaRupeeSign, key: "refunded" }
 ];
 
 function formatOrderDate(value) {
@@ -172,6 +193,9 @@ function OrderDetails() {
   const status =
     normaliseStatus(order.status);
 
+  const isReturnTrackingStatus =
+    RETURN_TRACKING_STATUSES.includes(status);
+
   const hasDeliveredStatus = [
 
     "delivered",
@@ -184,6 +208,8 @@ function OrderDetails() {
   ].includes(status);
 
   const trackingStage = (() => {
+    if (status === "cancelled") return 1;
+
     if (status === "shipped") return 2;
 
     if (hasDeliveredStatus) return 3;
@@ -191,6 +217,20 @@ function OrderDetails() {
     if (["processing", "cancellation requested"].includes(status)) {
       return 1;
     }
+
+    return 0;
+  })();
+
+  const returnTrackingStage = (() => {
+    if (status === "refund completed") return 3;
+
+    if (status === "return completed") {
+      return normaliseStatus(order.refundStatus) === "refund processing"
+        ? 3
+        : 2;
+    }
+
+    if (["pickup scheduled", "pickup completed"].includes(status)) return 1;
 
     return 0;
   })();
@@ -221,9 +261,32 @@ function OrderDetails() {
       "return completed",
       "refund completed"
     ].includes(status)) {
+      const returnSummary = {
+        "return requested": [
+          "Return Requested",
+          "Your return request is under review."
+        ],
+        "pickup scheduled": [
+          "Pickup Scheduled",
+          "A return pickup has been scheduled."
+        ],
+        "pickup completed": [
+          "Product Picked Up",
+          "Your return pickup has been completed."
+        ],
+        "return completed": [
+          "Return Completed",
+          "Your return has been completed."
+        ],
+        "refund completed": [
+          "Refund Completed",
+          "Your refund has been completed."
+        ]
+      }[status] || ["Return Update", "There is an update to your return request."];
+
       return {
-        title: order.status || "Return Update",
-        message: "There is an update to your return request.",
+        title: returnSummary[0],
+        message: returnSummary[1],
         Icon: FaUndo,
         className: "return"
       };
@@ -534,8 +597,16 @@ function OrderDetails() {
             </div>
           </div>
 
-          <div className="details-order-tracking" aria-label="Order tracking">
-            {ORDER_TRACKING_STEPS.map(({ label, Icon }, index) => {
+          <div
+            className={`details-order-tracking ${
+              status === "cancelled" ? "cancelled-tracking" : ""
+            }`}
+            aria-label="Order tracking"
+          >
+            {(status === "cancelled"
+              ? CANCELLED_TRACKING_STEPS
+              : ORDER_TRACKING_STEPS
+            ).map(({ label, Icon }, index, steps) => {
               const isComplete = index < trackingStage;
               const isCurrent = index === trackingStage;
               const isDelivered = index === 3 && trackingStage === 3;
@@ -554,7 +625,7 @@ function OrderDetails() {
                     </span>
                     <span>{label}</span>
                   </div>
-                  {index < ORDER_TRACKING_STEPS.length - 1 && (
+                  {index < steps.length - 1 && (
                     <span
                       className={`details-order-tracking-line ${
                         index < trackingStage ? "complete" : ""
@@ -806,6 +877,63 @@ function OrderDetails() {
           )}
 
         </div>
+
+        {isReturnTrackingStatus && (
+          <section className="details-return-tracking" aria-label="Return tracking">
+            <h3>Return Tracking</h3>
+
+            <div className="details-return-tracking-timeline">
+              {RETURN_TRACKING_STEPS.map(({ label, Icon, key }, index) => {
+                const isComplete = index < returnTrackingStage;
+                const isCurrent = index === returnTrackingStage;
+                const isRefundProcessing = key === "refunded" &&
+                  isCurrent && status !== "refund completed";
+                const meta = key === "pickedUp" && status === "pickup scheduled" && order.pickupDate
+                  ? `Pickup scheduled for ${formatOrderDate(order.pickupDate)}`
+                  : key === "completed" && order.returnCompletedDate && index <= returnTrackingStage
+                    ? formatOrderDate(order.returnCompletedDate)
+                    : key === "refunded" && status === "refund completed" && order.refundCompletedDate
+                      ? formatOrderDate(order.refundCompletedDate)
+                      : key === "refunded" && isRefundProcessing && order.refundDate
+                        ? `Expected by ${formatOrderDate(order.refundDate)}`
+                        : "";
+
+                return (
+                  <div className="details-return-tracking-segment" key={key}>
+                    <div
+                      className={`details-return-tracking-step ${key} ${
+                        isComplete ? "complete" : ""
+                      } ${isCurrent ? "current" : ""} ${
+                        status === "refund completed" && key === "refunded"
+                          ? "refund-completed"
+                          : ""
+                      }`}
+                    >
+                      <span className="details-return-tracking-icon">
+                        {isComplete ? <FaCheck /> : <Icon />}
+                      </span>
+                      <span className="details-return-tracking-label">
+                        {isRefundProcessing ? "Refund Processing" : label}
+                      </span>
+                      {meta && (
+                        <small className="details-return-tracking-meta">
+                          {meta}
+                        </small>
+                      )}
+                    </div>
+                    {index < RETURN_TRACKING_STEPS.length - 1 && (
+                      <span
+                        className={`details-return-tracking-line ${
+                          index < returnTrackingStage ? "complete" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <hr />
 

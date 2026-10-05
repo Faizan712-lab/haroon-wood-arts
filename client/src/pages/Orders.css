@@ -2604,6 +2604,27 @@
   color: #b83232;
 }
 
+.user-order-status.cancelled {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+}
+
+.order-tracking.cancelled-tracking .order-tracking-step.current {
+  color: #b91c1c;
+}
+
+.order-tracking.cancelled-tracking .order-tracking-step.current .order-tracking-icon {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #c62828;
+  box-shadow: none;
+}
+
+.order-tracking.cancelled-tracking .order-tracking-line.complete {
+  background: #f3caca;
+}
+
 .user-order-status.return-requested,
 .user-order-status.pickup-scheduled,
 .user-order-status.pickup-completed,
