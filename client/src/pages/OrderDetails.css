@@ -963,7 +963,7 @@
   justify-content: center;
   border-radius: 50%;
   background: #fff;
-  color: #e88a2a;
+  color: #d9822b;
   font-size: 16px;
 }
 
@@ -991,12 +991,12 @@
 }
 
 .details-status-summary.shipped {
-  border-color: #d9e0e8;
-  background: #f7f9fc;
+  border-color: #d4e2f0;
+  background: #f2f7fc;
 }
 
 .details-status-summary.shipped .details-status-summary-icon {
-  color: #6b7280;
+  color: #5b7fa3;
 }
 
 .details-status-summary.cancellation {
