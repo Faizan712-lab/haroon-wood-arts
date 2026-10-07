@@ -372,6 +372,10 @@ function Payment() {
 
       </div>
 
+      <div className="payment-page-title">
+        <h1>Secure Payment</h1>
+      </div>
+
       <div className="payment-shell">
 
         <aside className="payment-summary-card">
@@ -445,11 +449,6 @@ function Payment() {
 
         <section className="payment-box">
 
-          <div className="payment-page-heading payment-method-heading">
-            <h1>Secure Payment</h1>
-            <p>Choose your preferred payment method.</p>
-          </div>
-
           <h2 className="payment-box-title">Choose Payment Method</h2>
 
           <div className="payment-method-choice-grid">
@@ -489,7 +488,7 @@ function Payment() {
           </div>
 
           {!isCod && (
-            <div className="payment-choice-grid">
+            <div className="payment-choice-grid payment-online-options">
               {paymentOptions.map(option => (
                 <button
                   key={option.id}
