@@ -501,7 +501,14 @@ function Payment() {
                   onClick={() => setSelectedMethod(option.id)}
                 >
                   <span className="choice-icon">
-                    <img src={option.logo} alt={option.label} />
+                    {option.id === "card" ? (
+                      <span className="choice-card-network-logos" aria-label="Visa and Mastercard accepted">
+                        <img src={paymentLogos.visa} alt="Visa" />
+                        <img src={paymentLogos.mastercard} alt="Mastercard" />
+                      </span>
+                    ) : (
+                      <img src={option.logo} alt={option.label} />
+                    )}
                   </span>
                   <span>
                     <strong>{option.label}</strong>
