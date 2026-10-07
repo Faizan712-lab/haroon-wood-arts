@@ -322,9 +322,8 @@
 }
 
 .choice-icon.cod-icon {
-  color: #3e2723;
-  font-size: 13px;
-  font-weight: 700;
+  color: #b96b2d;
+  font-size: 18px;
 }
 
 .payment-choice strong,
@@ -499,6 +498,19 @@
   color: #9a541f;
   font-size: 14px;
   font-weight: 700;
+}
+
+.cod-breakdown span {
+  display: block;
+}
+
+.cod-advance-row {
+  color: #2f2824;
+  font-weight: 700;
+}
+
+.cod-remaining-row {
+  color: #c96a6a;
 }
 
 .card-panel {

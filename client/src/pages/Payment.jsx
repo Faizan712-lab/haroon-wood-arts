@@ -1,7 +1,8 @@
 import "./Payment.css";
 
 import {
-  FaCreditCard
+  FaCreditCard,
+  FaHandHolding
 } from "react-icons/fa";
 
 import {
@@ -461,7 +462,9 @@ function Payment() {
               }
               onClick={() => selectPaymentMode("COD")}
             >
-              <span className="choice-icon cod-icon">COD</span>
+              <span className="choice-icon cod-icon">
+                <FaHandHolding />
+              </span>
               <span>
                 <strong>Cash on Delivery</strong>
                 <small>10% advance, 90% on delivery</small>
@@ -602,9 +605,13 @@ function Payment() {
           {isCod && (
             <div className="cod-panel">
               <strong>Cash on Delivery</strong>
-              <p>
-                Advance payment: Rs. {codAdvance.toFixed(2)}<br />
-                Payable on delivery: Rs. {codRemaining.toFixed(2)}
+              <p className="cod-breakdown">
+                <span className="cod-advance-row">
+                  Advance payment: Rs. {codAdvance.toFixed(2)}
+                </span>
+                <span className="cod-remaining-row">
+                  Payable on delivery: Rs. {codRemaining.toFixed(2)}
+                </span>
               </p>
             </div>
           )}
