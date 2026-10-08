@@ -2584,6 +2584,12 @@
   color: #b86624;
 }
 
+.user-order-status.payment-pending {
+  border-color: #d8d3ff;
+  background: #f6f4ff;
+  color: #5b4bb7;
+}
+
 .user-order-status.shipped {
   border-color: #d4e2f0;
   background: #f2f7fc;

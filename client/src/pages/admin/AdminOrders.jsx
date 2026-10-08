@@ -424,6 +424,8 @@ function AdminOrders() {
 
   const hiddenStatuses = [
 
+    "payment pending",
+
     "cancellation requested",
 
     "return requested",

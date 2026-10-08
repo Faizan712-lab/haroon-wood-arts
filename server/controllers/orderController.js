@@ -562,7 +562,7 @@ async function createOrder(req, res) {
         0,
         total,
         normalizedPaymentMode,
-        "Processing",
+        "Payment Pending",
         null,
         null,
         toSqlDateTime(addDaysDate(2))
@@ -613,7 +613,8 @@ async function createOrder(req, res) {
         [orderId]
       );
 
-    await notifyOrderCreated(req.auth.id, order);
+    // Payment confirmation notifications are deferred until Phase 3 verifies
+    // the Razorpay payment and transitions this order to Processing.
 
     res.status(201).json({
       success: true,

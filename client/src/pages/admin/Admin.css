@@ -935,6 +935,10 @@ body{
   background:#ff9800;
 }
 
+.status-badge.payment-pending{
+  background:#6d5bd0;
+}
+
 .shipped{
   background:#2196f3;
 }

@@ -50,6 +50,10 @@ const CANCELLED_TRACKING_STEPS = [
   { label: "Cancelled", Icon: FaTimesCircle }
 ];
 
+const PAYMENT_PENDING_TRACKING_STEPS = [
+  { label: "Payment Pending", Icon: FaBoxOpen }
+];
+
 const REFUND_COMPLETED_TRACKING_STEPS = [
   ...ORDER_TRACKING_STEPS,
   { label: "Refund Completed", Icon: FaRupeeSign }
@@ -62,6 +66,8 @@ function getTrackingStage(status) {
     .replace(/\s+/g, " ");
 
   if (normalisedStatus === "cancelled") return 1;
+
+  if (normalisedStatus === "payment pending") return 0;
 
   if (normalisedStatus === "shipped") return 2;
 
@@ -753,6 +759,8 @@ function Orders() {
               >
                 {(normaliseStatus(order.status) === "cancelled"
                   ? CANCELLED_TRACKING_STEPS
+                  : normaliseStatus(order.status) === "payment pending"
+                    ? PAYMENT_PENDING_TRACKING_STEPS
                   : normaliseStatus(order.status) === "refund completed"
                     ? REFUND_COMPLETED_TRACKING_STEPS
                     : ORDER_TRACKING_STEPS
