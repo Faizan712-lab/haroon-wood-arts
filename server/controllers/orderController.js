@@ -15,6 +15,9 @@ const {
   sendReturnRejectedEmail,
   sendOrderCancelledEmail
 } = require("../services/emailService");
+const {
+  createRazorpayOrder: createRemoteRazorpayOrder
+} = require("../services/razorpayService");
 
 function runQuery(sql, params = []) {
   return db.promise().execute(sql, params);
@@ -629,6 +632,95 @@ async function createOrder(req, res) {
   }
 }
 
+async function createRazorpayOrder(req, res) {
+  const connection = db.promise();
+
+  try {
+    await connection.beginTransaction();
+
+    const [orders] = await connection.execute(
+      `
+        SELECT id, order_code, total_amount, payment_mode, razorpay_order_id
+        FROM orders
+        WHERE (id = ? OR order_code = ?) AND user_id = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [req.params.id, req.params.id, req.auth.id]
+    );
+
+    const order = orders[0];
+
+    if (!order) {
+      await connection.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    if (order.payment_mode !== "Online Payment") {
+      await connection.rollback();
+      return res.status(409).json({
+        success: false,
+        message: "Razorpay is only available for online payments."
+      });
+    }
+
+    const amount = Math.round(Number(order.total_amount) * 100);
+
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      await connection.rollback();
+      return res.status(409).json({
+        success: false,
+        message: "Order amount is invalid."
+      });
+    }
+
+    let razorpayOrderId = order.razorpay_order_id;
+
+    if (!razorpayOrderId) {
+      const razorpayOrder = await createRemoteRazorpayOrder({
+        amount,
+        receipt: `hs_${order.order_code}`,
+        notes: {
+          order_code: order.order_code
+        }
+      });
+
+      razorpayOrderId = razorpayOrder.id;
+
+      if (!razorpayOrderId) {
+        throw new Error("Razorpay did not return an order ID.");
+      }
+
+      await connection.execute(
+        "UPDATE orders SET razorpay_order_id = ? WHERE id = ?",
+        [razorpayOrderId, order.id]
+      );
+    }
+
+    await connection.commit();
+
+    return res.status(200).json({
+      success: true,
+      razorpayOrderId,
+      amount,
+      currency: "INR",
+      keyId: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Failed to create Razorpay order:", {
+      code: error?.code || error?.name || "unknown"
+    });
+    return res.status(500).json({
+      success: false,
+      message: "Unable to initialize online payment. Please try again."
+    });
+  }
+}
+
 async function getOrders(req, res) {
   try {
 
@@ -1077,6 +1169,7 @@ async function markRefundCompleted(req, res) {
 
 module.exports = {
   createOrder,
+  createRazorpayOrder,
   getOrders,
   getOrderById,
   getMyOrders,

@@ -28,6 +28,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.3.0",
     "mysql2": "^3.24.4",
+    "razorpay": "^2.9.8",
     "resend": "^6.28.1"
   },
   "overrides": {

@@ -13,6 +13,7 @@ const {
 
 const {
   createOrder,
+  createRazorpayOrder,
   getOrders,
   getOrderById,
   updateStatus,
@@ -31,6 +32,7 @@ const {
 const returnEvidenceUpload = createImageUpload("returns");
 
 router.post("/", requireAuth(["user"]), createOrder);
+router.post("/:id/razorpay-order", requireAuth(["user"]), createRazorpayOrder);
 router.get("/", requireAdminAuth, getOrders);
 router.get("/:id", requireAuth(["user", "admin"]), getOrderById);
 router.patch("/:id/status", requireAdminAuth, updateStatus);
