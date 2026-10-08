@@ -2,17 +2,21 @@ import "./Payment.css";
 
 import {
   FaCreditCard,
-  FaHandHolding
+  FaHandHolding,
+  FaLock,
+  FaShieldAlt
 } from "react-icons/fa";
 
 import {
+  useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState
 } from "react";
 
 import {
-  useLocation,
-  useNavigate
+  useLocation
 } from "react-router-dom";
 
 import toast from "react-hot-toast";
@@ -25,69 +29,59 @@ import {
   getApiUrl
 } from "../utils/api";
 
-const paymentLogos = {
-  gpay:
-    "https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg",
-  paytm:
-    "https://upload.wikimedia.org/wikipedia/commons/4/42/Paytm_logo.png",
-  phonepe:
-    "https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg",
-  visa:
-    "https://upload.wikimedia.org/wikipedia/commons/5/5c/Visa_Inc._logo_%282021%E2%80%93present%29.svg",
-  mastercard:
-    "https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg"
-};
+/* ──────────────────────────────────────────────
+   Razorpay Checkout script loader (singleton)
+   ────────────────────────────────────────────── */
 
-const paymentOptions = [
-  {
-    id: "gpay",
-    label: "Google Pay",
-    type: "UPI",
-    logo:
-      paymentLogos.gpay
-  },
-  {
-    id: "paytm",
-    label: "Paytm",
-    type: "Wallet / UPI",
-    logo:
-      paymentLogos.paytm
-  },
-  {
-    id: "phonepe",
-    label: "PhonePe",
-    type: "UPI",
-    logo:
-      paymentLogos.phonepe
-  },
-  {
-    id: "card",
-    label: "Debit / Credit Card",
-    type: "Visa, Mastercard",
-    logo:
-      paymentLogos.visa
-  }
-];
+let razorpayScriptPromise = null;
+
+function loadRazorpayScript() {
+  if (razorpayScriptPromise) return razorpayScriptPromise;
+
+  razorpayScriptPromise = new Promise((resolve, reject) => {
+    if (window.Razorpay) {
+      resolve(window.Razorpay);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+
+    script.onload = () => {
+      if (window.Razorpay) {
+        resolve(window.Razorpay);
+      } else {
+        razorpayScriptPromise = null;
+        reject(new Error("Razorpay loaded but not available."));
+      }
+    };
+
+    script.onerror = () => {
+      razorpayScriptPromise = null;
+      reject(new Error("Failed to load payment gateway. Please check your internet and try again."));
+    };
+
+    document.body.appendChild(script);
+  });
+
+  return razorpayScriptPromise;
+}
+
+/* ──────────────────────────────────────────────
+   Component
+   ────────────────────────────────────────────── */
 
 function Payment() {
 
-  const navigate =
-    useNavigate();
-
-  const location =
-    useLocation();
+  const location = useLocation();
 
   const {
     cartItems,
-    clearCart,
     getTotalPrice
   } = useContext(CartContext);
 
-  const params =
-
-    new URLSearchParams(
-      location.search
-    );
+  const params = new URLSearchParams(location.search);
 
   const initialPaymentMode =
     params.get("mode") === "Online"
@@ -118,266 +112,289 @@ function Payment() {
     getTotalPrice() - discount,
     0
   );
+
   const codAdvance = Math.round(checkoutTotal * 10) / 100;
   const codRemaining = Math.round((checkoutTotal - codAdvance) * 100) / 100;
   const isCod = paymentMode === "COD";
   const amountToPay = isCod ? codAdvance : checkoutTotal;
 
-  const [selectedMethod,
-    setSelectedMethod] =
-    useState(isCod ? "cod" : "gpay");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState("idle");
+  // "idle" | "creating_order" | "loading_razorpay" | "awaiting_payment" | "pending_verification" | "payment_failed"
 
-  const [cardDetails,
-    setCardDetails] =
-    useState({
-      number: "",
-      name: "",
-      expiry: "",
-      cvv: ""
-    });
+  const isPaymentInProgress = useRef(false);
 
-  const [isSubmitting,
-    setIsSubmitting] =
-    useState(false);
+  /* ── Delivery date helper ── */
 
   function getDeliveryDate() {
-
-    const date =
-      new Date();
-
-    date.setDate(
-      date.getDate() + 4
-    );
-
+    const date = new Date();
+    date.setDate(date.getDate() + 4);
     return date.toDateString();
-
   }
 
-  function handleCardChange(e) {
-
-    const {
-      name,
-      value
-    } = e.target;
-
-    setCardDetails({
-      ...cardDetails,
-      [name]:
-        value
-    });
-
-  }
-
-  function getPaymentLabel() {
-    if (selectedMethod === "cod") {
-      return "COD";
-    }
-    const selected = paymentOptions.find(option => option.id === selectedMethod);
-    return selected?.label || "Online Payment";
-  }
+  /* ── Payment mode selection ── */
 
   function selectPaymentMode(nextMode) {
+    if (isSubmitting) return;
     setPaymentMode(nextMode);
-    setSelectedMethod(
-      nextMode === "COD" ? "cod" : "gpay"
-    );
   }
+
+  /* ── Coupon ── */
 
   function applyCoupon() {
     if (coupon.trim().toUpperCase() === "HAROON250") {
       setDiscount(250);
-      toast.success("Coupon Applied! Rs.250 Discount");
+      toast.success("Coupon Applied! ₹250 Discount");
       return;
     }
-
     setDiscount(0);
     toast.error("Invalid Coupon");
   }
 
-  function validatePayment() {
-    if (selectedMethod !== "card") {
-      return true;
-    }
-    if (!cardDetails.number || !cardDetails.name || !cardDetails.expiry || !cardDetails.cvv) {
-      toast.error("Please complete your card details");
-      return false;
-    }
-    return true;
-  }
+  /* ── Preload Razorpay on mount ── */
 
-  async function handlePayment() {
+  useEffect(() => {
+    loadRazorpayScript().catch(() => {
+      /* silent preload failure — we'll retry on click */
+    });
+  }, []);
 
-    if (!validatePayment()) {
-      return;
-    }
+  /* ── Main payment handler ── */
 
-    if (isSubmitting) {
-      return;
-    }
-
-    const total =
-
-      Math.max(
-        getTotalPrice() - discount,
-        0
-      );
-
-    const paid =
-
-      isCod ? 0 : total;
-
-    const remaining =
-
-      isCod ? total : 0;
-
-    const deliveryDate =
-      getDeliveryDate();
-
-    const orderPayload = {
-      createdAt:
-        checkoutData.createdAt ||
-        Date.now(),
-      cancelUntil:
-        checkoutData.cancelUntil ||
-        (
-          Date.now() +
-          (5 * 24 * 60 * 60 * 1000)
-        ),
-      items:
-        cartItems.map(item => ({
-          id:
-            item.id,
-          productId:
-            item.productId ||
-            item.id,
-          name:
-            item.name,
-          image:
-            item.image,
-          quantity:
-            item.quantity,
-          price:
-            item.price,
-          variantId:
-            item.variantId,
-          variantLabel:
-            item.variantLabel,
-          variantDimensions:
-            item.variantDimensions
-        })),
-      customer:
-        checkoutData.customer ||
-        "Guest",
-      phone:
-        checkoutData.phone ||
-        "",
-      address:
-        checkoutData.address ||
-        "",
-      total:
-        total,
-      paid:
-        paid,
-      remaining:
-        remaining,
-      paymentMode:
-        getPaymentLabel(),
-      status:
-        "Processing",
-      deliveryDate:
-        deliveryDate
-    };
+  const handlePayment = useCallback(async () => {
+    if (
+      isPaymentInProgress.current ||
+      isSubmitting ||
+      paymentStatus === "pending_verification"
+    ) return;
+    isPaymentInProgress.current = true;
+    setIsSubmitting(true);
+    setPaymentStatus("creating_order");
 
     try {
+      /* ── Step 1: Create the internal order ── */
 
-      setIsSubmitting(true);
+      const total = Math.max(getTotalPrice() - discount, 0);
 
-      const response =
-        await fetch(
-          getApiUrl("/api/orders"),
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-            body:
-              JSON.stringify(orderPayload)
-          }
-        );
+      const orderPayload = {
+        createdAt: checkoutData.createdAt || Date.now(),
+        cancelUntil: checkoutData.cancelUntil || (Date.now() + 5 * 24 * 60 * 60 * 1000),
+        items: cartItems.map(item => ({
+          id: item.id,
+          productId: item.productId || item.id,
+          name: item.name,
+          image: item.image,
+          quantity: item.quantity,
+          price: item.price,
+          variantId: item.variantId,
+          variantLabel: item.variantLabel,
+          variantDimensions: item.variantDimensions
+        })),
+        customer: checkoutData.customer || "Guest",
+        phone: checkoutData.phone || "",
+        address: checkoutData.address || "",
+        total,
+        paid: 0,
+        remaining: total,
+        paymentMode: isCod ? "COD" : "Online Payment",
+        status: "Processing",
+        deliveryDate: getDeliveryDate()
+      };
 
-      const data =
-        await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message ||
-          "Failed to create order"
-        );
-      }
-
-      clearCart();
-
-      sessionStorage.removeItem("haroonCheckoutData");
-
-      navigate(
-        "/order-success",
+      const orderRes = await fetch(
+        getApiUrl("/api/orders"),
         {
-          state: {
-            order:
-              data.order
-          }
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderPayload)
         }
       );
 
-    } catch (error) {
+      const orderData = await orderRes.json();
 
-      toast.error(
-        error.message ||
-        "Unable to place order. Please try again."
+      if (!orderRes.ok || !orderData.success) {
+        throw new Error(orderData.message || "Failed to create order");
+      }
+
+      const internalOrder = orderData.order;
+      const orderId = internalOrder.databaseId || internalOrder.id;
+
+      /* ── Step 2: Create / reuse Razorpay order ── */
+
+      const rpRes = await fetch(
+        getApiUrl(`/api/orders/${orderId}/razorpay-order`),
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" }
+        }
       );
 
+      const rpData = await rpRes.json();
+
+      if (!rpRes.ok || !rpData.success) {
+        throw new Error(rpData.message || "Unable to initialize payment.");
+      }
+
+      /* ── Step 3: Load Razorpay Checkout ── */
+
+      setPaymentStatus("loading_razorpay");
+
+      let RazorpayClass;
+      try {
+        RazorpayClass = await loadRazorpayScript();
+      } catch {
+        throw new Error("Payment gateway could not be loaded. Please check your internet connection and try again.");
+      }
+
+      /* ── Step 4: Open Razorpay Checkout ── */
+
+      setPaymentStatus("awaiting_payment");
+
+      const razorpayResponse = await new Promise((resolve, reject) => {
+        const options = {
+          key: rpData.keyId,
+          amount: rpData.amount,
+          currency: rpData.currency,
+          name: "Haroon Stores",
+          description: isCod
+            ? `10% Advance for Order ${rpData.orderCode || ""}`
+            : `Payment for Order ${rpData.orderCode || ""}`,
+          order_id: rpData.razorpayOrderId,
+          prefill: {
+            name: checkoutData.customer || "",
+            contact: checkoutData.phone || ""
+          },
+          theme: {
+            color: "#3e2723"
+          },
+          modal: {
+            ondismiss: () => {
+              reject(new Error("__CANCELLED__"));
+            },
+            escape: true,
+            confirm_close: true
+          },
+          handler: (response) => {
+            /* Phase 2: we do NOT verify the signature yet.
+               Just capture the response for Phase 3. */
+            resolve(response);
+          }
+        };
+
+        const rzp = new RazorpayClass(options);
+
+        rzp.on("payment.failed", (failResponse) => {
+          const desc =
+            failResponse?.error?.description ||
+            "Payment failed. Please try again.";
+          reject(new Error(desc));
+        });
+
+        rzp.open();
+      });
+
+      /* ── Step 5: Retain the unverified Razorpay response ── */
+
+      /* Phase 2 does not verify the Razorpay signature. Keep the response
+         available for Phase 3, but do not finalize this order client-side. */
+      sessionStorage.setItem(
+        "haroonRazorpayPaymentResponse",
+        JSON.stringify({
+          orderId,
+          orderCode: rpData.orderCode,
+          razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+          razorpay_order_id: razorpayResponse.razorpay_order_id,
+          razorpay_signature: razorpayResponse.razorpay_signature
+        })
+      );
+
+      setPaymentStatus("pending_verification");
+      toast("Payment response received. Verification is pending.", {
+        icon: "ℹ️"
+      });
+
+    } catch (error) {
+      if (error.message === "__CANCELLED__") {
+        setPaymentStatus("idle");
+        toast("Payment cancelled. You can try again.", {
+          icon: "ℹ️"
+        });
+      } else {
+        setPaymentStatus("payment_failed");
+        toast.error(
+          error.message || "Unable to process payment. Please try again."
+        );
+      }
     } finally {
-
       setIsSubmitting(false);
-
+      isPaymentInProgress.current = false;
     }
+  }, [
+    isCod, cartItems, checkoutData, discount,
+    getTotalPrice, isSubmitting, paymentStatus
+  ]);
 
+  /* ── Button label ── */
+
+  function getButtonLabel() {
+    switch (paymentStatus) {
+      case "creating_order":
+        return "Creating Order…";
+      case "loading_razorpay":
+        return "Loading Payment…";
+      case "awaiting_payment":
+        return "Complete Payment…";
+      case "pending_verification":
+        return "Verification Pending";
+      default:
+        if (isCod) {
+          return `Pay ₹${codAdvance.toFixed(2)} Advance`;
+        }
+        return `Pay ₹${checkoutTotal.toFixed(2)}`;
+    }
   }
+
+  /* ────────────────────────────────────────────
+     Render
+     ──────────────────────────────────────────── */
 
   return (
 
     <div className="payment-page">
 
-      <div className="payment-stepper">
+      {/* ── Progress stepper ── */}
 
+      <div className="payment-stepper">
         <div className="payment-step done">
           <span>✓</span>
           <p>Address</p>
         </div>
-
         <div className="payment-line active"></div>
-
         <div className="payment-step active">
           <span>2</span>
           <p>Payment</p>
         </div>
-
         <div className="payment-line"></div>
-
         <div className="payment-step">
           <span>3</span>
           <p>Success</p>
         </div>
-
       </div>
 
       <div className="payment-page-title">
-        <h1>Secure Payment</h1>
+        <h1>
+          <FaLock style={{ fontSize: 14, marginRight: 6, verticalAlign: "-1px" }} />
+          Secure Payment
+        </h1>
       </div>
 
       <div className="payment-shell">
+
+        {/* ════════════════════════════════════
+            SUMMARY SIDEBAR
+            ════════════════════════════════════ */}
 
         <aside className="payment-summary-card">
 
@@ -387,38 +404,41 @@ function Payment() {
           </div>
 
           <p className="amount-label">
-            Amount to Pay
+            {isCod ? "Advance to Pay Now" : "Amount to Pay"}
           </p>
 
           <h2 className="payment-amount">
-            Rs. {amountToPay.toFixed(2)}
+            ₹{amountToPay.toFixed(2)}
           </h2>
 
           <div className="payment-mode-pill">
             <span>Mode</span>
-            <strong>{isCod ? "Cash on Delivery" : "Online Payment"}</strong>
+            <strong>{isCod ? "Cash on Delivery" : "Pay Online"}</strong>
           </div>
 
           <div className="payment-price-summary">
             {isCod ? (
               <>
                 <div>
-                  <span>Cash on Delivery</span>
-                  <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
+                  <span>Order Total</span>
+                  <strong>₹{checkoutTotal.toFixed(2)}</strong>
+                </div>
+                <div className="cod-highlight-advance">
+                  <span>
+                    <FaLock style={{ fontSize: 9, marginRight: 4, verticalAlign: "0px" }} />
+                    Pay 10% advance online
+                  </span>
+                  <strong>₹{codAdvance.toFixed(2)}</strong>
                 </div>
                 <div>
-                  <span>Advance payment</span>
-                  <strong>Rs. {codAdvance.toFixed(2)}</strong>
-                </div>
-                <div>
-                  <span>Payable on delivery</span>
-                  <strong>Rs. {codRemaining.toFixed(2)}</strong>
+                  <span>Pay 90% on delivery</span>
+                  <strong>₹{codRemaining.toFixed(2)}</strong>
                 </div>
               </>
             ) : (
               <div>
                 <span>Order Total</span>
-                <strong>Rs. {checkoutTotal.toFixed(2)}</strong>
+                <strong>₹{checkoutTotal.toFixed(2)}</strong>
               </div>
             )}
           </div>
@@ -432,25 +452,30 @@ function Payment() {
                 placeholder="Enter coupon code"
                 value={coupon}
                 onChange={(event) => setCoupon(event.target.value)}
+                disabled={isSubmitting}
               />
-              <button type="button" onClick={applyCoupon}>Apply</button>
+              <button type="button" onClick={applyCoupon} disabled={isSubmitting}>
+                Apply
+              </button>
             </div>
             {discount > 0 && (
               <p className="payment-coupon-success">
-                Coupon applied: Rs. {discount.toFixed(2)} saved
+                Coupon applied: ₹{discount.toFixed(2)} saved
               </p>
             )}
           </div>
 
-
-
-
-
         </aside>
+
+        {/* ════════════════════════════════════
+            PAYMENT METHODS SECTION
+            ════════════════════════════════════ */}
 
         <section className="payment-box">
 
           <h2 className="payment-box-title">Choose Payment Method</h2>
+
+          {/* ── COD vs Online toggle ── */}
 
           <div className="payment-method-choice-grid">
             <button
@@ -461,13 +486,14 @@ function Payment() {
                   : "payment-choice"
               }
               onClick={() => selectPaymentMode("COD")}
+              disabled={isSubmitting}
             >
               <span className="choice-icon cod-icon">
                 <FaHandHolding />
               </span>
               <span>
                 <strong>Cash on Delivery</strong>
-                <small>10% advance, 90% on delivery</small>
+                <small>Pay 10% advance, 90% on delivery</small>
               </span>
             </button>
 
@@ -479,151 +505,91 @@ function Payment() {
                   : "payment-choice"
               }
               onClick={() => selectPaymentMode("Online")}
+              disabled={isSubmitting}
             >
               <span className="choice-icon">
                 <FaCreditCard />
               </span>
               <span>
                 <strong>Pay Online</strong>
-                <small>Pay the full amount online</small>
+                <small>Pay full amount securely</small>
               </span>
             </button>
           </div>
 
-          {!isCod && (
-            <div className="payment-choice-grid payment-online-options">
-              {paymentOptions.map(option => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={
-                    selectedMethod === option.id
-                      ? "payment-choice active"
-                      : "payment-choice"
-                  }
-                  onClick={() => setSelectedMethod(option.id)}
-                >
-                  <span className="choice-icon">
-                    {option.id === "card" ? (
-                      <span className="choice-card-network-logos" aria-label="Visa and Mastercard accepted">
-                        <img src={paymentLogos.visa} alt="Visa" />
-                        <img src={paymentLogos.mastercard} alt="Mastercard" />
-                      </span>
-                    ) : (
-                      <img src={option.logo} alt={option.label} />
-                    )}
-                  </span>
-                  <span>
-                    <strong>{option.label}</strong>
-                    <small>{option.type}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {!isCod && selectedMethod !== "card" && (
-            <div className="upi-panel">
-              <label htmlFor="upi-id">
-                UPI ID / Mobile Number
-              </label>
-              <input
-                id="upi-id"
-                type="text"
-                placeholder="example@upi or mobile number"
-              />
-              <p>
-                A secure payment request will be created for the selected app.
-              </p>
-            </div>
-          )}
-
-          {!isCod && selectedMethod === "card" && (
-            <div className="card-panel">
-              <label htmlFor="card-number">
-                Card Number
-              </label>
-              <input
-                id="card-number"
-                name="number"
-                type="text"
-                inputMode="numeric"
-                maxLength="19"
-                placeholder="1234 5678 9012 3456"
-                value={cardDetails.number}
-                onChange={handleCardChange}
-              />
-              <label htmlFor="card-name">
-                Name on Card
-              </label>
-              <input
-                id="card-name"
-                name="name"
-                type="text"
-                placeholder="Card holder name"
-                value={cardDetails.name}
-                onChange={handleCardChange}
-              />
-              <div className="card-row">
-                <div>
-                  <label htmlFor="card-expiry">
-                    Expiry
-                  </label>
-                  <input
-                    id="card-expiry"
-                    name="expiry"
-                    type="text"
-                    placeholder="MM/YY"
-                    maxLength="5"
-                    value={cardDetails.expiry}
-                    onChange={handleCardChange}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="card-cvv">
-                    CVV
-                  </label>
-                  <input
-                    id="card-cvv"
-                    name="cvv"
-                    type="password"
-                    inputMode="numeric"
-                    placeholder="123"
-                    maxLength="4"
-                    value={cardDetails.cvv}
-                    onChange={handleCardChange}
-                  />
-                </div>
-              </div>
-              <div className="card-logos">
-                <img src={paymentLogos.visa} alt="Visa" />
-                <img src={paymentLogos.mastercard} alt="Mastercard" />
-              </div>
-            </div>
-          )}
+          {/* ── COD info panel ── */}
 
           {isCod && (
             <div className="cod-panel">
-              <strong>Cash on Delivery</strong>
-              <p className="cod-breakdown">
-                <span className="cod-advance-row">
-                  Advance payment: Rs. {codAdvance.toFixed(2)}
-                </span>
-                <span className="cod-remaining-row">
-                  Payable on delivery: Rs. {codRemaining.toFixed(2)}
-                </span>
+              <div className="cod-info-header">
+                <FaShieldAlt className="cod-shield-icon" />
+                <strong>Cash on Delivery</strong>
+              </div>
+              <div className="cod-breakdown-grid">
+                <div className="cod-breakdown-item cod-advance-item">
+                  <span className="cod-breakdown-label">Pay now (10% advance)</span>
+                  <span className="cod-breakdown-value">₹{codAdvance.toFixed(2)}</span>
+                </div>
+                <div className="cod-breakdown-item">
+                  <span className="cod-breakdown-label">Pay on delivery (90%)</span>
+                  <span className="cod-breakdown-value">₹{codRemaining.toFixed(2)}</span>
+                </div>
+                <div className="cod-breakdown-item cod-total-item">
+                  <span className="cod-breakdown-label">Order Total</span>
+                  <span className="cod-breakdown-value">₹{checkoutTotal.toFixed(2)}</span>
+                </div>
+              </div>
+              <p className="cod-info-note">
+                A 10% advance payment is required to confirm your Cash on Delivery order.
+                The remaining amount will be collected at the time of delivery.
               </p>
             </div>
           )}
 
+          {/* ── Online info panel ── */}
+
+          {!isCod && (
+            <div className="online-panel">
+              <div className="online-info-header">
+                <FaLock className="online-lock-icon" />
+                <strong>Pay Online — ₹{checkoutTotal.toFixed(2)}</strong>
+              </div>
+              <p className="online-info-note">
+                You will be redirected to Razorpay's secure checkout
+                to complete your payment using UPI, cards, net banking, or wallets.
+              </p>
+            </div>
+          )}
+
+          {/* ── Error message ── */}
+
+          {paymentStatus === "payment_failed" && (
+            <div className="payment-error-banner">
+              <p>Payment was not completed. Please try again.</p>
+            </div>
+          )}
+
+          {/* ── Pay button ── */}
+
           <button
-            className="pay-btn"
+            className={`pay-btn${isSubmitting ? " pay-btn-loading" : ""}`}
             type="button"
             onClick={handlePayment}
-            disabled={isSubmitting}
+            disabled={isSubmitting || paymentStatus === "pending_verification"}
           >
-            {isSubmitting ? "Processing..." : "Continue to Pay"}
+            {isSubmitting && (
+              <span className="pay-btn-spinner" aria-hidden="true"></span>
+            )}
+            {getButtonLabel()}
           </button>
+
+          <p className="pay-btn-subtext">
+            <FaShieldAlt style={{ fontSize: 10, marginRight: 4, verticalAlign: "-1px" }} />
+            {isCod
+              ? "Secure online advance via Razorpay"
+              : "Secured by Razorpay"
+            }
+          </p>
 
         </section>
 

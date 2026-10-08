@@ -640,7 +640,8 @@ async function createRazorpayOrder(req, res) {
 
     const [orders] = await connection.execute(
       `
-        SELECT id, order_code, total_amount, payment_mode, razorpay_order_id
+        SELECT id, order_code, total_amount, payment_mode,
+               razorpay_order_id, razorpay_payment_type
         FROM orders
         WHERE (id = ? OR order_code = ?) AND user_id = ?
         LIMIT 1
@@ -659,17 +660,29 @@ async function createRazorpayOrder(req, res) {
       });
     }
 
-    if (order.payment_mode !== "Online Payment") {
+    const paymentMode = order.payment_mode;
+
+    if (paymentMode !== "Online Payment" && paymentMode !== "COD") {
       await connection.rollback();
       return res.status(409).json({
         success: false,
-        message: "Razorpay is only available for online payments."
+        message: "Invalid payment mode for this order."
       });
     }
 
-    const amount = Math.round(Number(order.total_amount) * 100);
+    const isCod = paymentMode === "COD";
+    const requestedType = isCod ? "cod_advance" : "full";
 
-    if (!Number.isSafeInteger(amount) || amount <= 0) {
+    const totalPaise = Math.round(Number(order.total_amount) * 100);
+    let amountPaise;
+
+    if (isCod) {
+      amountPaise = Math.round(totalPaise * 10 / 100);
+    } else {
+      amountPaise = totalPaise;
+    }
+
+    if (!Number.isSafeInteger(amountPaise) || amountPaise <= 0) {
       await connection.rollback();
       return res.status(409).json({
         success: false,
@@ -678,13 +691,25 @@ async function createRazorpayOrder(req, res) {
     }
 
     let razorpayOrderId = order.razorpay_order_id;
+    const storedType = order.razorpay_payment_type || null;
+
+    const typeMatches = razorpayOrderId && storedType === requestedType;
+
+    if (razorpayOrderId && !typeMatches) {
+      await connection.rollback();
+      return res.status(409).json({
+        success: false,
+        message: "This order already has a Razorpay order for a different payment type."
+      });
+    }
 
     if (!razorpayOrderId) {
       const razorpayOrder = await createRemoteRazorpayOrder({
-        amount,
-        receipt: `hs_${order.order_code}`,
+        amount: amountPaise,
+        receipt: `hs_${order.order_code}_${requestedType}`,
         notes: {
-          order_code: order.order_code
+          order_code: order.order_code,
+          payment_type: requestedType
         }
       });
 
@@ -695,19 +720,24 @@ async function createRazorpayOrder(req, res) {
       }
 
       await connection.execute(
-        "UPDATE orders SET razorpay_order_id = ? WHERE id = ?",
-        [razorpayOrderId, order.id]
+        "UPDATE orders SET razorpay_order_id = ?, razorpay_payment_type = ? WHERE id = ?",
+        [razorpayOrderId, requestedType, order.id]
       );
     }
 
     await connection.commit();
 
+    const amountRupees = amountPaise / 100;
+
     return res.status(200).json({
       success: true,
       razorpayOrderId,
-      amount,
+      amount: amountPaise,
+      amountDisplay: amountRupees,
       currency: "INR",
-      keyId: process.env.RAZORPAY_KEY_ID
+      keyId: process.env.RAZORPAY_KEY_ID,
+      paymentType: requestedType,
+      orderCode: order.order_code
     });
   } catch (error) {
     await connection.rollback();
