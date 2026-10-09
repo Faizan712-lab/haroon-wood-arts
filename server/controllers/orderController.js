@@ -1685,5 +1685,9 @@ module.exports = {
   markPickupScheduled,
   markPickupCompleted,
   markReturnCompleted,
-  markRefundCompleted
+  markRefundCompleted,
+  getOrderWithItems,
+  notifyOrderCreated,
+  isPaymentPendingOrder,
+  codPaymentBreakdown
 };

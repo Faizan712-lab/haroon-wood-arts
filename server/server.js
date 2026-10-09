@@ -14,6 +14,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const passwordResetRoutes = require("./routes/passwordResetRoutes");
 const wishlistRoutes = require("./routes/wishlistRoutes");
+const webhookRoutes = require("./routes/webhookRoutes");
 const {
   getMyOrders,
   expireDuePendingOrders
@@ -68,7 +69,14 @@ app.use(helmet({
     }
   }
 }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({
+  limit: "1mb",
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith("/api/webhooks")) {
+      req.rawBody = buf.toString("utf8");
+    }
+  }
+}));
 app.use(requestShapeLimit());
 app.use(cookieMutationProtection(allowedOrigins));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -98,6 +106,7 @@ app.use("/api/password", passwordResetRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/webhooks", webhookRoutes);
 app.get(
   "/api/users/me/orders",
   requireAuth(["user"]),
