@@ -944,7 +944,13 @@ async function createRazorpayOrder(req, res) {
       order.checkout_attempt_id = checkoutAttemptId;
     }
 
-    const paymentMode = order.payment_mode;
+    let paymentMode = order.payment_mode;
+
+    if (isResumeRequest && req.body?.paymentMode && req.body.paymentMode !== paymentMode) {
+      if (req.body.paymentMode === "COD" || req.body.paymentMode === "Online Payment") {
+        paymentMode = req.body.paymentMode;
+      }
+    }
 
     if (paymentMode !== "Online Payment" && paymentMode !== "COD") {
       await connection.rollback();
@@ -980,11 +986,7 @@ async function createRazorpayOrder(req, res) {
     const typeMatches = razorpayOrderId && storedType === requestedType;
 
     if (razorpayOrderId && !typeMatches) {
-      await connection.rollback();
-      return res.status(409).json({
-        success: false,
-        message: "This order already has a Razorpay order for a different payment type."
-      });
+      razorpayOrderId = null;
     }
 
     if (!razorpayOrderId) {
@@ -1004,8 +1006,8 @@ async function createRazorpayOrder(req, res) {
       }
 
       await connection.execute(
-        "UPDATE orders SET razorpay_order_id = ?, razorpay_payment_type = ? WHERE id = ?",
-        [razorpayOrderId, requestedType, order.id]
+        "UPDATE orders SET razorpay_order_id = ?, razorpay_payment_type = ?, payment_mode = ? WHERE id = ?",
+        [razorpayOrderId, requestedType, paymentMode, order.id]
       );
     }
 

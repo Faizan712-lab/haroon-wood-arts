@@ -16,7 +16,8 @@ import {
 } from "react";
 
 import {
-  useLocation
+  useLocation,
+  useNavigate
 } from "react-router-dom";
 
 import toast from "react-hot-toast";
@@ -98,6 +99,7 @@ function loadRazorpayScript() {
 function Payment() {
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   const {
     cartItems,
@@ -133,6 +135,11 @@ function Payment() {
     useState(initialPaymentMode);
 
   const [pendingOrder, setPendingOrder] = useState(null);
+  const pendingOrderRef = useRef(null);
+  useEffect(() => {
+    pendingOrderRef.current = pendingOrder;
+  }, [pendingOrder]);
+
   const [resumeLoadError, setResumeLoadError] = useState("");
 
   const checkoutTotal = Math.max(
@@ -162,7 +169,7 @@ function Payment() {
   /* ── Payment mode selection ── */
 
   function selectPaymentMode(nextMode) {
-    if (isSubmitting || pendingOrder) return;
+    if (isSubmitting) return;
     setPaymentMode(nextMode);
   }
 
@@ -188,6 +195,9 @@ function Payment() {
 
   useEffect(() => {
     if (!resumeOrderId) return;
+    if (pendingOrderRef.current && (pendingOrderRef.current.databaseId || pendingOrderRef.current.id) == resumeOrderId) {
+      return;
+    }
 
     async function loadPendingOrder() {
       try {
@@ -238,7 +248,10 @@ function Payment() {
 
       let internalOrder = pendingOrder;
       let orderId = pendingOrder?.databaseId || pendingOrder?.id;
-      const isResumeCheckout = Boolean(resumeOrderId);
+      const isResumeCheckout = Boolean(
+        resumeOrderId ||
+        (pendingOrder && pendingOrder.paymentAttemptState === "resume_window")
+      );
       activeOrderId = orderId;
 
       if (!internalOrder) {
@@ -303,7 +316,10 @@ function Payment() {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resume: isResumeCheckout })
+          body: JSON.stringify({
+            resume: isResumeCheckout,
+            paymentMode: isCod ? "COD" : "Online Payment"
+          })
         }
       );
 
@@ -402,7 +418,15 @@ function Payment() {
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ checkoutAttemptId: activeCheckoutAttemptId })
-          }).catch(() => {});
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success && data.order) {
+                setPendingOrder(data.order);
+                navigate(`?order=${activeOrderId}`, { replace: true, state: location.state });
+              }
+            })
+            .catch(() => {});
         }
         setPaymentStatus("idle");
         toast("Payment cancelled. You can try again.", {
@@ -415,7 +439,15 @@ function Payment() {
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ checkoutAttemptId: activeCheckoutAttemptId })
-          }).catch(() => {});
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success && data.order) {
+                setPendingOrder(data.order);
+                navigate(`?order=${activeOrderId}`, { replace: true, state: location.state });
+              }
+            })
+            .catch(() => {});
         }
         setPaymentStatus("payment_failed");
         toast.error(
@@ -428,7 +460,7 @@ function Payment() {
     }
   }, [
     isCod, cartItems, checkoutData, discount,
-    getTotalPrice, isSubmitting, paymentStatus, pendingOrder, resumeOrderId
+    getTotalPrice, isSubmitting, paymentStatus, pendingOrder, resumeOrderId, navigate, location.state
   ]);
 
   /* ── Button label ── */
@@ -581,7 +613,7 @@ function Payment() {
                   : "payment-choice"
               }
               onClick={() => selectPaymentMode("COD")}
-              disabled={isSubmitting || Boolean(pendingOrder)}
+              disabled={isSubmitting}
             >
               <span className="choice-icon cod-icon">
                 <FaHandHolding />
@@ -600,7 +632,7 @@ function Payment() {
                   : "payment-choice"
               }
               onClick={() => selectPaymentMode("Online")}
-              disabled={isSubmitting || Boolean(pendingOrder)}
+              disabled={isSubmitting}
             >
               <span className="choice-icon">
                 <FaCreditCard />
