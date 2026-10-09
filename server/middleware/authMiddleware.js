@@ -25,18 +25,25 @@ function getToken(req, allowedRoles = []) {
     return authHeader.slice(7);
   }
 
-  if (
-    allowedRoles.includes("admin") ||
-    req.query.role === "admin"
-  ) {
+  if (req.query.role === "admin") {
     return getCookie(req, "adminToken");
   }
 
-  if (
-    allowedRoles.includes("user") ||
-    req.query.role === "user"
-  ) {
+  if (req.query.role === "user") {
     return getCookie(req, "userToken");
+  }
+
+  if (allowedRoles.length > 0) {
+    for (const role of allowedRoles) {
+      const cookieName = role === "admin" ? "adminToken" : "userToken";
+      const token = getCookie(req, cookieName);
+
+      if (token) {
+        return token;
+      }
+    }
+
+    return undefined;
   }
 
   return (
