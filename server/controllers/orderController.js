@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const crypto = require("crypto");
 const {
   uploadedImagePaths,
   deleteCloudinaryImages
@@ -31,6 +32,10 @@ function generateOrderCode() {
       Math.random() * 900000
     )
   );
+}
+
+function generateCheckoutAttemptId() {
+  return crypto.randomUUID();
 }
 
 function finalProductPrice(product, basePrice) {
@@ -119,6 +124,105 @@ function isAllowedTransition(currentStatus, allowedStatuses) {
   );
 }
 
+const PAYMENT_PENDING_STATUS = "Payment Pending";
+const PAYMENT_EXPIRED_STATUS = "Payment Expired";
+const CHECKOUT_ACTIVE_STATE = "checkout_active";
+const RESUME_WINDOW_STATE = "resume_window";
+const EXPIRED_STATE = "expired";
+
+function isPaymentPendingOrder(order) {
+  return normalizeStatus(order?.status) === "payment pending";
+}
+
+function isResumeWindowExpired(order) {
+  if (order?.payment_attempt_state !== RESUME_WINDOW_STATE || !order.payment_resume_expires_at) {
+    return false;
+  }
+
+  return new Date(order.payment_resume_expires_at).getTime() <= Date.now();
+}
+
+async function restorePendingOrderStock(connection, orderId) {
+  const [items] = await connection.execute(
+    `SELECT product_id, variant_id, quantity
+     FROM order_items
+     WHERE order_id = ?
+     FOR UPDATE`,
+    [orderId]
+  );
+
+  for (const item of items) {
+    const quantity = Number(item.quantity || 0);
+    if (!Number.isInteger(quantity) || quantity <= 0) continue;
+
+    if (item.variant_id) {
+      await connection.execute(
+        "UPDATE product_variants SET stock = stock + ? WHERE id = ?",
+        [quantity, item.variant_id]
+      );
+    } else if (item.product_id) {
+      await connection.execute(
+        "UPDATE products SET stock = stock + ? WHERE id = ?",
+        [quantity, item.product_id]
+      );
+    }
+  }
+}
+
+async function expirePendingOrderInTransaction(connection, order, isDue = false) {
+  if (!isPaymentPendingOrder(order) || (!isDue && !isResumeWindowExpired(order))) {
+    return false;
+  }
+
+  await restorePendingOrderStock(connection, order.id);
+  await connection.execute(
+    `UPDATE orders
+     SET status = ?,
+         payment_attempt_state = ?,
+         payment_resume_expires_at = NULL
+     WHERE id = ? AND status = ? AND payment_attempt_state = ?`,
+    [
+      PAYMENT_EXPIRED_STATUS,
+      EXPIRED_STATE,
+      order.id,
+      PAYMENT_PENDING_STATUS,
+      RESUME_WINDOW_STATE
+    ]
+  );
+
+  return true;
+}
+
+async function expireDuePendingOrders() {
+  const connection = await db.promise().getConnection();
+
+  try {
+    await connection.beginTransaction();
+    const [orders] = await connection.execute(
+      `SELECT * FROM orders
+       WHERE status = ?
+         AND payment_attempt_state = ?
+         AND payment_resume_expires_at <= NOW()
+       ORDER BY id ASC
+       LIMIT 50
+       FOR UPDATE`,
+      [PAYMENT_PENDING_STATUS, RESUME_WINDOW_STATE]
+    );
+
+    for (const order of orders) {
+      await expirePendingOrderInTransaction(connection, order, true);
+    }
+
+    await connection.commit();
+    return orders.length;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
 function codPaymentBreakdown(totalAmount) {
   const totalPaise = Math.round(Number(totalAmount || 0) * 100);
   const advancePaise = Math.round(totalPaise * 10 / 100);
@@ -149,6 +253,9 @@ function mapOrderRow(row, items = []) {
     paid: Number(row.paid_amount || 0),
     remaining: Number(row.remaining_amount || 0),
     paymentMode: row.payment_mode,
+    paymentAttemptState: row.payment_attempt_state || null,
+    paymentResumeExpiresAt: row.payment_resume_expires_at || null,
+    checkoutAttemptId: row.checkout_attempt_id || null,
     codAdvance: codBreakdown?.advance || 0,
     codRemainingOnDelivery: codBreakdown?.remainingOnDelivery || 0,
     status: row.status,
@@ -254,7 +361,7 @@ async function updateOrderById(
   allowedStatuses,
   ownerUserId = null
 ) {
-  const connection = db.promise();
+  const connection = await db.promise().getConnection();
 
   try {
     await connection.beginTransaction();
@@ -343,6 +450,8 @@ async function updateOrderById(
   } catch (error) {
     await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 }
 
@@ -425,11 +534,21 @@ async function getOrderWithItems(whereSql, params) {
 }
 
 async function createOrder(req, res) {
-  const connection = db.promise();
+  const connection = await db.promise().getConnection();
+  let checkoutSessionId = null;
+  let checkoutLockName = null;
+  let checkoutLockAcquired = false;
 
   try {
 
-    const { customer, phone, address, paymentMode, items } = req.body;
+    const {
+      customer,
+      phone,
+      address,
+      paymentMode,
+      items,
+      checkoutSessionId: requestedCheckoutSessionId
+    } = req.body;
 
     if (!req.auth?.id || req.auth.role !== "user") {
       return res.status(401).json({
@@ -451,7 +570,69 @@ async function createOrder(req, res) {
       });
     }
 
+    if (
+      typeof requestedCheckoutSessionId !== "string" ||
+      !/^[a-f0-9-]{36}$/i.test(requestedCheckoutSessionId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid checkout session is required."
+      });
+    }
+
+    checkoutSessionId = requestedCheckoutSessionId;
+    checkoutLockName = `checkout:${req.auth.id}:${checkoutSessionId}`;
+
+    const [checkoutLocks] = await connection.query(
+      "SELECT GET_LOCK(?, 10) AS acquired",
+      [checkoutLockName]
+    );
+
+    if (Number(checkoutLocks[0]?.acquired) !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: "Checkout is busy. Please try again."
+      });
+    }
+
+    checkoutLockAcquired = true;
+
     await connection.beginTransaction();
+
+    const [existingOrders] = await connection.execute(
+      `SELECT id, status, payment_attempt_state
+       FROM orders
+       WHERE user_id = ? AND checkout_session_id = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [req.auth.id, checkoutSessionId]
+    );
+    const existingOrder = existingOrders[0];
+
+    if (existingOrder) {
+      const isReusable =
+        isPaymentPendingOrder(existingOrder) &&
+        (existingOrder.payment_attempt_state === CHECKOUT_ACTIVE_STATE ||
+          existingOrder.payment_attempt_state === RESUME_WINDOW_STATE);
+
+      if (!isReusable) {
+        await connection.rollback();
+        return res.status(409).json({
+          success: false,
+          checkoutSessionInvalid: true,
+          message: "This checkout is no longer available. Please start a new checkout."
+        });
+      }
+
+      await connection.commit();
+      const order = await getOrderWithItems("WHERE id = ?", [existingOrder.id]);
+      return res.status(200).json({
+        success: true,
+        reused: true,
+        message: "Existing pending order reused.",
+        order
+      });
+    }
 
     const authoritativeItems = [];
 
@@ -546,11 +727,14 @@ async function createOrder(req, res) {
           remaining_amount,
           payment_mode,
           status,
+          payment_attempt_state,
+          payment_resume_expires_at,
+          checkout_session_id,
           delivery_date,
           delivered_date,
           cancel_until
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         orderCode,
@@ -562,7 +746,10 @@ async function createOrder(req, res) {
         0,
         total,
         normalizedPaymentMode,
-        "Payment Pending",
+        PAYMENT_PENDING_STATUS,
+        CHECKOUT_ACTIVE_STATE,
+        null,
+        checkoutSessionId,
         null,
         null,
         toSqlDateTime(addDaysDate(2))
@@ -624,25 +811,59 @@ async function createOrder(req, res) {
   } catch (error) {
     await connection.rollback();
 
+    if (error?.code === "ER_DUP_ENTRY" && checkoutSessionId && req.auth?.id) {
+      const existingOrder = await getOrderWithItems(
+        "WHERE user_id = ? AND checkout_session_id = ?",
+        [req.auth.id, checkoutSessionId]
+      );
+
+      if (
+        existingOrder &&
+        isPaymentPendingOrder(existingOrder) &&
+        (existingOrder.paymentAttemptState === CHECKOUT_ACTIVE_STATE ||
+          existingOrder.paymentAttemptState === RESUME_WINDOW_STATE)
+      ) {
+        return res.status(200).json({
+          success: true,
+          reused: true,
+          message: "Existing pending order reused.",
+          order: existingOrder
+        });
+      }
+    }
+
     console.error("Failed to create order:", error);
 
     res.status(500).json({
       success: false,
       message: "Failed to create order"
     });
+  } finally {
+    if (checkoutLockAcquired) {
+      try {
+        await connection.query("SELECT RELEASE_LOCK(?)", [checkoutLockName]);
+      } catch (error) {
+        console.error("Failed to release checkout lock:", {
+          code: error?.code || error?.name || "unknown"
+        });
+      }
+    }
+    connection.release();
   }
 }
 
 async function createRazorpayOrder(req, res) {
-  const connection = db.promise();
+  const connection = await db.promise().getConnection();
 
   try {
     await connection.beginTransaction();
 
     const [orders] = await connection.execute(
       `
-        SELECT id, order_code, total_amount, payment_mode,
-               razorpay_order_id, razorpay_payment_type
+        SELECT id, order_code, total_amount, payment_mode, status,
+               razorpay_order_id, razorpay_payment_type,
+               payment_attempt_state, payment_resume_expires_at,
+               checkout_attempt_id
         FROM orders
         WHERE (id = ? OR order_code = ?) AND user_id = ?
         LIMIT 1
@@ -659,6 +880,68 @@ async function createRazorpayOrder(req, res) {
         success: false,
         message: "Order not found"
       });
+    }
+
+    if (!isPaymentPendingOrder(order)) {
+      await connection.rollback();
+      return res.status(409).json({
+        success: false,
+        message: "This order is not available for payment."
+      });
+    }
+
+    const isResumeRequest = req.body?.resume === true;
+    const [deadlineRows] = await connection.execute(
+      `SELECT payment_resume_expires_at <= NOW() AS expired
+       FROM orders WHERE id = ?`,
+      [order.id]
+    );
+
+    if (isResumeRequest) {
+      if (order.payment_attempt_state !== RESUME_WINDOW_STATE) {
+        await connection.rollback();
+        return res.status(409).json({
+          success: false,
+          message: "This order is not available to resume payment."
+        });
+      }
+
+      if (deadlineRows[0]?.expired) {
+        await expirePendingOrderInTransaction(connection, order, true);
+        await connection.commit();
+        return res.status(410).json({
+          success: false,
+          message: "This pending payment has expired."
+        });
+      }
+
+      const checkoutAttemptId = generateCheckoutAttemptId();
+      await connection.execute(
+        `UPDATE orders
+         SET payment_attempt_state = ?,
+             payment_resume_expires_at = NULL,
+             checkout_attempt_id = ?
+         WHERE id = ?`,
+        [CHECKOUT_ACTIVE_STATE, checkoutAttemptId, order.id]
+      );
+      order.payment_attempt_state = CHECKOUT_ACTIVE_STATE;
+      order.payment_resume_expires_at = null;
+      order.checkout_attempt_id = checkoutAttemptId;
+    } else if (order.payment_attempt_state !== CHECKOUT_ACTIVE_STATE) {
+      await connection.rollback();
+      return res.status(409).json({
+        success: false,
+        message: "This order is not available for initial payment."
+      });
+    }
+
+    if (!isResumeRequest) {
+      const checkoutAttemptId = generateCheckoutAttemptId();
+      await connection.execute(
+        "UPDATE orders SET checkout_attempt_id = ? WHERE id = ?",
+        [checkoutAttemptId, order.id]
+      );
+      order.checkout_attempt_id = checkoutAttemptId;
     }
 
     const paymentMode = order.payment_mode;
@@ -738,7 +1021,8 @@ async function createRazorpayOrder(req, res) {
       currency: "INR",
       keyId: process.env.RAZORPAY_KEY_ID,
       paymentType: requestedType,
-      orderCode: order.order_code
+      orderCode: order.order_code,
+      checkoutAttemptId: order.checkout_attempt_id
     });
   } catch (error) {
     await connection.rollback();
@@ -749,6 +1033,59 @@ async function createRazorpayOrder(req, res) {
       success: false,
       message: "Unable to initialize online payment. Please try again."
     });
+  } finally {
+    connection.release();
+  }
+}
+
+async function closePaymentCheckout(req, res) {
+  const connection = await db.promise().getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [orders] = await connection.execute(
+      `SELECT * FROM orders
+       WHERE (id = ? OR order_code = ?) AND user_id = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [req.params.id, req.params.id, req.auth.id]
+    );
+    const order = orders[0];
+
+    if (!order) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const checkoutAttemptId = String(req.body?.checkoutAttemptId || "");
+
+    if (
+      isPaymentPendingOrder(order) &&
+      order.payment_attempt_state === CHECKOUT_ACTIVE_STATE &&
+      checkoutAttemptId &&
+      checkoutAttemptId === order.checkout_attempt_id
+    ) {
+      await connection.execute(
+        `UPDATE orders
+         SET payment_attempt_state = ?,
+             payment_resume_expires_at = DATE_ADD(NOW(), INTERVAL 5 MINUTE)
+         WHERE id = ?`,
+        [RESUME_WINDOW_STATE, order.id]
+      );
+    }
+
+    await connection.commit();
+    const updatedOrder = await getOrderWithItems("WHERE id = ?", [order.id]);
+    return res.status(200).json({ success: true, order: updatedOrder });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Failed to close payment checkout:", {
+      code: error?.code || error?.name || "unknown"
+    });
+    return res.status(500).json({ success: false, message: "Unable to update payment status." });
+  } finally {
+    connection.release();
   }
 }
 
@@ -880,10 +1217,10 @@ async function getMyOrders(req, res) {
       `
         SELECT *
         FROM orders
-        WHERE user_id = ?
+        WHERE user_id = ? AND status <> ?
         ORDER BY id DESC
       `,
-      [req.auth.id]
+      [req.auth.id, PAYMENT_EXPIRED_STATUS]
     );
 
     if (orders.length === 0) {
@@ -1201,6 +1538,8 @@ async function markRefundCompleted(req, res) {
 module.exports = {
   createOrder,
   createRazorpayOrder,
+  closePaymentCheckout,
+  expireDuePendingOrders,
   getOrders,
   getOrderById,
   getMyOrders,

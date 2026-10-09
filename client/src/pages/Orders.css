@@ -2302,6 +2302,31 @@
   border-top: 1px solid #f0f0f0;
 }
 
+.pending-payment-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pending-payment-action p {
+  margin: 0;
+  color: #5b4bb7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.complete-payment-btn {
+  border: 0;
+  border-radius: 7px;
+  padding: 9px 12px;
+  background: #5b4bb7;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .order-total-compact {
   font-size: 16px;
   color: #444;

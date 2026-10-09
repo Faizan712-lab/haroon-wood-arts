@@ -939,6 +939,10 @@ body{
   background:#6d5bd0;
 }
 
+.status-badge.payment-expired{
+  background:#6b7280;
+}
+
 .shipped{
   background:#2196f3;
 }

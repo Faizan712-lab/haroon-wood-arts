@@ -426,6 +426,8 @@ function AdminOrders() {
 
     "payment pending",
 
+    "payment expired",
+
     "cancellation requested",
 
     "return requested",

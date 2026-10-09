@@ -51,6 +51,14 @@ const CANCELLED_TRACKING_STEPS = [
   { label: "Cancelled", Icon: FaTimesCircle }
 ];
 
+const PAYMENT_PENDING_TRACKING_STEPS = [
+  { label: "Payment Pending", Icon: FaBoxOpen }
+];
+
+const PAYMENT_EXPIRED_TRACKING_STEPS = [
+  { label: "Payment Expired", Icon: FaTimesCircle }
+];
+
 const RETURN_TRACKING_STATUSES = [
   "return requested",
   "pickup scheduled",
@@ -80,6 +88,17 @@ function formatOrderDate(value) {
   }).format(date);
 }
 
+function paymentResumeMessage(expiresAt, now) {
+  if (!expiresAt) return "Payment checkout is ready to continue.";
+
+  const remaining = new Date(expiresAt).getTime() - now;
+  if (remaining <= 0) return "Payment window is expiring…";
+
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+  return `Complete payment within ${minutes}:${String(seconds).padStart(2, "0")}.`;
+}
+
 function OrderDetails() {
 
   const location =
@@ -100,9 +119,15 @@ function OrderDetails() {
   const [returnImageName, setReturnImageName] = useState("");
   const [returnFormOpen, setReturnFormOpen] = useState(false);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   const orderId =
     order?.id;
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   /* GET UPDATED ORDER */
 
@@ -210,6 +235,10 @@ function OrderDetails() {
   const trackingStage = (() => {
     if (status === "cancelled") return 1;
 
+    if (status === "payment pending") return 0;
+
+    if (status === "payment expired") return 0;
+
     if (status === "shipped") return 2;
 
     if (hasDeliveredStatus) return 3;
@@ -236,6 +265,28 @@ function OrderDetails() {
   })();
 
   const statusSummary = (() => {
+    if (status === "payment pending") {
+      const amount = order.paymentMode === "COD"
+        ? `Pay ₹${Number(order.codAdvance || 0).toFixed(2)} advance now; ₹${Number(order.codRemainingOnDelivery || 0).toFixed(2)} remains due on delivery.`
+        : `Pay ₹${Number(order.total || 0).toFixed(2)} to complete your order.`;
+
+      return {
+        title: "Payment Pending",
+        message: `${amount} ${paymentResumeMessage(order.paymentResumeExpiresAt, now)}`,
+        Icon: FaRupeeSign,
+        className: "payment-pending"
+      };
+    }
+
+    if (status === "payment expired") {
+      return {
+        title: "Payment Expired",
+        message: "This pending payment expired and the reserved stock was released.",
+        Icon: FaTimesCircle,
+        className: "payment-expired"
+      };
+    }
+
     if (status === "cancellation requested") {
       return {
         title: "Cancellation Requested",
@@ -605,6 +656,10 @@ function OrderDetails() {
           >
             {(status === "cancelled"
               ? CANCELLED_TRACKING_STEPS
+              : status === "payment pending"
+                ? PAYMENT_PENDING_TRACKING_STEPS
+              : status === "payment expired"
+                ? PAYMENT_EXPIRED_TRACKING_STEPS
               : ORDER_TRACKING_STEPS
             ).map(({ label, Icon }, index, steps) => {
               const isComplete = index < trackingStage;
@@ -1030,8 +1085,26 @@ function OrderDetails() {
 
         </div>
 
-        {(canCancel || canReturn) && (
+        {(status === "payment pending" || canCancel || canReturn) && (
           <section className="details-actions" aria-label="Order actions">
+            {status === "payment pending" &&
+              order.paymentAttemptState === "resume_window" &&
+              order.paymentResumeExpiresAt &&
+              new Date(order.paymentResumeExpiresAt).getTime() > now && (
+              <div className="details-action-box">
+                <h3>Complete Payment</h3>
+                <p className="details-action-description">
+                  Continue securely with Razorpay to confirm this order.
+                </p>
+                <button
+                  type="button"
+                  className="details-complete-payment-btn"
+                  onClick={() => navigate(`/payment?order=${encodeURIComponent(order.id)}`)}
+                >
+                  Complete Payment
+                </button>
+              </div>
+            )}
             {canCancel && (
               <div className="details-action-box">
                 <h3>Cancel Order</h3>

@@ -34,6 +34,29 @@ import {
    ────────────────────────────────────────────── */
 
 let razorpayScriptPromise = null;
+const CHECKOUT_SESSION_STORAGE_KEY = "haroonCheckoutSessionId";
+
+function createCheckoutSessionId() {
+  return crypto.randomUUID();
+}
+
+function getCheckoutSessionId() {
+  const storedId = localStorage.getItem(CHECKOUT_SESSION_STORAGE_KEY);
+
+  if (/^[a-f0-9-]{36}$/i.test(storedId || "")) {
+    return storedId;
+  }
+
+  const checkoutSessionId = createCheckoutSessionId();
+  localStorage.setItem(CHECKOUT_SESSION_STORAGE_KEY, checkoutSessionId);
+  return checkoutSessionId;
+}
+
+function clearCheckoutSessionId(checkoutSessionId) {
+  if (localStorage.getItem(CHECKOUT_SESSION_STORAGE_KEY) === checkoutSessionId) {
+    localStorage.removeItem(CHECKOUT_SESSION_STORAGE_KEY);
+  }
+}
 
 function loadRazorpayScript() {
   if (razorpayScriptPromise) return razorpayScriptPromise;
@@ -82,6 +105,7 @@ function Payment() {
   } = useContext(CartContext);
 
   const params = new URLSearchParams(location.search);
+  const resumeOrderId = params.get("order");
 
   const initialPaymentMode =
     params.get("mode") === "Online"
@@ -108,8 +132,11 @@ function Payment() {
   const [paymentMode, setPaymentMode] =
     useState(initialPaymentMode);
 
+  const [pendingOrder, setPendingOrder] = useState(null);
+  const [resumeLoadError, setResumeLoadError] = useState("");
+
   const checkoutTotal = Math.max(
-    getTotalPrice() - discount,
+    pendingOrder ? Number(pendingOrder.total || 0) : getTotalPrice() - discount,
     0
   );
 
@@ -135,7 +162,7 @@ function Payment() {
   /* ── Payment mode selection ── */
 
   function selectPaymentMode(nextMode) {
-    if (isSubmitting) return;
+    if (isSubmitting || pendingOrder) return;
     setPaymentMode(nextMode);
   }
 
@@ -159,6 +186,38 @@ function Payment() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!resumeOrderId) return;
+
+    async function loadPendingOrder() {
+      try {
+        const response = await fetch(getApiUrl(`/api/orders/${resumeOrderId}`), {
+          credentials: "include",
+          cache: "no-store"
+        });
+        const data = await response.json();
+
+        if (
+          !response.ok ||
+          !data.success ||
+          data.order?.status !== "Payment Pending" ||
+          data.order?.paymentAttemptState !== "resume_window" ||
+          !data.order?.paymentResumeExpiresAt ||
+          new Date(data.order.paymentResumeExpiresAt).getTime() <= Date.now()
+        ) {
+          throw new Error(data.message || "This pending payment is no longer available.");
+        }
+
+        setPendingOrder(data.order);
+        setPaymentMode(data.order.paymentMode === "COD" ? "COD" : "Online");
+      } catch (error) {
+        setResumeLoadError(error.message || "Unable to load pending payment.");
+      }
+    }
+
+    loadPendingOrder();
+  }, [resumeOrderId]);
+
   /* ── Main payment handler ── */
 
   const handlePayment = useCallback(async () => {
@@ -170,13 +229,22 @@ function Payment() {
     isPaymentInProgress.current = true;
     setIsSubmitting(true);
     setPaymentStatus("creating_order");
+    let activeOrderId = null;
+    let checkoutOpened = false;
+    let activeCheckoutAttemptId = null;
 
     try {
-      /* ── Step 1: Create the internal order ── */
+      /* ── Step 1: Create or resume the internal order ── */
 
-      const total = Math.max(getTotalPrice() - discount, 0);
+      let internalOrder = pendingOrder;
+      let orderId = pendingOrder?.databaseId || pendingOrder?.id;
+      const isResumeCheckout = Boolean(resumeOrderId);
+      activeOrderId = orderId;
 
-      const orderPayload = {
+      if (!internalOrder) {
+        const total = Math.max(getTotalPrice() - discount, 0);
+        const checkoutSessionId = getCheckoutSessionId();
+        const orderPayload = {
         createdAt: checkoutData.createdAt || Date.now(),
         cancelUntil: checkoutData.cancelUntil || (Date.now() + 5 * 24 * 60 * 60 * 1000),
         items: cartItems.map(item => ({
@@ -197,11 +265,12 @@ function Payment() {
         paid: 0,
         remaining: total,
         paymentMode: isCod ? "COD" : "Online Payment",
+        checkoutSessionId,
         status: "Processing",
         deliveryDate: getDeliveryDate()
       };
 
-      const orderRes = await fetch(
+        const orderRes = await fetch(
         getApiUrl("/api/orders"),
         {
           method: "POST",
@@ -211,14 +280,20 @@ function Payment() {
         }
       );
 
-      const orderData = await orderRes.json();
+        const orderData = await orderRes.json();
 
-      if (!orderRes.ok || !orderData.success) {
-        throw new Error(orderData.message || "Failed to create order");
+        if (!orderRes.ok || !orderData.success) {
+          if (orderData.checkoutSessionInvalid) {
+            clearCheckoutSessionId(checkoutSessionId);
+          }
+          throw new Error(orderData.message || "Failed to create order");
+        }
+
+        internalOrder = orderData.order;
+        orderId = internalOrder.databaseId || internalOrder.id;
+        activeOrderId = orderId;
+        setPendingOrder(internalOrder);
       }
-
-      const internalOrder = orderData.order;
-      const orderId = internalOrder.databaseId || internalOrder.id;
 
       /* ── Step 2: Create / reuse Razorpay order ── */
 
@@ -227,7 +302,8 @@ function Payment() {
         {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resume: isResumeCheckout })
         }
       );
 
@@ -236,6 +312,8 @@ function Payment() {
       if (!rpRes.ok || !rpData.success) {
         throw new Error(rpData.message || "Unable to initialize payment.");
       }
+
+      activeCheckoutAttemptId = rpData.checkoutAttemptId;
 
       /* ── Step 3: Load Razorpay Checkout ── */
 
@@ -251,6 +329,7 @@ function Payment() {
       /* ── Step 4: Open Razorpay Checkout ── */
 
       setPaymentStatus("awaiting_payment");
+      checkoutOpened = true;
 
       const razorpayResponse = await new Promise((resolve, reject) => {
         const options = {
@@ -317,11 +396,27 @@ function Payment() {
 
     } catch (error) {
       if (error.message === "__CANCELLED__") {
+        if (activeOrderId) {
+          await fetch(getApiUrl(`/api/orders/${activeOrderId}/payment-checkout-closed`), {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ checkoutAttemptId: activeCheckoutAttemptId })
+          }).catch(() => {});
+        }
         setPaymentStatus("idle");
         toast("Payment cancelled. You can try again.", {
           icon: "ℹ️"
         });
       } else {
+        if (checkoutOpened && activeOrderId) {
+          await fetch(getApiUrl(`/api/orders/${activeOrderId}/payment-checkout-closed`), {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ checkoutAttemptId: activeCheckoutAttemptId })
+          }).catch(() => {});
+        }
         setPaymentStatus("payment_failed");
         toast.error(
           error.message || "Unable to process payment. Please try again."
@@ -333,7 +428,7 @@ function Payment() {
     }
   }, [
     isCod, cartItems, checkoutData, discount,
-    getTotalPrice, isSubmitting, paymentStatus
+    getTotalPrice, isSubmitting, paymentStatus, pendingOrder, resumeOrderId
   ]);
 
   /* ── Button label ── */
@@ -452,9 +547,9 @@ function Payment() {
                 placeholder="Enter coupon code"
                 value={coupon}
                 onChange={(event) => setCoupon(event.target.value)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || Boolean(pendingOrder)}
               />
-              <button type="button" onClick={applyCoupon} disabled={isSubmitting}>
+              <button type="button" onClick={applyCoupon} disabled={isSubmitting || Boolean(pendingOrder)}>
                 Apply
               </button>
             </div>
@@ -486,7 +581,7 @@ function Payment() {
                   : "payment-choice"
               }
               onClick={() => selectPaymentMode("COD")}
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(pendingOrder)}
             >
               <span className="choice-icon cod-icon">
                 <FaHandHolding />
@@ -505,7 +600,7 @@ function Payment() {
                   : "payment-choice"
               }
               onClick={() => selectPaymentMode("Online")}
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(pendingOrder)}
             >
               <span className="choice-icon">
                 <FaCreditCard />
@@ -569,13 +664,19 @@ function Payment() {
             </div>
           )}
 
+          {resumeLoadError && (
+            <div className="payment-error-banner">
+              <p>{resumeLoadError}</p>
+            </div>
+          )}
+
           {/* ── Pay button ── */}
 
           <button
             className={`pay-btn${isSubmitting ? " pay-btn-loading" : ""}`}
             type="button"
             onClick={handlePayment}
-            disabled={isSubmitting || paymentStatus === "pending_verification"}
+            disabled={isSubmitting || paymentStatus === "pending_verification" || Boolean(resumeOrderId && !pendingOrder)}
           >
             {isSubmitting && (
               <span className="pay-btn-spinner" aria-hidden="true"></span>

@@ -123,10 +123,23 @@ function getOrderStatusIcon(status) {
   return FaBoxOpen;
 }
 
+function paymentResumeLabel(expiresAt, now) {
+  if (!expiresAt) return "Payment checkout is ready to continue.";
+
+  const remaining = new Date(expiresAt).getTime() - now;
+  if (remaining <= 0) return "Payment window is expiring…";
+
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+  return `Complete payment within ${minutes}:${String(seconds).padStart(2, "0")}.`;
+}
+
 function Orders() {
 
   const [orders, setOrders] =
     useState([]);
+
+  const [now, setNow] = useState(Date.now());
 
   const [cancelReason,
     setCancelReason] =
@@ -163,6 +176,11 @@ function Orders() {
 
   const ordersRef =
     useRef([]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   /* ================= LOAD ================= */
 
@@ -694,7 +712,7 @@ function Orders() {
 
         <div className="orders-list">
 
-          {orders.map(order => (
+          {orders.filter(order => normaliseStatus(order.status) !== "payment expired").map(order => (
 
             <div
               key={String(order.id)}
@@ -806,6 +824,20 @@ function Orders() {
                 <div className="order-total-compact">
                   Total: <strong>₹ {order.total}</strong>
                 </div>
+                {normaliseStatus(order.status) === "payment pending" &&
+                  order.paymentAttemptState === "resume_window" &&
+                  order.paymentResumeExpiresAt &&
+                  new Date(order.paymentResumeExpiresAt).getTime() > now && (
+                  <div className="pending-payment-action">
+                    <p>{paymentResumeLabel(order.paymentResumeExpiresAt, now)}</p>
+                    <button
+                      className="complete-payment-btn"
+                      onClick={() => navigate(`/payment?order=${encodeURIComponent(order.id)}`)}
+                    >
+                      Complete Payment
+                    </button>
+                  </div>
+                )}
                 <button
                   className="view-order-btn"
                   onClick={() => navigate("/order-details", { state: { order } })}

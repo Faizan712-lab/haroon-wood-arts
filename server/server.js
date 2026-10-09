@@ -15,7 +15,8 @@ const addressRoutes = require("./routes/addressRoutes");
 const passwordResetRoutes = require("./routes/passwordResetRoutes");
 const wishlistRoutes = require("./routes/wishlistRoutes");
 const {
-  getMyOrders
+  getMyOrders,
+  expireDuePendingOrders
 } = require("./controllers/orderController");
 const {
   requireAuth
@@ -150,3 +151,17 @@ const HOST = process.env.HOST || "0.0.0.0";
 app.listen(PORT, HOST, () => {
   console.log(`Server listening on ${HOST}:${PORT}`);
 });
+
+async function expirePendingPayments() {
+  try {
+    await expireDuePendingOrders();
+  } catch (error) {
+    console.error("Pending payment expiry cleanup failed:", {
+      code: error?.code || error?.name || "unknown"
+    });
+  }
+}
+
+expirePendingPayments();
+const paymentExpiryTimer = setInterval(expirePendingPayments, 60 * 1000);
+paymentExpiryTimer.unref();

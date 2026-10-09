@@ -1019,6 +1019,37 @@
   color: #7b1fa2;
 }
 
+.details-status-summary.payment-pending {
+  border-color: #d8d3ff;
+  background: #f6f4ff;
+}
+
+.details-status-summary.payment-pending .details-status-summary-icon {
+  background: #eeeaff;
+  color: #5b4bb7;
+}
+
+.details-status-summary.payment-expired {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+}
+
+.details-status-summary.payment-expired .details-status-summary-icon {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.details-complete-payment-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #5b4bb7;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .details-order-tracking {
   display: flex;
   align-items: flex-start;
