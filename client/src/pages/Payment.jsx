@@ -103,7 +103,8 @@ function Payment() {
 
   const {
     cartItems,
-    getTotalPrice
+    getTotalPrice,
+    clearCart
   } = useContext(CartContext);
 
   const params = new URLSearchParams(location.search);
@@ -390,24 +391,36 @@ function Payment() {
         rzp.open();
       });
 
-      /* ── Step 5: Retain the unverified Razorpay response ── */
+      /* ── Step 5: Verify the payment server-side ── */
 
-      /* Phase 2 does not verify the Razorpay signature. Keep the response
-         available for Phase 3, but do not finalize this order client-side. */
-      sessionStorage.setItem(
-        "haroonRazorpayPaymentResponse",
-        JSON.stringify({
-          orderId,
-          orderCode: rpData.orderCode,
+      setPaymentStatus("pending_verification");
+
+      const verifyRes = await fetch(getApiUrl(`/api/orders/${orderId}/razorpay-verify`), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           razorpay_payment_id: razorpayResponse.razorpay_payment_id,
           razorpay_order_id: razorpayResponse.razorpay_order_id,
           razorpay_signature: razorpayResponse.razorpay_signature
         })
-      );
+      });
 
-      setPaymentStatus("pending_verification");
-      toast("Payment response received. Verification is pending.", {
-        icon: "ℹ️"
+      const verifyData = await verifyRes.json();
+
+      if (!verifyRes.ok || !verifyData.success) {
+        throw new Error(verifyData.message || "Payment verification failed.");
+      }
+
+      toast.success("Payment verified and order placed successfully!");
+
+      clearCart();
+      sessionStorage.removeItem("haroonCheckoutData");
+      clearCheckoutSessionId(getCheckoutSessionId());
+
+      navigate("/order-success", {
+        replace: true,
+        state: { order: verifyData.order }
       });
 
     } catch (error) {

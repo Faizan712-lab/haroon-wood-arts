@@ -14,6 +14,7 @@ const {
 const {
   createOrder,
   createRazorpayOrder,
+  verifyRazorpayPayment,
   closePaymentCheckout,
   getOrders,
   getOrderById,
@@ -34,6 +35,7 @@ const returnEvidenceUpload = createImageUpload("returns");
 
 router.post("/", requireAuth(["user"]), createOrder);
 router.post("/:id/razorpay-order", requireAuth(["user"]), createRazorpayOrder);
+router.post("/:id/razorpay-verify", requireAuth(["user"]), verifyRazorpayPayment);
 router.post("/:id/payment-checkout-closed", requireAuth(["user"]), closePaymentCheckout);
 router.get("/", requireAdminAuth, getOrders);
 router.get("/:id", requireAuth(["user", "admin"]), getOrderById);

@@ -17,7 +17,8 @@ const {
   sendOrderCancelledEmail
 } = require("../services/emailService");
 const {
-  createRazorpayOrder: createRemoteRazorpayOrder
+  createRazorpayOrder: createRemoteRazorpayOrder,
+  getRazorpayPayment
 } = require("../services/razorpayService");
 
 function runQuery(sql, params = []) {
@@ -1040,6 +1041,134 @@ async function createRazorpayOrder(req, res) {
   }
 }
 
+async function verifyRazorpayPayment(req, res) {
+  const connection = await db.promise().getConnection();
+
+  try {
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      return res.status(400).json({ success: false, message: "Missing Razorpay payment parameters." });
+    }
+
+    await connection.beginTransaction();
+
+    const [orders] = await connection.execute(
+      `SELECT * FROM orders
+       WHERE (id = ? OR order_code = ?) AND user_id = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [req.params.id, req.params.id, req.auth.id]
+    );
+    const order = orders[0];
+
+    if (!order) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.status === "Processing" && order.razorpay_payment_id === razorpay_payment_id && order.payment_attempt_state === "verified") {
+      await connection.commit();
+      const updatedOrder = await getOrderWithItems("WHERE id = ?", [order.id]);
+      return res.status(200).json({ success: true, message: "Payment already verified", order: updatedOrder });
+    }
+
+    if (!isPaymentPendingOrder(order)) {
+      await connection.rollback();
+      return res.status(409).json({ success: false, message: "Order is not pending payment." });
+    }
+
+    if (order.razorpay_order_id !== razorpay_order_id) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Razorpay order ID mismatch." });
+    }
+
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(razorpay_order_id + "|" + razorpay_payment_id)
+      .digest("hex");
+
+    if (
+      expectedSignature.length !== razorpay_signature.length ||
+      !crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(razorpay_signature))
+    ) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Invalid payment signature." });
+    }
+
+    const isCod = order.payment_mode === "COD";
+    const total = Number(order.total_amount);
+
+    let paidAmount, remainingAmount;
+    if (isCod) {
+      const breakdown = codPaymentBreakdown(total);
+      paidAmount = breakdown.advance;
+      remainingAmount = breakdown.remainingOnDelivery;
+    } else {
+      paidAmount = total;
+      remainingAmount = 0;
+    }
+
+    const expectedAmountPaise = Math.round(paidAmount * 100);
+
+    const payment = await getRazorpayPayment(razorpay_payment_id);
+
+    if (!payment) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Razorpay payment not found." });
+    }
+
+    if (payment.order_id !== razorpay_order_id) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Payment does not belong to the expected order." });
+    }
+
+    if (payment.currency !== "INR") {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Invalid payment currency." });
+    }
+
+    if (payment.amount !== expectedAmountPaise) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, message: "Payment amount mismatch." });
+    }
+
+    if (payment.status !== "captured") {
+      await connection.rollback();
+      const message = payment.status === "authorized"
+        ? "Payment is authorized but not captured yet."
+        : "Payment is not in a successful state.";
+      return res.status(400).json({ success: false, message });
+    }
+
+    await connection.execute(
+      `UPDATE orders
+       SET paid_amount = ?,
+           remaining_amount = ?,
+           status = ?,
+           payment_attempt_state = ?,
+           razorpay_payment_id = ?,
+           razorpay_signature = ?
+       WHERE id = ?`,
+      [paidAmount, remainingAmount, "Processing", "verified", razorpay_payment_id, razorpay_signature, order.id]
+    );
+
+    await connection.commit();
+
+    const updatedOrder = await getOrderWithItems("WHERE id = ?", [order.id]);
+    await notifyOrderCreated(req.auth.id, updatedOrder);
+
+    return res.status(200).json({ success: true, order: updatedOrder });
+  } catch (error) {
+    await connection.rollback();
+    console.error("Failed to verify Razorpay payment:", error);
+    return res.status(500).json({ success: false, message: "Failed to verify payment." });
+  } finally {
+    connection.release();
+  }
+}
+
 async function closePaymentCheckout(req, res) {
   const connection = await db.promise().getConnection();
 
@@ -1540,6 +1669,7 @@ async function markRefundCompleted(req, res) {
 module.exports = {
   createOrder,
   createRazorpayOrder,
+  verifyRazorpayPayment,
   closePaymentCheckout,
   expireDuePendingOrders,
   getOrders,

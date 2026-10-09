@@ -29,6 +29,11 @@ async function createRazorpayOrder({ amount, receipt, notes }) {
   });
 }
 
+async function getRazorpayPayment(paymentId) {
+  return getRazorpayClient().payments.fetch(paymentId);
+}
+
 module.exports = {
-  createRazorpayOrder
+  createRazorpayOrder,
+  getRazorpayPayment
 };
