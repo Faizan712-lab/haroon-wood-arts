@@ -267,6 +267,10 @@ function Checkout() {
       JSON.stringify(checkoutData)
     );
 
+    // Clear stale payment session data for a completely new checkout
+    localStorage.removeItem("haroonCheckoutSessionId");
+    sessionStorage.removeItem("haroonRazorpayPaymentResponse");
+
     navigate(
       `/payment?amount=${totalPrice}&mode=COD`,
       {
