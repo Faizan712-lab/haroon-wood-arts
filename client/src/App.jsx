@@ -507,6 +507,28 @@ function App() {
 
         />
 
+        <Route
+
+          path="/order-details/:id"
+
+          element={
+
+            <>
+
+              <Navbar />
+
+              <ProtectedUserRoute>
+
+                <OrderDetails />
+
+              </ProtectedUserRoute>
+
+            </>
+
+          }
+
+        />
+
         {/* ================================================= */}
         {/* ADMIN LOGIN */}
         {/* ================================================= */}

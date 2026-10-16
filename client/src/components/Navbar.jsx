@@ -3,7 +3,8 @@ import "./Navbar.css";
 import {
   NavLink,
   Link,
-  useNavigate
+  useNavigate,
+  useLocation
 }
 from "react-router-dom";
 
@@ -51,8 +52,14 @@ import ConfirmModal from "./ConfirmModal";
 
 function Navbar() {
 
+  const location = useLocation();
+
   const navigate =
     useNavigate();
+
+  const isOrderDetailsPath =
+    location.pathname === "/order-details" ||
+    location.pathname.startsWith("/order-details/");
 
   const {
     cartItems
@@ -424,7 +431,12 @@ function Navbar() {
 
         <li>
 
-          <NavLink to="/orders">
+          <NavLink
+            to="/orders"
+            className={({ isActive }) =>
+              isActive || isOrderDetailsPath ? "active" : undefined
+            }
+          >
 
             Orders
 

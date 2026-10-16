@@ -46,6 +46,16 @@ import {
   isOutOfStock
 } from "../utils/productDisplay";
 
+import {
+  FaUser,
+  FaCamera,
+  FaHeart,
+  FaCog,
+  FaSignOutAlt,
+  FaKey,
+  FaPlus
+} from "react-icons/fa";
+
 const emptyAddress = {
   name: "",
   phone: "",
@@ -474,22 +484,25 @@ function UserProfile() {
           {session?.profileImage ? (
             <img
               src={session.profileImage}
-              alt={session.name}
+              alt={session?.name || "User"}
             />
           ) : (
-            <span></span>
+            <span className="profile-avatar-placeholder">
+              {session?.name ? session.name.charAt(0).toUpperCase() : <FaUser />}
+            </span>
           )}
         </div>
 
         <div className="profile-header-text">
-          <h1>{session?.name}</h1>
+          <h1>{session?.name || "My Profile"}</h1>
           <p>{session?.email}</p>
           <p>{session?.phone || "Phone not provided"}</p>
         </div>
 
         <div className="profile-header-actions">
           <label className="profile-upload-btn">
-            Edit Picture
+            <FaCamera aria-hidden="true" />
+            <span>Edit Picture</span>
             <input
               type="file"
               accept="image/*"
@@ -502,7 +515,8 @@ function UserProfile() {
             className="profile-wishlist-shortcut"
             onClick={() => navigate("/wishlist")}
           >
-            Wishlist
+            <FaHeart aria-hidden="true" />
+            <span>Wishlist</span>
           </button>
 
           <button
@@ -510,7 +524,8 @@ function UserProfile() {
             className="profile-settings-shortcut"
             onClick={() => navigate("/settings")}
           >
-            Settings
+            <FaCog aria-hidden="true" />
+            <span>Settings</span>
           </button>
         </div>
       </section>
@@ -604,17 +619,17 @@ function UserProfile() {
                 onChange={handleAddressChange}
               />
             </div>
-            <button
-              type="submit"
-              disabled={isSavingAddress}
-            >
-              {isSavingAddress
-                ? "Saving..."
-                : editingAddressId
-                  ? "Update Address"
-                  : "Add Address"}
-            </button>
-            {editingAddressId && (
+            <div className="profile-form-actions">
+              <button
+                type="submit"
+                disabled={isSavingAddress}
+              >
+                {isSavingAddress
+                  ? "Saving..."
+                  : editingAddressId
+                    ? "Update Address"
+                    : "Add Address"}
+              </button>
               <button
                 type="button"
                 className="profile-danger-btn"
@@ -622,10 +637,7 @@ function UserProfile() {
               >
                 Cancel
               </button>
-            )}
-            {!editingAddressId && (
-              <button type="button" className="profile-danger-btn" onClick={cancelAddressEdit}>Cancel</button>
-            )}
+            </div>
           </form>
 
           <div className="profile-address-list">
@@ -678,7 +690,8 @@ function UserProfile() {
               setIsAddressEditorOpen(true);
             }}
           >
-            + Add Address
+            <FaPlus aria-hidden="true" />
+            <span>Add Address</span>
           </button>
         </section>
 
@@ -725,7 +738,8 @@ function UserProfile() {
               className="profile-change-password-btn"
               onClick={() => navigate("/settings#security")}
             >
-              Change Password
+              <FaKey aria-hidden="true" />
+              <span>Change Password</span>
             </button>
 
             <button
@@ -744,7 +758,8 @@ function UserProfile() {
             }
             disabled={isLoggingOut}
           >
-            {isLoggingOut ? "Logging out..." : "Logout"}
+            <FaSignOutAlt aria-hidden="true" />
+            <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
           </button>
         </section>
       </div>

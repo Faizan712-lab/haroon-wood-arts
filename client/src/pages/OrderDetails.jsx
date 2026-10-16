@@ -8,20 +8,18 @@ import {
 
 import {
   useLocation,
-  useNavigate
-}
-from "react-router-dom";
+  useNavigate,
+  useParams
+} from "react-router-dom";
 
 import {
   useEffect,
   useState
-}
-from "react";
+} from "react";
 
 import {
   getApiUrl
-}
-from "../utils/api";
+} from "../utils/api";
 
 import {
   getVariantLabel
@@ -39,54 +37,20 @@ import {
   FaTruck
 } from "react-icons/fa";
 
-const ORDER_TRACKING_STEPS = [
-  { label: "Order Placed", Icon: FaBoxOpen },
-  { label: "Processing", Icon: FaBoxOpen },
-  { label: "Shipped", Icon: FaTruck },
-  { label: "Delivered", Icon: FaCheckCircle }
-];
-
-const CANCELLED_TRACKING_STEPS = [
-  { label: "Order Placed", Icon: FaBoxOpen },
-  { label: "Cancelled", Icon: FaTimesCircle }
-];
-
-const PAYMENT_PENDING_TRACKING_STEPS = [
-  { label: "Payment Pending", Icon: FaBoxOpen }
-];
-
-const PAYMENT_EXPIRED_TRACKING_STEPS = [
-  { label: "Payment Expired", Icon: FaTimesCircle }
-];
-
-const RETURN_TRACKING_STATUSES = [
-  "return requested",
-  "pickup scheduled",
-  "pickup completed",
-  "return completed",
-  "refund completed"
-];
-
-const RETURN_TRACKING_STEPS = [
-  { label: "Return Requested", Icon: FaUndo, key: "requested" },
-  { label: "Product Picked Up", Icon: FaBoxOpen, key: "pickedUp" },
-  { label: "Return Completed", Icon: FaCheckCircle, key: "completed" },
-  { label: "Refund Completed", Icon: FaRupeeSign, key: "refunded" }
-];
-
-function formatOrderDate(value) {
-  if (!value) return "";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric"
-  }).format(date);
-}
+import {
+  ORDER_TRACKING_STEPS,
+  CANCELLED_TRACKING_STEPS,
+  PAYMENT_PENDING_TRACKING_STEPS,
+  PAYMENT_EXPIRED_TRACKING_STEPS,
+  RETURN_TRACKING_STATUSES,
+  RETURN_TRACKING_STEPS,
+  normaliseStatus,
+  formatOrderDate,
+  getStatusClass,
+  hasDeliveredStatus,
+  getTrackingStage,
+  getStepState
+} from "../utils/orderTracking";
 
 function paymentResumeMessage(expiresAt, now) {
   if (!expiresAt) return "Payment checkout is ready to continue.";
@@ -100,17 +64,30 @@ function paymentResumeMessage(expiresAt, now) {
 }
 
 function OrderDetails() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = useParams();
 
-  const location =
-    useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const targetOrderId =
+    params.id ||
+    searchParams.get("id") ||
+    searchParams.get("order") ||
+    location.state?.order?.id ||
+    location.state?.order?.databaseId ||
+    null;
 
-  const navigate =
-    useNavigate();
+  const initialOrder =
+    location.state?.order &&
+    (!targetOrderId ||
+      String(location.state.order.id) === String(targetOrderId) ||
+      String(location.state.order.databaseId) === String(targetOrderId))
+      ? location.state.order
+      : null;
 
-  const [order, setOrder] =
-    useState(
-      location.state?.order || null
-    );
+  const [order, setOrder] = useState(initialOrder);
+  const [isLoading, setIsLoading] = useState(!initialOrder && !!targetOrderId);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [cancelReason, setCancelReason] = useState("");
   const [returnReason, setReturnReason] = useState("");
@@ -121,134 +98,98 @@ function OrderDetails() {
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  const orderId =
-    order?.id;
-
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  /* GET UPDATED ORDER */
-
+  /* GET UPDATED ORDER FROM BACKEND OR LOCATION STATE */
   useEffect(() => {
-
-    if (!orderId)
+    if (!targetOrderId) {
       return;
+    }
+
+    let isMounted = true;
+
+    const navOrder = location.state?.order;
+    if (
+      navOrder &&
+      (String(navOrder.id) === String(targetOrderId) ||
+        String(navOrder.databaseId) === String(targetOrderId))
+    ) {
+      setOrder(navOrder);
+      setErrorMessage("");
+    } else if (
+      !order ||
+      (String(order.id) !== String(targetOrderId) &&
+        String(order.databaseId) !== String(targetOrderId))
+    ) {
+      setIsLoading(true);
+    }
 
     async function loadOrder() {
-
       try {
+        const response = await fetch(
+          getApiUrl(`/api/orders/${encodeURIComponent(targetOrderId)}`),
+          {
+            credentials: "include",
+            cache: "no-store"
+          }
+        );
 
-        const response =
-          await fetch(
-            getApiUrl(`/api/orders/${orderId}`),
-            {
-              credentials: "include",
-              cache: "no-store"
-            }
-          );
+        const data = await response.json();
 
-        const data =
-          await response.json();
+        if (!isMounted) return;
 
-        if (response.ok && data.success) {
+        if (response.ok && data.success && data.order) {
           setOrder(data.order);
+          setErrorMessage("");
+        } else if (!navOrder) {
+          setErrorMessage(data.message || "Order not found");
         }
-
       } catch {
-
+        if (!isMounted) return;
+        if (!navOrder) {
+          setErrorMessage("Unable to load order details.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-
     }
 
     loadOrder();
 
-  }, [orderId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [targetOrderId, location.key]);
+
+  /* LOADING STATE */
+  if (isLoading) {
+    return (
+      <div className="order-details-page">
+        <p style={{ textAlign: "center", padding: "40px", color: "#6d5b50" }}>
+          Loading order details…
+        </p>
+      </div>
+    );
+  }
 
   /* NO ORDER */
-
   if (!order) {
-
     return (
-
       <div className="order-details-page">
-
-        <h2>
-          No Order Found
-        </h2>
-
-        <button
-          onClick={() =>
-            navigate("/orders")
-          }
-        >
-          Back to Orders
-        </button>
-
+        <h2>{errorMessage || "No Order Found"}</h2>
+        <button onClick={() => navigate("/orders")}>Back to Orders</button>
       </div>
-
     );
-
   }
 
-  /* STATUS CLASS */
-
-  function getStatusClass(status) {
-
-    if (!status)
-      return "processing";
-
-    return status
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-");
-
-  }
-
-  function normaliseStatus(status) {
-
-    return (status || "")
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, " ");
-
-  }
-
-  const status =
-    normaliseStatus(order.status);
-
-  const isReturnTrackingStatus =
-    RETURN_TRACKING_STATUSES.includes(status);
-
-  const hasDeliveredStatus = [
-
-    "delivered",
-    "return requested",
-    "pickup scheduled",
-    "pickup completed",
-    "return completed",
-    "refund completed"
-
-  ].includes(status);
-
-  const trackingStage = (() => {
-    if (status === "cancelled") return 1;
-
-    if (status === "payment pending") return 0;
-
-    if (status === "payment expired") return 0;
-
-    if (status === "shipped") return 2;
-
-    if (hasDeliveredStatus) return 3;
-
-    if (["processing", "cancellation requested"].includes(status)) {
-      return 1;
-    }
-
-    return 0;
-  })();
+  const status = normaliseStatus(order.status);
+  const isReturnTrackingStatus = RETURN_TRACKING_STATUSES.includes(status);
+  const trackingStage = getTrackingStage(status);
 
   const returnTrackingStage = (() => {
     if (status === "refund completed") return 3;
@@ -352,7 +293,7 @@ function OrderDetails() {
       };
     }
 
-    if (hasDeliveredStatus) {
+    if (hasDeliveredStatus(status)) {
       return {
         title: "Delivered",
         message: "Your order was delivered successfully.",
@@ -380,8 +321,8 @@ function OrderDetails() {
     const returnWindowEndsAt = deliveredAt + (5 * 24 * 60 * 60 * 1000);
 
     return !Number.isNaN(deliveredAt) &&
-      Date.now() >= deliveredAt &&
-      Date.now() <= returnWindowEndsAt;
+      now >= deliveredAt &&
+      now <= returnWindowEndsAt;
   })();
 
   async function requestCancellation() {
@@ -597,7 +538,7 @@ function OrderDetails() {
             status === "shipped") &&
             order.deliveryDate && (
 
-            <p>
+            <p className="order-meta-delivery">
 
               <strong>
                 Expected Delivery:
@@ -613,10 +554,10 @@ function OrderDetails() {
 
           )}
 
-          {hasDeliveredStatus &&
+          {hasDeliveredStatus(status) &&
             order.deliveredDate && (
 
-            <p>
+            <p className="order-meta-delivered-on">
 
               <strong>
                 Delivered On:
@@ -661,19 +602,22 @@ function OrderDetails() {
               : status === "payment expired"
                 ? PAYMENT_EXPIRED_TRACKING_STEPS
               : ORDER_TRACKING_STEPS
-            ).map(({ label, Icon }, index, steps) => {
-              const isComplete = index < trackingStage;
-              const isCurrent = index === trackingStage;
-              const isDelivered = index === 3 && trackingStage === 3;
+            ).map(({ label, Icon, key }, index, steps) => {
+              const stepKey = key || label.toLowerCase().replace(/\s+/g, "-");
+              const { isComplete, isCurrent, isDelivered, isPending } = getStepState(
+                index,
+                trackingStage,
+                order.status
+              );
 
               return (
                 <div className="details-order-tracking-segment" key={label}>
                   <div
-                    className={`details-order-tracking-step ${
+                    className={`details-order-tracking-step step-${stepKey} ${
                       isComplete ? "complete" : ""
                     } ${isCurrent ? "current" : ""} ${
                       isDelivered ? "delivered" : ""
-                    }`}
+                    } ${isPending ? "pending" : ""}`}
                   >
                     <span className="details-order-tracking-icon">
                       {isComplete ? <FaCheck /> : <Icon />}
@@ -683,7 +627,7 @@ function OrderDetails() {
                   {index < steps.length - 1 && (
                     <span
                       className={`details-order-tracking-line ${
-                        index < trackingStage ? "complete" : ""
+                        index < (hasDeliveredStatus(order.status) ? 3 : trackingStage) ? "complete" : ""
                       }`}
                     />
                   )}
@@ -691,246 +635,6 @@ function OrderDetails() {
               );
             })}
           </div>
-
-          {status === "processing" && (
-
-            <div className="details-timeline-card processing-card">
-
-              <div className="details-timeline-left">
-                BOX
-              </div>
-
-              <div>
-
-                <h4>
-                  Order Processing
-                </h4>
-
-                <p>
-                  Your order has been confirmed and is being prepared.
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {status === "shipped" && (
-
-            <div className="details-timeline-card shipping-card">
-
-              <div className="details-timeline-left">
-                TRK
-              </div>
-
-              <div>
-
-                <h4>
-                  Order Shipped
-                </h4>
-
-                <p>
-                  Your order is on the way.
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {hasDeliveredStatus &&
-            order.deliveredDate && (
-
-            <div className="details-timeline-card delivered-card">
-
-              <div className="details-timeline-left">
-                OK
-              </div>
-
-              <div>
-
-                <h4>
-                  Delivered Successfully
-                </h4>
-
-                <p>
-                  Your order was delivered on
-                  <strong>
-                    {formatOrderDate(order.deliveredDate)}
-                  </strong>
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {status === "return requested" && (
-
-            <div className="details-timeline-card return-card">
-
-              <div className="details-timeline-left">
-                RTN
-              </div>
-
-              <div>
-
-                <h4>
-                  Return Requested
-                </h4>
-
-                <p>
-                  Your return request is under review.
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {status === "pickup scheduled" && (
-
-            <div className="details-timeline-card pickup-card">
-
-              <div className="details-timeline-left">
-                PK
-              </div>
-
-              <div>
-
-                <h4>
-                  Pickup Scheduled
-                </h4>
-
-                <p>
-                  Pickup arranged for
-                  <strong>
-                    {order.pickupDate}
-                  </strong>
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {(status === "pickup completed" ||
-            status === "return completed" ||
-            status === "refund completed") && (
-
-            <div className="details-timeline-card pickup-complete-card">
-
-              <div className="details-timeline-left">
-                PK
-              </div>
-
-              <div>
-
-                <h4>
-                  Product Picked Up
-                </h4>
-
-                <p>
-                  Return pickup completed successfully.
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {(status === "return completed" ||
-            status === "refund completed") &&
-            order.returnCompletedDate && (
-
-            <div className="details-timeline-card return-complete-card">
-
-              <div className="details-timeline-left">
-                OK
-              </div>
-
-              <div>
-
-                <h4>
-                  Return Completed
-                </h4>
-
-                <p>
-                  Your return was completed on
-                  <strong>
-                    {formatOrderDate(order.returnCompletedDate)}
-                  </strong>
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {(status === "pickup completed" ||
-            status === "return completed") &&
-            order.refundDate && (
-
-            <div className="details-timeline-card refund-card">
-
-              <div className="details-timeline-left">
-                Rs
-              </div>
-
-              <div>
-
-                <h4>
-                  Refund Processing
-                </h4>
-
-                <p>
-                  Expected refund by
-                  <strong>
-                    {formatOrderDate(order.refundDate)}
-                  </strong>
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {status === "refund completed" &&
-            order.refundCompletedDate && (
-
-            <div className="details-timeline-card success-card">
-
-              <div className="details-timeline-left">
-                OK
-              </div>
-
-              <div>
-
-                <h4>
-                  Refund Completed Successfully
-                </h4>
-
-                <p>
-                  Refund processed on
-                  <strong>
-                    {formatOrderDate(order.refundCompletedDate)}
-                  </strong>
-                </p>
-
-              </div>
-
-            </div>
-
-          )}
-
         </div>
 
         {isReturnTrackingStatus && (
@@ -1047,42 +751,32 @@ function OrderDetails() {
 
         {/* PAYMENT */}
 
-        <div className="details-payment">
+        <div className="details-payment" aria-label="Payment summary">
+          <div className="details-payment-row details-payment-total-row">
+            <span className="payment-label">Total Amount</span>
+            <span className="details-total">Rs. {order.total}</span>
+          </div>
 
-          <p className="details-total">
-
-            Total Amount:
-            Rs. {order.total}
-
-          </p>
-
-          <p className="details-paid">
-
-            Paid:
-            Rs. {order.paid}
-
-          </p>
+          <div className="details-payment-row">
+            <span className="payment-label">Paid</span>
+            <span className="details-paid">Rs. {order.paid}</span>
+          </div>
 
           {order.paymentMode === "COD" && (
-
-            <p className="details-paid">
-              Required Online Advance (10%):
-              Rs. {order.codAdvance}
-            </p>
-
+            <div className="details-payment-row">
+              <span className="payment-label">Required Online Advance (10%)</span>
+              <span className="details-paid">Rs. {order.codAdvance}</span>
+            </div>
           )}
 
           {order.paymentMode === "COD" && (
-
-            <p className="details-remaining">
-
-              Remaining on Delivery:
-              Rs. {order.codRemainingOnDelivery ?? order.remaining}
-
-            </p>
-
+            <div className="details-payment-row details-payment-remaining-row">
+              <span className="payment-label">Remaining on Delivery</span>
+              <span className="details-remaining">
+                Rs. {order.codRemainingOnDelivery ?? order.remaining}
+              </span>
+            </div>
           )}
-
         </div>
 
         {(status === "payment pending" || canCancel || canReturn) && (

@@ -1,4 +1,362 @@
-.user-settings-page { min-height: 100vh; padding: 36px 24px 72px; background: linear-gradient(#f7f3ef, #fff); }
-.user-settings-card { max-width: 620px; margin: 14px auto; padding: 26px; border: 1px solid #f0e2d6; border-radius: 18px; background: #fff; box-shadow: 0 12px 34px rgba(0,0,0,.06); }
-.user-settings-card h1 { margin: 0 0 22px; color: #3e2723; }.settings-form,.settings-account { display:grid; gap:12px; padding:18px 0; border-top:1px solid #f0e2d6; }.settings-form h2,.settings-account h2 { margin:0; color:#3e2723; font-size:19px; }.settings-form label { display:grid; gap:7px; color:#3e2723; font-weight:800; font-size:13px; }.settings-form input { height:46px; padding:0 13px; border:1px solid #ddd; border-radius:10px; font-size:16px; }.settings-form button,.settings-account button,.settings-back { min-height:46px; border:0; border-radius:10px; padding:0 16px; background:#3e2723; color:#fff; font-weight:800; cursor:pointer; }.settings-form button:hover,.settings-account button:hover { filter:brightness(.92); }.settings-form button:focus-visible,.settings-account button:focus-visible { outline:3px solid #d8bfae; outline-offset:2px; }.settings-back { display:block; margin:auto; background:#fff8f2; border:1px solid #e2d4c8; color:#3e2723; }.settings-secondary { background:#fff !important; border:1px solid #d8bfae !important; color:#6b3c25 !important; }.settings-dark-action { background:#171717 !important; color:#fff !important; }.settings-danger { background:#d32f2f !important; color:#fff !important; }.settings-danger:hover { background:#b71c1c !important; }.settings-forgot-password { min-height:auto !important; justify-self:start; padding:0 !important; background:transparent !important; color:#8d4822 !important; text-decoration:underline; text-underline-offset:3px; }
-@media(max-width:600px) { .user-settings-page { padding:18px 14px calc(72px + env(safe-area-inset-bottom)); }.user-settings-card { margin-top:12px; padding:18px 16px; border-radius:16px; }.user-settings-card h1 { font-size:25px; }.settings-form,.settings-account { padding:16px 0; }.settings-form button,.settings-account button,.settings-back { width:100%; min-height:48px; } }
+/* ═══════════════════════════════════════════════════════
+   Haroon Stores — User Settings Page
+   Brand Identity: Warm Coffee Brown, Cream/Off-White, Subtle Warm Borders
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Page Container ─── */
+.user-settings-page {
+  min-height: 80vh;
+  padding: 36px 24px 64px;
+  background: #fcfbf9;
+}
+
+.user-settings-container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ─── Back to Profile Button ─── */
+.settings-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid #ede8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2c1b14;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(44, 27, 20, 0.02);
+  transition: all 0.2s ease;
+}
+
+.settings-back:hover {
+  background: #fbf9f6;
+  border-color: #ded8d1;
+  color: #170d09;
+  transform: translateY(-1px);
+}
+
+.settings-back svg {
+  font-size: 13px;
+  color: #6d5b50;
+  transition: transform 0.2s ease;
+}
+
+.settings-back:hover svg {
+  transform: translateX(-2px);
+  color: #2c1b14;
+}
+
+/* ─── Main Settings Card ─── */
+.user-settings-card {
+  background: #ffffff;
+  border: 1px solid #ede8e3;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 2px 10px rgba(44, 27, 20, 0.035);
+  transition: border-color 0.2s ease;
+}
+
+.user-settings-card:hover {
+  border-color: #ded8d1;
+}
+
+/* ─── Settings Header ─── */
+.settings-header {
+  padding-bottom: 22px;
+  border-bottom: 1px solid #ede8e3;
+  margin-bottom: 26px;
+}
+
+.settings-header h1 {
+  margin: 0 0 6px;
+  color: #2c1b14;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.settings-subtitle {
+  margin: 0;
+  color: #6d5b50;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ─── Section Titles ─── */
+.settings-section-title {
+  margin-bottom: 18px;
+}
+
+.settings-section-title h2 {
+  margin: 0 0 4px;
+  color: #2c1b14;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.settings-section-title p {
+  margin: 0;
+  color: #6d5b50;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+/* ─── Forms & Field Groups ─── */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid #ede8e3;
+  margin-bottom: 28px;
+}
+
+.settings-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #2c1b14;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.settings-form input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #ede8e3;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #2c1b14;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.settings-form input::placeholder {
+  color: #a39285;
+}
+
+.settings-form input:hover {
+  border-color: #d8cfc5;
+}
+
+.settings-form input:focus {
+  outline: none;
+  border-color: #c8742d;
+  box-shadow: 0 0 0 3px rgba(200, 116, 45, 0.12);
+  background: #fff;
+}
+
+/* ─── Buttons ─── */
+.settings-primary-btn,
+.settings-dark-action {
+  height: 44px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #3b2415;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  align-self: flex-start;
+}
+
+.settings-primary-btn:hover,
+.settings-dark-action:hover {
+  background: #543621;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(59, 36, 21, 0.15);
+}
+
+.settings-primary-btn:active,
+.settings-dark-action:active {
+  transform: translateY(0);
+}
+
+.settings-primary-btn:disabled,
+.settings-dark-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ─── Secondary Button (Resend OTP, etc.) ─── */
+.settings-secondary {
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid #ede8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2c1b14;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.settings-secondary:hover {
+  background: #fbf9f6;
+  border-color: #ded8d1;
+  color: #170d09;
+}
+
+.settings-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ─── Button Group (Verify + Resend) ─── */
+.settings-button-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* ─── Security Specific ─── */
+.settings-security {
+  scroll-margin-top: 24px;
+}
+
+.settings-instruction {
+  margin: 0 0 8px;
+  padding: 12px 14px;
+  background: #fbf9f6;
+  border: 1px solid #ede8e3;
+  border-radius: 8px;
+  color: #6d5b50;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.settings-instruction strong {
+  color: #2c1b14;
+}
+
+.settings-forgot-password {
+  border: none;
+  background: transparent;
+  color: #c8742d;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  padding: 2px 0;
+  margin-top: -6px;
+  margin-bottom: 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
+}
+
+.settings-forgot-password:hover {
+  color: #a65d20;
+}
+
+.settings-forgot-password:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ─── Account Section (Logout) ─── */
+.settings-account {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-account .settings-section-title {
+  margin-bottom: 8px;
+}
+
+.settings-danger {
+  height: 42px;
+  padding: 0 18px;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #c53030;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  transition: all 0.2s ease;
+}
+
+.settings-danger:hover {
+  background: #fee2e2;
+  border-color: #feb2b2;
+  color: #9b2c2c;
+  transform: translateY(-1px);
+}
+
+.settings-danger:active {
+  transform: translateY(0);
+}
+
+.settings-danger svg {
+  font-size: 14px;
+}
+
+/* ─── Responsive Styles ─── */
+@media (max-width: 680px) {
+  .user-settings-page {
+    padding: 20px 16px calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .user-settings-card {
+    padding: 22px 18px;
+    border-radius: 14px;
+  }
+
+  .settings-header h1 {
+    font-size: 22px;
+  }
+
+  .settings-primary-btn,
+  .settings-dark-action,
+  .settings-secondary,
+  .settings-danger {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .settings-button-group {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .settings-button-group button {
+    width: 100%;
+  }
+}

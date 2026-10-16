@@ -281,7 +281,7 @@ function OrderSuccess() {
           <button
             className="success-btn-primary"
             type="button"
-            onClick={() => navigate("/order-details", { state: { order } })}
+            onClick={() => navigate(`/order-details?id=${encodeURIComponent(order?.id || "")}`, { state: { order } })}
           >
             View Order Details
           </button>

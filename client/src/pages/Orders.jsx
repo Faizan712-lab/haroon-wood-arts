@@ -29,99 +29,23 @@ import {
 } from "../utils/productDisplay";
 
 import {
-  FaBoxOpen,
-  FaCheck,
-  FaCheckCircle,
-  FaRupeeSign,
-  FaTimesCircle,
-  FaUndo,
-  FaTruck
+  FaCheck
 } from "react-icons/fa";
 
-const ORDER_TRACKING_STEPS = [
-  { label: "Order Placed", Icon: FaBoxOpen },
-  { label: "Processing", Icon: FaBoxOpen },
-  { label: "Shipped", Icon: FaTruck },
-  { label: "Delivered", Icon: FaCheckCircle }
-];
-
-const CANCELLED_TRACKING_STEPS = [
-  { label: "Order Placed", Icon: FaBoxOpen },
-  { label: "Cancelled", Icon: FaTimesCircle }
-];
-
-const PAYMENT_PENDING_TRACKING_STEPS = [
-  { label: "Payment Pending", Icon: FaBoxOpen }
-];
-
-const REFUND_COMPLETED_TRACKING_STEPS = [
-  ...ORDER_TRACKING_STEPS,
-  { label: "Refund Completed", Icon: FaRupeeSign }
-];
-
-function getTrackingStage(status) {
-  const normalisedStatus = (status || "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ");
-
-  if (normalisedStatus === "cancelled") return 1;
-
-  if (normalisedStatus === "payment pending") return 0;
-
-  if (normalisedStatus === "shipped") return 2;
-
-  if (normalisedStatus === "refund completed") return 4;
-
-  if ([
-    "delivered",
-    "return requested",
-    "pickup scheduled",
-    "pickup completed",
-    "return completed",
-    "refund completed"
-  ].includes(normalisedStatus)) return 3;
-
-  if (["processing", "cancellation requested"].includes(normalisedStatus)) {
-    return 1;
-  }
-
-  return 0;
-}
-
-function formatOrderDate(value) {
-  if (!value) return "";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric"
-  }).format(date);
-}
-
-function getOrderStatusIcon(status) {
-  const normalisedStatus = (status || "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ");
-
-  if (["cancelled", "cancellation requested"].includes(normalisedStatus)) {
-    return FaTimesCircle;
-  }
-
-  if (normalisedStatus.includes("return") || normalisedStatus.includes("pickup")) {
-    return FaUndo;
-  }
-
-  if (normalisedStatus === "delivered") return FaCheckCircle;
-  if (normalisedStatus === "shipped") return FaTruck;
-
-  return FaBoxOpen;
-}
+import {
+  ORDER_TRACKING_STEPS,
+  CANCELLED_TRACKING_STEPS,
+  PAYMENT_PENDING_TRACKING_STEPS,
+  REFUND_COMPLETED_TRACKING_STEPS,
+  normaliseStatus,
+  formatOrderDate,
+  getStatusClass,
+  getOrderStatusClass,
+  getOrderStatusIcon,
+  hasDeliveredStatus,
+  getTrackingStage,
+  getStepState
+} from "../utils/orderTracking";
 
 function paymentResumeLabel(expiresAt, now) {
   if (!expiresAt) return "Payment checkout is ready to continue.";
@@ -289,35 +213,6 @@ function Orders() {
     updateOrderInState(data.order);
 
     return data.order;
-
-  }
-
-  /* ================= STATUS ================= */
-
-  function getStatusClass(status) {
-
-    if (!status)
-      return "processing";
-
-    return status
-
-      .toLowerCase()
-
-      .trim()
-
-      .replaceAll(" ", "-");
-
-  }
-
-  function normaliseStatus(status) {
-
-    return (status || "")
-
-      .toLowerCase()
-
-      .trim()
-
-      .replace(/\s+/g, " ");
 
   }
 
@@ -691,7 +586,7 @@ function Orders() {
     <div className="orders-page">
 
       <h1>
-        📦 Your Orders
+        Your Orders
       </h1>
 
       {orders.length === 0 ? (
@@ -750,7 +645,7 @@ function Orders() {
                       />
                     </div>
                     <div className="order-item-details">
-                      <p>{item.name}</p>
+                      <p className="order-item-name">{item.name}</p>
                       <div className="order-item-meta">
                         <span>Qty: {item.quantity}</span>
                         {getVariantLabel(item) && (
@@ -782,20 +677,23 @@ function Orders() {
                   : normaliseStatus(order.status) === "refund completed"
                     ? REFUND_COMPLETED_TRACKING_STEPS
                     : ORDER_TRACKING_STEPS
-                ).map(({ label, Icon }, index, steps) => {
+                ).map(({ label, Icon, key }, index, steps) => {
+                  const stepKey = key || label.toLowerCase().replace(/\s+/g, "-");
                   const currentStage = getTrackingStage(order.status);
-                  const isComplete = index < currentStage;
-                  const isCurrent = index === currentStage;
-                  const isDelivered = index === 3 && currentStage === 3;
+                  const { isComplete, isCurrent, isDelivered, isPending } = getStepState(
+                    index,
+                    currentStage,
+                    order.status
+                  );
 
                   return (
                     <div className="order-tracking-segment" key={label}>
                       <div
-                        className={`order-tracking-step ${
+                        className={`order-tracking-step step-${stepKey} ${
                           isComplete ? "complete" : ""
                         } ${isCurrent ? "current" : ""} ${
                           isDelivered ? "delivered" : ""
-                        }`}
+                        } ${isPending ? "pending" : ""}`}
                       >
                         <span className="order-tracking-icon">
                           {isComplete ? <FaCheck /> : <Icon />}
@@ -805,7 +703,7 @@ function Orders() {
                       {index < steps.length - 1 && (
                         <span
                           className={`order-tracking-line ${
-                            index < currentStage ? "complete" : ""
+                            index < (hasDeliveredStatus(order.status) ? 3 : currentStage) ? "complete" : ""
                           }`}
                         />
                       )}
@@ -814,7 +712,7 @@ function Orders() {
                 })}
               </div>
 
-              {getTrackingStage(order.status) === 3 && order.deliveredDate && (
+              {hasDeliveredStatus(order.status) && order.deliveredDate && (
                 <p className="order-delivered-date">
                   Delivered on {formatOrderDate(order.deliveredDate)}
                 </p>
@@ -822,7 +720,7 @@ function Orders() {
 
               <div className="order-card-footer">
                 <div className="order-total-compact">
-                  Total: <strong>₹ {order.total}</strong>
+                  Total: <strong>Rs. {order.total}</strong>
                 </div>
                 {normaliseStatus(order.status) === "payment pending" &&
                   order.paymentAttemptState === "resume_window" &&
@@ -840,9 +738,9 @@ function Orders() {
                 )}
                 <button
                   className="view-order-btn"
-                  onClick={() => navigate("/order-details", { state: { order } })}
+                  onClick={() => navigate(`/order-details?id=${encodeURIComponent(order.id)}`, { state: { order } })}
                 >
-                  View Full Order →
+                  View Details →
                 </button>
               </div>
 
