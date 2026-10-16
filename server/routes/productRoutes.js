@@ -6,6 +6,8 @@ const {
   getProductById,
   addProduct,
   updateProduct,
+  updateProductStockStatus,
+  reconcileCart,
   addProductReview,
   deleteProduct
 } = require("../controllers/productController");
@@ -24,6 +26,7 @@ const productImagesUpload = createImageUpload("products", 72, {
 });
 
 router.get("/", getProducts);
+router.post("/reconcile-cart", reconcileCart);
 router.get("/:id", getProductById);
 const productImageFields = productImagesUpload.fields([
   { name: "images", maxCount: 8 },
@@ -32,6 +35,7 @@ const productImageFields = productImagesUpload.fields([
 
 router.post("/", requireAdminAuth, productImageFields, validateUploadedImages, addProduct);
 router.put("/:id", requireAdminAuth, productImageFields, validateUploadedImages, updateProduct);
+router.patch("/:id/stock-status", requireAdminAuth, updateProductStockStatus);
 router.post("/:id/reviews", requireAuth(["user"]), addProductReview);
 router.delete("/:id", requireAdminAuth, deleteProduct);
 

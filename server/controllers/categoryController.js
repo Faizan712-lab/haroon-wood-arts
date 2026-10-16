@@ -16,7 +16,9 @@ function mapCategory(row) {
     name: row.name,
     image: images[0] || "",
     images,
-    category_images: images
+    category_images: images,
+    productCount: Number(row.product_count || 0),
+    product_count: Number(row.product_count || 0)
   };
 }
 
@@ -74,11 +76,12 @@ function getNumericCategoryId(rawId) {
 
 async function getCategories(req, res) {
   try {
-
     const [savedCategories] = await runQuery(`
-      SELECT id, name, image, category_images
-      FROM categories
-      ORDER BY name ASC
+      SELECT c.id, c.name, c.image, c.category_images, COUNT(p.id) AS product_count
+      FROM categories c
+      LEFT JOIN products p ON p.category = c.name
+      GROUP BY c.id, c.name, c.image, c.category_images
+      ORDER BY c.name ASC
     `);
 
     res.json({
@@ -131,10 +134,14 @@ async function addCategory(req, res) {
     );
     await deleteCloudinaryImages(removedImages(previousImages, images));
 
-    const [rows] = await runQuery(
-      "SELECT id, name, image, category_images FROM categories WHERE name = ? LIMIT 1",
-      [name]
-    );
+    const [rows] = await runQuery(`
+      SELECT c.id, c.name, c.image, c.category_images, COUNT(p.id) AS product_count
+      FROM categories c
+      LEFT JOIN products p ON p.category = c.name
+      WHERE c.name = ?
+      GROUP BY c.id, c.name, c.image, c.category_images
+      LIMIT 1
+    `, [name]);
 
     res.status(201).json({
       success: true,
@@ -174,6 +181,18 @@ async function deleteCategory(req, res) {
       });
     }
 
+    const [assignedProducts] = await runQuery(
+      "SELECT COUNT(*) AS count FROM products WHERE category = ?",
+      [categories[0].name]
+    );
+
+    if (assignedProducts[0] && Number(assignedProducts[0].count) > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete category "${categories[0].name}" because ${assignedProducts[0].count} product(s) are assigned to it. Please reassign or delete these products first.`
+      });
+    }
+
     await runQuery(
       "DELETE FROM categories WHERE id = ?",
       [id]
@@ -210,7 +229,7 @@ async function updateCategory(req, res) {
     }
 
     const [existingRows] = await runQuery(
-      "SELECT image, category_images FROM categories WHERE id = ? LIMIT 1",
+      "SELECT name, image, category_images FROM categories WHERE id = ? LIMIT 1",
       [id]
     );
     if (!existingRows[0]) {
@@ -240,6 +259,14 @@ async function updateCategory(req, res) {
     );
     await deleteCloudinaryImages(removedImages(previousImages, images));
 
+    // If category name changed, synchronize existing products
+    if (existingRows[0].name && existingRows[0].name !== name) {
+      await runQuery(
+        "UPDATE products SET category = ? WHERE category = ?",
+        [name, existingRows[0].name]
+      );
+    }
+
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
@@ -247,18 +274,21 @@ async function updateCategory(req, res) {
       });
     }
 
-    const [rows] = await runQuery(
-      "SELECT id, name, image, category_images FROM categories WHERE id = ? LIMIT 1",
-      [id]
-    );
+    const [rows] = await runQuery(`
+      SELECT c.id, c.name, c.image, c.category_images, COUNT(p.id) AS product_count
+      FROM categories c
+      LEFT JOIN products p ON p.category = c.name
+      WHERE c.id = ?
+      GROUP BY c.id, c.name, c.image, c.category_images
+      LIMIT 1
+    `, [id]);
 
     res.json({
       success: true,
       message: "Category updated successfully",
       category: mapCategory(rows[0])
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Failed to update category:", error);
 
     const duplicateEntry =

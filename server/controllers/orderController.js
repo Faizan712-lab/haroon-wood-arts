@@ -684,6 +684,11 @@ async function createOrder(req, res) {
         throw new Error("Insufficient stock for a selected product.");
       }
 
+      const expectedPrice = Number(requestedItem.price);
+      if (Number.isFinite(expectedPrice) && Math.abs(expectedPrice - unitPrice) > 0.01) {
+        throw new Error(`PRICE_CHANGED:${product.name}:${expectedPrice}:${unitPrice}`);
+      }
+
       if (variant) {
         await connection.execute(
           "UPDATE product_variants SET stock = stock - ? WHERE id = ? AND stock >= ?",
@@ -833,11 +838,38 @@ async function createOrder(req, res) {
       }
     }
 
+    if (error.message && error.message.startsWith("PRICE_CHANGED:")) {
+      const parts = error.message.split(":");
+      const productName = parts[1];
+      const oldP = parts[2];
+      const newP = parts[3];
+      return res.status(409).json({
+        success: false,
+        priceChanged: true,
+        message: `Price for "${productName}" has updated from ₹${Number(oldP).toFixed(2)} to ₹${Number(newP).toFixed(2)}. Please review your cart before completing payment.`
+      });
+    }
+
+    const clientValidationErrors = [
+      "Invalid product or quantity.",
+      "A selected product is unavailable.",
+      "Selected product variant is unavailable.",
+      "Please select a product variant.",
+      "Insufficient stock for a selected product."
+    ];
+
+    if (error.message && clientValidationErrors.includes(error.message)) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
     console.error("Failed to create order:", error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to create order"
+      message: error.message || "Failed to create order"
     });
   } finally {
     if (checkoutLockAcquired) {

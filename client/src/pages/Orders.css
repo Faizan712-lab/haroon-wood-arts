@@ -2078,13 +2078,13 @@
 /* SUCCESS */
 /* ======================================== */
 
-.success-card {
+.timeline-card.success-card {
 
   border-left: 5px solid #2e7d32;
 
 }
 
-.success-card .timeline-left {
+.timeline-card.success-card .timeline-left {
 
   background: #e8f5e9;
 

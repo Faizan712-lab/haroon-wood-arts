@@ -285,42 +285,73 @@ async function getReviews(productId) {
 }
 
 async function saveVariants(productId, variants, fallbackPrice, fallbackStock) {
-  const [previousRows] = await db.promise().execute(
-    "SELECT variant_images FROM product_variants WHERE product_id = ?",
+  const [existingRows] = await db.promise().execute(
+    "SELECT id, variant_images FROM product_variants WHERE product_id = ?",
     [productId]
   );
-  const previousImages = previousRows.flatMap(row => parseImages(row.variant_images));
-  await db.promise().execute(
-    "DELETE FROM product_variants WHERE product_id = ?",
-    [productId]
-  );
+  const previousImages = existingRows.flatMap(row => parseImages(row.variant_images));
+  const existingIdSet = new Set(existingRows.map(row => Number(row.id)));
 
-  const cleanVariants =
-    variants
-      .filter(variant =>
-        String(variant.size || variant.label || "").trim()
-      )
-      .map(variant => ({
+  const cleanVariants = variants
+    .filter(variant => String(variant.size || variant.label || "").trim())
+    .map(variant => {
+      const parsedId = Number(variant.id);
+      const hasValidId = Number.isInteger(parsedId) && parsedId > 0 && existingIdSet.has(parsedId);
+      return {
+        id: hasValidId ? parsedId : null,
         size: String(variant.size || variant.label || "").trim(),
         price: Number(variant.price || fallbackPrice || 0),
         stock: Number(variant.stock ?? fallbackStock ?? 0),
         images: parseImages(variant.variant_images ?? variant.images)
-      }));
+      };
+    });
+
+  const keptIds = new Set();
 
   for (const variant of cleanVariants) {
+    if (variant.id) {
+      await db.promise().execute(
+        `UPDATE product_variants
+         SET size_label = ?, size = ?, price = ?, stock = ?, variant_images = ?
+         WHERE id = ? AND product_id = ?`,
+        [
+          variant.size,
+          variant.size,
+          variant.price,
+          variant.stock,
+          JSON.stringify(variant.images),
+          variant.id,
+          productId
+        ]
+      );
+      keptIds.add(variant.id);
+    } else {
+      const [insertRes] = await db.promise().execute(
+        `INSERT INTO product_variants
+         (product_id, size_label, size, price, stock, variant_images)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          productId,
+          variant.size,
+          variant.size,
+          variant.price,
+          variant.stock,
+          JSON.stringify(variant.images)
+        ]
+      );
+      keptIds.add(insertRes.insertId);
+    }
+  }
+
+  const toDeleteIds = existingRows
+    .map(row => Number(row.id))
+    .filter(id => !keptIds.has(id));
+
+  if (toDeleteIds.length > 0) {
+    const placeholders = toDeleteIds.map(() => "?").join(",");
     await db.promise().execute(
-      `
-        INSERT INTO product_variants
-        (product_id, size_label, price, stock, variant_images)
-        VALUES (?, ?, ?, ?, ?)
-      `,
-      [
-        productId,
-        variant.size,
-        variant.price,
-        variant.stock,
-        JSON.stringify(variant.images)
-      ]
+      `DELETE FROM product_variants WHERE product_id = ? AND id IN (${placeholders})`,
+      [productId, ...toDeleteIds]
     );
   }
 
@@ -525,6 +556,20 @@ const addProduct = async (req, res) => {
     sizes,
     variants
   } = req.body;
+  if (!name || !String(name).trim()) {
+    return res.status(400).json({ success: false, message: "Product name is required." });
+  }
+
+  const parsedPrice = Number(price);
+  if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ success: false, message: "A valid non-negative price is required." });
+  }
+
+  const parsedStock = Number(stock !== undefined && stock !== null && stock !== "" ? stock : 0);
+  if (!Number.isFinite(parsedStock) || parsedStock < 0) {
+    return res.status(400).json({ success: false, message: "A valid non-negative stock quantity is required." });
+  }
+
   const discount =
     normalizeDiscountPercent(
       discountPercent ?? discount_percent ?? 0
@@ -555,21 +600,21 @@ const addProduct = async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
-        name,
-        description,
-        Number(price || 0),
+        String(name).trim(),
+        description || "",
+        parsedPrice,
         null,
         discount,
-        category,
+        category || "",
         images[0] || "",
         JSON.stringify(images),
-        stock,
+        parsedStock,
         normalizedStockStatus,
         JSON.stringify([])
       ]
     );
 
-    await saveVariants(result.insertId, productVariants, Number(price || 0), Number(stock || 0));
+    await saveVariants(result.insertId, productVariants, parsedPrice, parsedStock);
 
     res.status(201).json({
       success: true,
@@ -709,6 +754,21 @@ const updateProduct = async (req, res) => {
     sizes,
     variants
   } = req.body;
+
+  if (!name || !String(name).trim()) {
+    return res.status(400).json({ success: false, message: "Product name is required." });
+  }
+
+  const parsedPrice = Number(price);
+  if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ success: false, message: "A valid non-negative price is required." });
+  }
+
+  const parsedStock = Number(stock !== undefined && stock !== null && stock !== "" ? stock : 0);
+  if (!Number.isFinite(parsedStock) || parsedStock < 0) {
+    return res.status(400).json({ success: false, message: "A valid non-negative stock quantity is required." });
+  }
+
   const discount =
     normalizeDiscountPercent(
       discountPercent ?? discount_percent ?? 0
@@ -764,15 +824,15 @@ const updateProduct = async (req, res) => {
         WHERE id = ?
       `,
       [
-        name,
-        description,
-        Number(price || 0),
+        String(name).trim(),
+        description || "",
+        parsedPrice,
         null,
         discount,
-        category,
+        category || "",
         nextImages[0] || image || "",
         JSON.stringify(nextImages),
-        stock,
+        parsedStock,
         normalizedStockStatus,
         JSON.stringify([]),
         req.params.id
@@ -786,7 +846,7 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    await saveVariants(req.params.id, productVariants, Number(price || 0), Number(stock || 0));
+    await saveVariants(req.params.id, productVariants, parsedPrice, parsedStock);
     await deleteCloudinaryImages(removedImages(previousImages, nextImages));
 
     const [rows] = await db.promise().execute(
@@ -820,6 +880,238 @@ const updateProduct = async (req, res) => {
   }
 };
 
+// UPDATE PRODUCT STOCK STATUS (In Stock / Out of Stock)
+const updateProductStockStatus = async (req, res) => {
+  try {
+    const productId = Number(req.params.id);
+    if (!Number.isInteger(productId) || productId <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid product ID." });
+    }
+
+    const { stockStatus, stock_status } = req.body;
+    const requestedStatus = (stockStatus || stock_status || "").toLowerCase().trim();
+    const newStatus = requestedStatus === "out_of_stock" ? "out_of_stock" : "in_stock";
+
+    const [result] = await db.promise().execute(
+      "UPDATE products SET stock_status = ? WHERE id = ?",
+      [newStatus, productId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Product not found." });
+    }
+
+    const [rows] = await db.promise().execute(
+      `SELECT products.*,
+              COALESCE(AVG(product_reviews.rating), 0) AS average_rating,
+              COUNT(product_reviews.id) AS review_count
+       FROM products
+       LEFT JOIN product_reviews ON product_reviews.product_id = products.id
+       WHERE products.id = ?
+       GROUP BY products.id`,
+      [productId]
+    );
+
+    const [product] = await attachVariants([mapProduct(rows[0])]);
+
+    res.status(200).json({
+      success: true,
+      message: `Product marked as ${newStatus === "out_of_stock" ? "out of stock" : "in stock"}.`,
+      product
+    });
+  } catch (err) {
+    console.error("Failed to update stock status:", err);
+    res.status(500).json({ success: false, message: "Failed to update stock status." });
+  }
+};
+
+// RECONCILE CART ITEMS AGAINST AUTHORITATIVE DATABASE VALUES
+const reconcileCart = async (req, res) => {
+  try {
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(200).json({
+        success: true,
+        items: [],
+        priceChanges: [],
+        unavailableItems: [],
+        stockIssues: []
+      });
+    }
+
+    const productIds = [
+      ...new Set(
+        items
+          .map(item => Number(item.productId || item.id))
+          .filter(id => Number.isInteger(id) && id > 0)
+      )
+    ];
+
+    if (productIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        items: [],
+        priceChanges: [],
+        unavailableItems: [],
+        stockIssues: []
+      });
+    }
+
+    const placeholders = productIds.map(() => "?").join(",");
+    const [productRows] = await db.promise().execute(
+      `SELECT * FROM products WHERE id IN (${placeholders})`,
+      productIds
+    );
+
+    const products = await attachVariants(productRows.map(mapProduct));
+    const productMap = new Map(products.map(p => [Number(p.id), p]));
+
+    const reconciledItems = [];
+    const priceChanges = [];
+    const unavailableItems = [];
+    const stockIssues = [];
+
+    for (const item of items) {
+      const productId = Number(item.productId || item.id);
+      const requestedQuantity = Math.max(1, Number(item.quantity || 1));
+      const clientPrice = Number(item.price);
+      const product = productMap.get(productId);
+
+      if (!product) {
+        unavailableItems.push({
+          cartKey: item.cartKey || `${productId}-${item.variantId || "default"}`,
+          productId,
+          name: item.name || "Product",
+          reason: "This product is no longer available in the catalog."
+        });
+        reconciledItems.push({
+          ...item,
+          productId,
+          isUnavailable: true,
+          unavailableReason: "Product has been removed from catalog.",
+          availableStock: 0
+        });
+        continue;
+      }
+
+      const isProductOutOfStock = product.stockStatus === "out_of_stock" || product.stock_status === "out_of_stock";
+
+      let selectedVariant = null;
+      let variantNotFound = false;
+
+      if (item.variantId) {
+        const vId = Number(item.variantId);
+        selectedVariant = product.variants?.find(v => Number(v.id) === vId) || null;
+        if (!selectedVariant) {
+          if (item.variantLabel) {
+            selectedVariant = product.variants?.find(v => (v.size || v.label || "").trim() === (item.variantLabel || "").trim()) || null;
+          }
+          if (!selectedVariant) {
+            variantNotFound = true;
+          }
+        }
+      } else if (product.variants?.length > 0) {
+        selectedVariant = product.variants[0];
+      }
+
+      if (variantNotFound) {
+        unavailableItems.push({
+          cartKey: item.cartKey || `${productId}-${item.variantId || "default"}`,
+          productId,
+          name: item.name || product.name,
+          reason: "The selected size/option is no longer available."
+        });
+        reconciledItems.push({
+          ...item,
+          productId,
+          name: product.name,
+          isUnavailable: true,
+          unavailableReason: "The selected size/option is no longer available.",
+          availableStock: 0
+        });
+        continue;
+      }
+
+      const authoritativePrice = selectedVariant
+        ? Number(selectedVariant.finalPrice || selectedVariant.discountedPrice || selectedVariant.price || product.finalPrice)
+        : Number(product.finalPrice || product.discountedPrice || product.price);
+
+      const availableStock = selectedVariant
+        ? Number(selectedVariant.stock || 0)
+        : Number(product.stock || 0);
+
+      const isOutOfStock = isProductOutOfStock || availableStock <= 0;
+
+      if (isOutOfStock) {
+        unavailableItems.push({
+          cartKey: item.cartKey || `${productId}-${item.variantId || "default"}`,
+          productId,
+          name: product.name,
+          reason: "This product is currently out of stock."
+        });
+        reconciledItems.push({
+          ...item,
+          productId,
+          name: product.name,
+          price: authoritativePrice,
+          isUnavailable: true,
+          unavailableReason: "Out of stock.",
+          availableStock: 0
+        });
+        continue;
+      }
+
+      let quantity = requestedQuantity;
+      if (quantity > availableStock) {
+        stockIssues.push({
+          cartKey: item.cartKey || `${productId}-${item.variantId || "default"}`,
+          productId,
+          name: product.name,
+          requestedQuantity,
+          availableStock,
+          reason: `Only ${availableStock} item(s) available in stock.`
+        });
+        quantity = availableStock;
+      }
+
+      if (Number.isFinite(clientPrice) && Math.abs(clientPrice - authoritativePrice) > 0.01) {
+        priceChanges.push({
+          cartKey: item.cartKey || `${productId}-${item.variantId || "default"}`,
+          productId,
+          name: product.name,
+          oldPrice: clientPrice,
+          currentPrice: authoritativePrice
+        });
+      }
+
+      reconciledItems.push({
+        ...item,
+        productId,
+        name: product.name,
+        price: authoritativePrice,
+        quantity,
+        variantId: selectedVariant?.id || item.variantId,
+        variantLabel: selectedVariant?.size || selectedVariant?.label || item.variantLabel,
+        image: selectedVariant?.images?.[0] || product.image || item.image,
+        isUnavailable: false,
+        availableStock
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      items: reconciledItems,
+      priceChanges,
+      unavailableItems,
+      stockIssues
+    });
+  } catch (err) {
+    console.error("Cart reconciliation failed:", err);
+    res.status(500).json({ success: false, message: "Cart reconciliation failed." });
+  }
+};
+
 // DELETE PRODUCT
 const deleteProduct = async (req, res) => {
   try {
@@ -839,9 +1131,19 @@ const deleteProduct = async (req, res) => {
       "SELECT variant_images FROM product_variants WHERE product_id = ?",
       [rows[0].id || req.params.id]
     );
+
+    const [orderRefs] = await db.promise().execute(
+      "SELECT id FROM order_items WHERE product_id = ? LIMIT 1",
+      [req.params.id]
+    );
+
     await db.promise().execute("DELETE FROM products WHERE id = ?", [req.params.id]);
-    await deleteCloudinaryImages(parseImages(rows[0].product_images, rows[0].image));
-    await deleteCloudinaryImages(variantRows.flatMap(row => parseImages(row.variant_images)));
+
+    // Only clean up Cloudinary images if no historical customer orders reference this product
+    if (orderRefs.length === 0) {
+      await deleteCloudinaryImages(parseImages(rows[0].product_images, rows[0].image));
+      await deleteCloudinaryImages(variantRows.flatMap(row => parseImages(row.variant_images)));
+    }
 
     res.status(200).json({
       success: true,
@@ -858,6 +1160,8 @@ module.exports = {
   getProductById,
   addProduct,
   updateProduct,
+  updateProductStockStatus,
+  reconcileCart,
   addProductReview,
   deleteProduct
 };

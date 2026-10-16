@@ -1,11 +1,12 @@
 import "./Checkout.css";
 
 import { useContext, useEffect, useState } from "react";
-
 import { useNavigate } from "react-router-dom";
-
 import toast from "react-hot-toast";
 
+import logo from "../assets/logo.png";
+import CheckoutStepper from "../components/CheckoutStepper";
+import ConfirmModal from "../components/ConfirmModal";
 import { CartContext } from "../context/CartContext";
 
 import {
@@ -21,7 +22,8 @@ import {
 import {
   createUserAddress,
   getUserAddresses,
-  updateUserAddress
+  updateUserAddress,
+  deleteUserAddress
 } from "../utils/addresses";
 
 const emptyAddress = {
@@ -36,44 +38,40 @@ const emptyAddress = {
 };
 
 function Checkout() {
-
   const navigate = useNavigate();
 
   const {
     cartItems,
-    getTotalPrice
+    getTotalPrice,
+    reconcileCart,
+    hasUnavailableItems
   } = useContext(CartContext);
 
-  const [address, setAddress] =
-    useState(emptyAddress);
-
-  const [savedAddresses,
-    setSavedAddresses] =
-    useState([]);
-
-  const [selectedAddressId,
-    setSelectedAddressId] =
-    useState("");
-
-  const [isSavingAddress,
-    setIsSavingAddress] =
-    useState(false);
+  const [address, setAddress] = useState(emptyAddress);
+  const [originalAddress, setOriginalAddress] = useState(emptyAddress);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [isDeletingAddress, setIsDeletingAddress] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   useEffect(() => {
+    if (cartItems.length === 0) {
+      navigate("/cart", { replace: true });
+    }
+  }, [cartItems.length, navigate]);
 
+  useEffect(() => {
     async function loadAddresses() {
       try {
-        const saved =
-          await getUserAddresses();
-
+        const saved = await getUserAddresses();
         setSavedAddresses(saved);
 
         if (saved.length > 0) {
           setAddress(saved[0]);
-
-          setSelectedAddressId(
-            String(saved[0].id)
-          );
+          setOriginalAddress(saved[0]);
+          setSelectedAddressId(String(saved[0].id));
         }
       } catch {
         setSavedAddresses([]);
@@ -81,41 +79,42 @@ function Checkout() {
     }
 
     loadAddresses();
-
   }, []);
 
   function handleChange(e) {
-
-    setSelectedAddressId("");
-
     setAddress({
       ...address,
-      [e.target.name]:
-        e.target.value
+      [e.target.name]: e.target.value
     });
-
   }
 
-  function isAddressComplete(
-    addressData = address
-  ) {
-
-    return (
-      addressData.name &&
-      addressData.phone &&
-      addressData.street &&
-      addressData.locality &&
-      addressData.city &&
-      addressData.state &&
-      addressData.pincode
+  function isAddressComplete(addressData = address) {
+    return Boolean(
+      addressData.name?.trim() &&
+      addressData.phone?.trim() &&
+      addressData.street?.trim() &&
+      addressData.locality?.trim() &&
+      addressData.city?.trim() &&
+      addressData.state?.trim() &&
+      addressData.pincode?.trim()
     );
-
   }
 
-  function formatAddress(
-    addressData
-  ) {
+  const isDirty = Boolean(
+    selectedAddressId &&
+    (
+      (address.name || "").trim() !== (originalAddress.name || "").trim() ||
+      (address.phone || "").trim() !== (originalAddress.phone || "").trim() ||
+      (address.street || "").trim() !== (originalAddress.street || "").trim() ||
+      (address.locality || "").trim() !== (originalAddress.locality || "").trim() ||
+      (address.city || "").trim() !== (originalAddress.city || "").trim() ||
+      (address.state || "").trim() !== (originalAddress.state || "").trim() ||
+      (address.pincode || "").trim() !== (originalAddress.pincode || "").trim() ||
+      (address.landmark || "").trim() !== (originalAddress.landmark || "").trim()
+    )
+  );
 
+  function formatAddress(addressData) {
     const mainAddress = [
       addressData.street,
       addressData.locality,
@@ -126,77 +125,52 @@ function Checkout() {
       .join(", ");
 
     return `${mainAddress} - ${addressData.pincode}`;
-
   }
 
   function handleAddNewAddress() {
-
     setAddress(emptyAddress);
-
+    setOriginalAddress(emptyAddress);
     setSelectedAddressId("");
-
   }
 
-  function handleSelectAddress(
-    savedAddress
-  ) {
-
+  function handleSelectAddress(savedAddress) {
     setAddress(savedAddress);
-
-    setSelectedAddressId(
-      String(savedAddress.id)
-    );
-
+    setOriginalAddress(savedAddress);
+    setSelectedAddressId(String(savedAddress.id));
   }
 
   async function handleSaveAddress() {
-
     if (!isAddressComplete()) {
-
-      toast.error(
-        "Please fill all required address fields before saving"
-      );
-
+      toast.error("Please fill all required address fields before saving");
       return;
-
     }
 
     try {
       setIsSavingAddress(true);
       if (selectedAddressId) {
-        const updatedAddress =
-          await updateUserAddress(
-            selectedAddressId,
-            address
-          );
+        const updatedAddress = await updateUserAddress(
+          selectedAddressId,
+          address
+        );
 
         setSavedAddresses(
           savedAddresses.map(item =>
-            String(item.id) ===
-            String(selectedAddressId)
+            String(item.id) === String(selectedAddressId)
               ? updatedAddress
               : item
           )
         );
 
         setAddress(updatedAddress);
-
+        setOriginalAddress(updatedAddress);
         toast.success("Address updated successfully");
       } else {
-        const savedAddress =
-          await createUserAddress(address);
+        const savedAddress = await createUserAddress(address);
 
-        setSavedAddresses([
-          savedAddress,
-          ...savedAddresses
-        ]);
-
+        setSavedAddresses([savedAddress, ...savedAddresses]);
         setAddress(savedAddress);
-
-        setSelectedAddressId(
-          String(savedAddress.id)
-        );
-
+        setOriginalAddress(savedAddress);
+        setSelectedAddressId(String(savedAddress.id));
         toast.success("Address saved successfully");
       }
     } catch (error) {
@@ -204,334 +178,443 @@ function Checkout() {
     } finally {
       setIsSavingAddress(false);
     }
-
   }
 
-  const totalPrice =
-    getTotalPrice();
+  async function handleDeleteAddress() {
+    if (!selectedAddressId || isDeletingAddress) return;
 
-  const today =
-    new Date();
+    try {
+      setIsDeletingAddress(true);
+      await deleteUserAddress(selectedAddressId);
 
-  const deliveryDate =
-    new Date();
-
-  deliveryDate.setDate(
-    today.getDate() + 5
-  );
-
-  function handleContinue() {
-
-    if (!isAddressComplete()) {
-
-      toast.error(
-        "Please fill all required fields"
+      const remaining = savedAddresses.filter(
+        item => String(item.id) !== String(selectedAddressId)
       );
 
-      return;
+      setSavedAddresses(remaining);
 
+      if (remaining.length > 0) {
+        setAddress(remaining[0]);
+        setOriginalAddress(remaining[0]);
+        setSelectedAddressId(String(remaining[0].id));
+      } else {
+        setAddress(emptyAddress);
+        setOriginalAddress(emptyAddress);
+        setSelectedAddressId("");
+      }
+
+      toast.success("Address deleted successfully");
+      setDeleteModalOpen(false);
+    } catch (error) {
+      toast.error(error.message || "Failed to delete address");
+    } finally {
+      setIsDeletingAddress(false);
+    }
+  }
+
+  const totalPrice = getTotalPrice();
+
+  const today = new Date();
+  const deliveryDate = new Date();
+  deliveryDate.setDate(today.getDate() + 5);
+
+  async function handleContinue() {
+    if (cartItems.length === 0) {
+      toast.error("Your cart is empty.");
+      navigate("/cart");
+      return;
     }
 
-    const fullAddress =
-      formatAddress(address);
+    if (hasUnavailableItems) {
+      toast.error("Please remove unavailable items before continuing.");
+      navigate("/cart");
+      return;
+    }
 
-    const deliveryAddress =
+    if (!isAddressComplete()) {
+      toast.error("Please fill all required fields");
+      return;
+    }
 
-      address.landmark
+    setIsCheckingOut(true);
+    try {
+      const reconResult = await reconcileCart();
+      if (reconResult?.hasUnavailableItems) {
+        toast.error("Some items are no longer available. Please review your cart.");
+        navigate("/cart");
+        return;
+      }
+      if (reconResult?.hasPriceChanges) {
+        toast.error("Some product prices have changed. Please review your updated cart before continuing.");
+        navigate("/cart");
+        return;
+      }
+
+      const fullAddress = formatAddress(address);
+      const deliveryAddress = address.landmark
         ? `${fullAddress}, Landmark: ${address.landmark}`
         : fullAddress;
 
-    const createdAt =
-      Date.now();
+      const createdAt = Date.now();
+      const cancelUntil = createdAt + (5 * 24 * 60 * 60 * 1000);
 
-    const cancelUntil =
-
-      createdAt +
-      (5 * 24 * 60 * 60 * 1000);
-
-    const checkoutData = {
-      customer:
-        address.name,
-      phone:
-        address.phone,
-      address:
-        deliveryAddress,
-      createdAt:
+      const checkoutData = {
+        customer: address.name,
+        phone: address.phone,
+        address: deliveryAddress,
         createdAt,
-      cancelUntil:
         cancelUntil
-    };
+      };
 
-    sessionStorage.setItem(
-      "haroonCheckoutData",
-      JSON.stringify(checkoutData)
-    );
+      sessionStorage.setItem(
+        "haroonCheckoutData",
+        JSON.stringify(checkoutData)
+      );
 
-    // Clear stale payment session data for a completely new checkout
-    localStorage.removeItem("haroonCheckoutSessionId");
-    sessionStorage.removeItem("haroonRazorpayPaymentResponse");
+      // Clear stale payment session data for a completely new checkout
+      localStorage.removeItem("haroonCheckoutSessionId");
+      sessionStorage.removeItem("haroonRazorpayPaymentResponse");
 
-    navigate(
-      `/payment?amount=${totalPrice}&mode=COD`,
-      {
-        state: {
-          checkoutData
+      navigate(
+        `/payment?amount=${totalPrice}&mode=COD`,
+        {
+          state: {
+            checkoutData
+          }
         }
-      }
-    );
-
+      );
+    } catch {
+      toast.error("Failed to verify cart. Please try again.");
+    } finally {
+      setIsCheckingOut(false);
+    }
   }
 
   return (
+    <div className="checkout-page">
+      <header className="checkout-header">
+        <h1 className="checkout-title">Checkout Payment</h1>
+        <p className="checkout-subtitle">Review your items and enter delivery details.</p>
+      </header>
 
-    <div className="checkout">
-
-      <h1>
-        Checkout
-      </h1>
-
-      <div className="stepper">
-
-        <div className="step active">
-          <span>1</span>
-          <p>Address</p>
-        </div>
-
-        <div className="line"></div>
-
-        <div className="step">
-          <span>2</span>
-          <p>Payment</p>
-        </div>
-
-        <div className="line"></div>
-
-        <div className="step">
-          <span>3</span>
-          <p>Success</p>
-        </div>
-
-      </div>
+      <CheckoutStepper current={0} />
 
       <div className="checkout-container">
+        <main className="checkout-main">
+          <div className="address-card">
+            <div className="address-header">
+              <div>
+                <h2 className="address-heading">Delivery Address</h2>
+                <p className="address-subtext">Where should we deliver your order?</p>
+              </div>
 
-        <div className="checkout-form">
-
-          <div className="address-header">
-
-            <h2>
-              Delivery Address
-            </h2>
-
-            <div className="address-actions">
-
-              <button
-                className="address-add-btn"
-                type="button"
-                onClick={handleAddNewAddress}
-              >
-                Add Address
-              </button>
-
-              <button
-                className="address-save-btn"
-                type="button"
-                onClick={handleSaveAddress}
-                disabled={isSavingAddress}
-              >
-                {isSavingAddress ? "Saving..." : "Save Address"}
-              </button>
-
-            </div>
-
-          </div>
-
-          {savedAddresses.length > 0 && (
-
-            <div className="saved-addresses">
-
-              <p className="saved-addresses-title">
-                Saved Addresses
-              </p>
-
-              <div className="saved-address-list">
-
-                {savedAddresses.map(
-                  savedAddress => (
-
+              <div className="address-actions">
+                {selectedAddressId ? (
+                  <>
                     <button
-                      key={savedAddress.id}
+                      className="address-action-btn address-add-btn"
                       type="button"
-                      className={
-                        String(savedAddress.id) ===
-                        selectedAddressId
-                          ? "saved-address active"
-                          : "saved-address"
-                      }
-                      onClick={() =>
-                        handleSelectAddress(
-                          savedAddress
-                        )
-                      }
+                      onClick={handleAddNewAddress}
+                      disabled={isSavingAddress || isDeletingAddress}
                     >
-                      <strong>
-                        {savedAddress.name}
-                      </strong>
-
-                      <span>
-                        {formatAddress(savedAddress)}
-                      </span>
+                      + Add New
                     </button>
 
-                  )
+                    {isDirty && (
+                      <button
+                        className="address-action-btn address-update-btn"
+                        type="button"
+                        onClick={handleSaveAddress}
+                        disabled={isSavingAddress || isDeletingAddress || !isAddressComplete()}
+                      >
+                        {isSavingAddress ? "Updating..." : "Update Address"}
+                      </button>
+                    )}
+
+                    <button
+                      className="address-action-btn address-delete-btn"
+                      type="button"
+                      onClick={() => setDeleteModalOpen(true)}
+                      disabled={isDeletingAddress || isSavingAddress}
+                    >
+                      {isDeletingAddress ? "Deleting..." : "Delete Address"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {savedAddresses.length > 0 && (
+                      <button
+                        className="address-action-btn address-cancel-btn"
+                        type="button"
+                        onClick={() => handleSelectAddress(savedAddresses[0])}
+                        disabled={isSavingAddress}
+                      >
+                        Cancel
+                      </button>
+                    )}
+
+                    <button
+                      className="address-action-btn address-save-btn"
+                      type="button"
+                      onClick={handleSaveAddress}
+                      disabled={isSavingAddress || !isAddressComplete()}
+                    >
+                      {isSavingAddress ? "Saving..." : "Save Address"}
+                    </button>
+                  </>
                 )}
-
-              </div>
-
-            </div>
-
-          )}
-
-          <input
-            type="text"
-            name="name"
-            placeholder="Full Name"
-            value={address.name}
-            onChange={handleChange}
-          />
-
-          <input
-            type="tel"
-            name="phone"
-            placeholder="Mobile Number"
-            value={address.phone}
-            onChange={handleChange}
-          />
-
-          <textarea
-            name="street"
-            placeholder="House No / Street Address"
-            value={address.street}
-            onChange={handleChange}
-          />
-
-          <input
-            type="text"
-            name="locality"
-            placeholder="Locality"
-            value={address.locality}
-            onChange={handleChange}
-          />
-
-          <div className="row">
-
-            <input
-              type="text"
-              name="city"
-              placeholder="City"
-              value={address.city}
-              onChange={handleChange}
-            />
-
-            <input
-              type="text"
-              name="state"
-              placeholder="State"
-              value={address.state}
-              onChange={handleChange}
-            />
-
-          </div>
-
-          <div className="row">
-
-            <input
-              type="text"
-              name="pincode"
-              placeholder="Pincode"
-              value={address.pincode}
-              onChange={handleChange}
-            />
-
-            <input
-              type="text"
-              name="landmark"
-              placeholder="Landmark"
-              value={address.landmark}
-              onChange={handleChange}
-            />
-
-          </div>
-
-          <button
-            className="continue-btn"
-            type="button"
-            onClick={handleContinue}
-          >
-            Continue
-          </button>
-
-        </div>
-
-        <div className="order-summary">
-
-          <h2>
-            Order Summary
-          </h2>
-
-          {cartItems.map(item => (
-
-            <div
-              key={item.cartKey || item.id}
-              className="summary-item"
-            >
-              <img
-                src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
-                alt={item.name}
-                loading="lazy"
-                onError={handleImageFallback}
-              />
-
-              <div className="summary-text">
-                <span>{item.name}</span>
-                {getVariantLabel(item) && (
-                  <span>
-                    {getVariantLabel(item)}
-                  </span>
-                )}
-                <span>Qty: {item.quantity}</span>
-              </div>
-
-              <div className="summary-price">
-                Rs. {item.price * item.quantity}
               </div>
             </div>
 
-          ))}
+            {savedAddresses.length > 0 && (
+              <div className="saved-addresses-section">
+                <span className="saved-addresses-label">Saved Addresses</span>
+                <div className="saved-address-list">
+                  {savedAddresses.map(savedAddress => {
+                    const isSelected = String(savedAddress.id) === selectedAddressId;
+                    return (
+                      <button
+                        key={savedAddress.id}
+                        type="button"
+                        className={`saved-address-card ${isSelected ? "saved-address-card--active" : ""}`}
+                        onClick={() => handleSelectAddress(savedAddress)}
+                      >
+                        <div className="saved-address-top">
+                          <span className={`saved-address-radio ${isSelected ? "saved-address-radio--checked" : ""}`}>
+                            {isSelected && <span className="saved-address-radio-dot" />}
+                          </span>
+                          <strong className="saved-address-name">{savedAddress.name}</strong>
+                          {isSelected && <span className="saved-address-badge">Selected</span>}
+                        </div>
+                        <p className="saved-address-details">{formatAddress(savedAddress)}</p>
+                        {savedAddress.phone && (
+                          <span className="saved-address-phone">Phone: {savedAddress.phone}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-          <hr />
+            <div className="address-form">
+              <span className="address-form-legend">
+                {selectedAddressId ? "Selected Address Details" : "Enter Delivery Address"}
+              </span>
 
-          <p className="delivery-estimate">
-            Estimated Delivery:
-            <strong>
-              {" "}
-              {deliveryDate.toDateString()}
-            </strong>
-          </p>
+              <div className="address-row address-row--two">
+                <label className="address-field">
+                  <span className="address-field__label">Full Name <span className="req">*</span></span>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="e.g. Haroon Wood"
+                    value={address.name}
+                    onChange={handleChange}
+                    autoComplete="name"
+                    required
+                  />
+                </label>
+
+                <label className="address-field">
+                  <span className="address-field__label">Mobile Number <span className="req">*</span></span>
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder="10-digit mobile number"
+                    value={address.phone}
+                    onChange={handleChange}
+                    autoComplete="tel"
+                    required
+                  />
+                </label>
+              </div>
+
+              <label className="address-field">
+                <span className="address-field__label">Flat / House no. / Street Address <span className="req">*</span></span>
+                <textarea
+                  name="street"
+                  placeholder="House or flat number, building name, street"
+                  value={address.street}
+                  onChange={handleChange}
+                  autoComplete="street-address"
+                  rows="2"
+                  required
+                />
+              </label>
+
+              <label className="address-field">
+                <span className="address-field__label">Locality / Area <span className="req">*</span></span>
+                <input
+                  type="text"
+                  name="locality"
+                  placeholder="Locality, sector, or colony"
+                  value={address.locality}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+
+              <div className="address-row address-row--two">
+                <label className="address-field">
+                  <span className="address-field__label">City <span className="req">*</span></span>
+                  <input
+                    type="text"
+                    name="city"
+                    placeholder="City"
+                    value={address.city}
+                    onChange={handleChange}
+                    autoComplete="address-level2"
+                    required
+                  />
+                </label>
+
+                <label className="address-field">
+                  <span className="address-field__label">State <span className="req">*</span></span>
+                  <input
+                    type="text"
+                    name="state"
+                    placeholder="State"
+                    value={address.state}
+                    onChange={handleChange}
+                    autoComplete="address-level1"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="address-row address-row--two">
+                <label className="address-field">
+                  <span className="address-field__label">Pincode <span className="req">*</span></span>
+                  <input
+                    type="text"
+                    name="pincode"
+                    placeholder="6-digit PIN code"
+                    value={address.pincode}
+                    onChange={handleChange}
+                    autoComplete="postal-code"
+                    maxLength="10"
+                    required
+                  />
+                </label>
+
+                <label className="address-field">
+                  <span className="address-field__label">Landmark <span className="opt">(optional)</span></span>
+                  <input
+                    type="text"
+                    name="landmark"
+                    placeholder="Nearby landmark"
+                    value={address.landmark}
+                    onChange={handleChange}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="address-cta-wrap">
+              <button
+                className="checkout-continue-btn"
+                type="button"
+                onClick={handleContinue}
+                disabled={isCheckingOut}
+              >
+                {isCheckingOut ? "Checking Availability..." : "Continue to Payment"}
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <aside className="checkout-summary-card" aria-label="Order summary">
+          <div className="summary-header">
+            <h2 className="summary-heading">Order Summary</h2>
+            <span className="summary-item-count">{cartItems.length} {cartItems.length === 1 ? "item" : "items"}</span>
+          </div>
+
+          <div className="summary-items-list">
+            {cartItems.map(item => (
+              <div
+                key={item.cartKey || item.id}
+                className="summary-item"
+              >
+                <div className="summary-item__img-box">
+                  <img
+                    src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
+                    alt={item.name}
+                    loading="lazy"
+                    onError={handleImageFallback}
+                  />
+                </div>
+
+                <div className="summary-item__info">
+                  <span className="summary-item__name">{item.name}</span>
+                  {getVariantLabel(item) && (
+                    <span className="summary-item__variant">
+                      {getVariantLabel(item)}
+                    </span>
+                  )}
+                  <span className="summary-item__qty">Qty: {item.quantity}</span>
+                </div>
+
+                <div className="summary-item__price">
+                  ₹{(item.price * item.quantity).toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="summary-divider" />
+
+          <div className="summary-subtotal-rows">
+            <div className="summary-row">
+              <span>Items Subtotal</span>
+              <span>₹{totalPrice.toFixed(2)}</span>
+            </div>
+
+            <div className="summary-row">
+              <span>Delivery</span>
+              <span className="summary-row--free">Free</span>
+            </div>
+          </div>
 
           <div className="summary-total-row">
             <span>Order Total</span>
-            <strong>Rs. {totalPrice.toFixed(2)}</strong>
+            <strong>₹{totalPrice.toFixed(2)}</strong>
           </div>
 
-        </div>
+          <div className="summary-delivery-note">
+            <span className="summary-delivery-icon">📦</span>
+            <div>
+              <p className="summary-delivery-title">Estimated Delivery</p>
+              <p className="summary-delivery-date">
+                {deliveryDate.toLocaleDateString("en-IN", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric"
+                })}
+              </p>
+            </div>
+          </div>
 
+          <div className="summary-trust-notice">
+            <img src={logo} alt="Haroon Stores" className="summary-trust-logo" />
+            <span>Haroon Stores · Secure Checkout</span>
+          </div>
+        </aside>
       </div>
 
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        title="Delete Address"
+        message="Are you sure you want to delete this delivery address? This action cannot be undone."
+        confirmText={isDeletingAddress ? "Deleting..." : "Delete Address"}
+        cancelText="Keep Address"
+        danger={true}
+        onCancel={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteAddress}
+      />
     </div>
-
   );
-
 }
 
 export default Checkout;

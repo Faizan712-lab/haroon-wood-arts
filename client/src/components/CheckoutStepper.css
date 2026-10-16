@@ -1,0 +1,111 @@
+/* ═══════════════════════════════════════════
+   Checkout Stepper — Shared Component
+   ═══════════════════════════════════════════ */
+
+.ck-stepper {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto var(--co-space-2xl);
+  padding: 0 var(--co-space-md);
+  width: 100%;
+}
+
+.ck-stepper__container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  max-width: 380px;
+}
+
+.ck-stepper__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.ck-stepper__circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--co-border);
+  color: var(--co-muted);
+  transition: all var(--co-transition);
+  line-height: 1;
+}
+
+.ck-stepper__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--co-muted);
+  transition: color var(--co-transition);
+  letter-spacing: -0.01em;
+}
+
+.ck-stepper__line {
+  flex: 1;
+  height: 2px;
+  background: var(--co-border);
+  margin: 13px 10px 0;
+  border-radius: 2px;
+  transition: background var(--co-transition);
+}
+
+.ck-stepper__line--filled {
+  background: var(--co-brown);
+}
+
+/* Active step */
+.ck-stepper__step--active .ck-stepper__circle {
+  background: var(--co-brown);
+  color: var(--co-white);
+  box-shadow: 0 0 0 3px rgba(104, 72, 50, 0.15);
+}
+
+.ck-stepper__step--active .ck-stepper__label {
+  color: var(--co-brown);
+  font-weight: 700;
+}
+
+/* Done step */
+.ck-stepper__step--done .ck-stepper__circle {
+  background: var(--co-success);
+  color: var(--co-white);
+  font-size: 13px;
+}
+
+.ck-stepper__step--done .ck-stepper__label {
+  color: var(--co-text);
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .ck-stepper {
+    margin-bottom: var(--co-space-xl);
+  }
+
+  .ck-stepper__container {
+    max-width: 300px;
+  }
+
+  .ck-stepper__circle {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .ck-stepper__line {
+    margin: 12px 6px 0;
+  }
+
+  .ck-stepper__label {
+    font-size: 11px;
+  }
+}

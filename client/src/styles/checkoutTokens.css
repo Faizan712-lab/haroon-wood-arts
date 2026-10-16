@@ -1,0 +1,60 @@
+/* ═══════════════════════════════════════════════════════
+   Checkout Flow — Shared Design Tokens
+   Haroon Stores Premium Checkout Experience
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* Brand palette */
+  --co-brown: #684832;
+  --co-brown-dark: #4E342E;
+  --co-brown-hover: #5a3d2a;
+  --co-cream: #FAF7F2;
+  --co-offwhite: #FFFEFC;
+  --co-border: #E9DED2;
+  --co-border-light: #F0E8DF;
+  --co-muted: #81766E;
+  --co-success: #2E7D32;
+  --co-success-bg: #f0f7f0;
+  --co-white: #FFFFFF;
+  --co-text: #4E342E;
+  --co-text-secondary: #6B5E55;
+  --co-bg: #F9F7F5;
+  --co-error: #c0392b;
+  --co-error-bg: #fef2f2;
+
+  /* Spacing */
+  --co-space-xs: 4px;
+  --co-space-sm: 8px;
+  --co-space-md: 12px;
+  --co-space-lg: 16px;
+  --co-space-xl: 24px;
+  --co-space-2xl: 32px;
+  --co-space-3xl: 48px;
+
+  /* Typography */
+  --co-font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --co-heading-xl: clamp(22px, 2.5vw, 28px);
+  --co-heading-lg: 18px;
+  --co-heading-md: 15px;
+  --co-body: 14px;
+  --co-caption: 12px;
+  --co-micro: 11px;
+
+  /* Radii */
+  --co-radius-sm: 6px;
+  --co-radius-md: 8px;
+  --co-radius-lg: 10px;
+
+  /* Shadows */
+  --co-shadow: 0 2px 12px rgba(78, 52, 46, 0.06);
+  --co-shadow-lg: 0 4px 20px rgba(78, 52, 46, 0.08);
+
+  /* Transitions */
+  --co-transition: 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --co-transition: 0s;
+  }
+}
