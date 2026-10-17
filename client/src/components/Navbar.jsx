@@ -91,6 +91,23 @@ function Navbar() {
     setIsLoggingOut] =
     useState(false);
 
+  /* CLOSE MENU ON ROUTE CHANGE */
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname, location.search]);
+
+  /* PREVENT BACKGROUND SCROLL WHEN MOBILE MENU IS OPEN */
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
   /* FILTER SEARCH */
 
   useEffect(() => {
@@ -559,6 +576,13 @@ function Navbar() {
         onConfirm={handleUserLogout}
       />
 
+      {mobileMenuOpen && (
+        <div
+          className="mobile-menu-backdrop"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
     </nav>
 
   );

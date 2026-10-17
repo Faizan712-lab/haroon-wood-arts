@@ -97,7 +97,6 @@ function OrderDetails() {
   const [returnFormOpen, setReturnFormOpen] = useState(false);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [now, setNow] = useState(Date.now());
-
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);

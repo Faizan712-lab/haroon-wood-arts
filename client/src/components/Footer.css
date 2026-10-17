@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
-   Haroon Stores — Premium Minimal Footer
-   Palette: Warm Coffee Brown (#3b2415 to #5a3a22 matching Navbar)
+   Haroon Stores — Premium Footer
+   Theme: Coffee Brown (matching Navbar gradient: #3b2415 to #5a3a22)
    ═══════════════════════════════════════════════════════ */
 
 .footer {
@@ -12,54 +12,68 @@
   position: relative;
 }
 
-/* Container — 4 Balanced Desktop Columns */
+/* ─── 4-Column Balanced Grid ─── */
 .footer-container {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 24px 40px;
   display: grid;
-  grid-template-columns: 1.25fr 1.05fr 1.25fr 0.9fr;
+  grid-template-columns: 1.3fr 1.1fr 1.25fr 0.95fr;
   gap: 36px;
   align-items: start;
 }
 
-/* Sections */
 .footer-section {
   display: flex;
   flex-direction: column;
 }
 
-/* Headings */
+/* ─── Section Headings ─── */
 .footer-heading {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #f4c7a0;
   letter-spacing: 1.2px;
   text-transform: uppercase;
   margin: 0 0 16px;
+  line-height: 1.2;
 }
 
-/* 1. Brand Section */
-.footer-logo {
-  font-size: 24px;
-  font-weight: 700;
+/* ─── 1. Brand Section ─── */
+.footer-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.footer-brand-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.footer-brand-name {
+  font-size: 22px;
+  font-weight: 800;
   color: #ffffff;
-  margin: 0 0 12px;
   letter-spacing: -0.3px;
+  margin: 0;
   line-height: 1.2;
 }
 
 .footer-description {
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(255, 255, 255, 0.82);
   line-height: 1.65;
   font-size: 13.5px;
   max-width: 290px;
   margin: 0;
 }
 
-/* 2. Supported Payments */
+/* ─── 2. Supported Payments ─── */
 .payment-text {
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(255, 255, 255, 0.82);
   line-height: 1.5;
   margin: 0 0 14px;
   font-size: 13px;
@@ -69,24 +83,28 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  max-width: 234px;
+  max-width: 240px;
 }
 
 .payment-card {
   height: 38px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  border: none;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 8px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  box-shadow: none;
+  transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 .payment-card:hover {
   background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(244, 199, 160, 0.4);
+  border: none;
+  transform: translateY(-1px);
+  box-shadow: none;
 }
 
 .payment-card img {
@@ -95,14 +113,13 @@
   width: auto;
   height: auto;
   object-fit: contain;
-  filter: brightness(0.96);
 }
 
-/* 3. Contact Section */
+/* ─── 3. Contact Section ─── */
 .footer-contact-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 11px;
   margin-bottom: 12px;
   font-size: 13.5px;
   line-height: 1.5;
@@ -112,20 +129,59 @@
   margin-bottom: 0;
 }
 
-.contact-real-icon {
+.footer-contact-icon-wrapper {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.footer-contact-phone-icon {
+  color: #25d366;
+  font-size: 16px;
   width: 16px;
   height: 16px;
-  object-fit: contain;
+  display: block;
   flex-shrink: 0;
-  margin-top: 2px;
-  opacity: 0.95;
+}
+
+.footer-contact-gmail-icon {
+  width: 19px;
+  height: 15px;
+  max-width: 19px;
+  max-height: 15px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.footer-contact-maps-icon {
+  width: 14px;
+  height: 19px;
+  max-width: 15px;
+  max-height: 19px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+}
+
+.footer-contact-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .footer-contact-link {
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.92);
   text-decoration: none;
   transition: color 0.2s ease;
   word-break: break-word;
+  line-height: 1.5;
 }
 
 .footer-contact-link:hover {
@@ -137,9 +193,20 @@
   color: rgba(255, 255, 255, 0.84);
   font-size: 13px;
   line-height: 1.5;
+  flex: 1;
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
-/* 4. Connect / WhatsApp Section */
+/* ─── 4. Connect / WhatsApp Section ─── */
+.connect-text {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
 .footer-whatsapp {
   display: inline-flex;
   align-items: center;
@@ -150,26 +217,31 @@
   font-size: 13.5px;
   font-weight: 600;
   padding: 9px 16px;
-  border-radius: 6px;
+  border-radius: 8px;
   width: fit-content;
-  transition: background-color 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .footer-whatsapp:hover {
   background: #20ba59;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
 }
 
-.footer-whatsapp img {
-  width: 18px;
-  height: 18px;
+.footer-whatsapp:active {
+  transform: translateY(0);
+}
+
+.whatsapp-icon {
+  font-size: 18px;
   flex-shrink: 0;
 }
 
-/* 5. Copyright Bar */
+/* ─── 5. Copyright Bar ─── */
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.12);
   padding: 18px 24px;
   text-align: center;
 }
@@ -215,9 +287,8 @@
     padding: 0 16px 32px;
   }
 
-  .footer-logo {
-    font-size: 22px;
-    margin-bottom: 10px;
+  .footer-brand-name {
+    font-size: 20px;
   }
 
   .footer-heading {
@@ -225,15 +296,22 @@
   }
 
   .payment-grid {
-    max-width: 250px;
+    max-width: 240px;
+  }
+
+  .footer-contact-item {
+    gap: 11px;
+    margin-bottom: 11px;
+    font-size: 13px;
   }
 
   .footer-whatsapp {
     width: 100%;
     justify-content: center;
+    padding: 11px 16px;
   }
 
   .footer-bottom {
-    padding: 16px 14px;
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
   }
 }

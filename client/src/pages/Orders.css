@@ -643,15 +643,26 @@
 /* ─── Responsive Breakpoints ─── */
 @media (max-width: 768px) {
   .orders-page {
-    padding: 28px 16px 48px;
+    padding: 24px 14px 48px;
   }
 
   .order-card {
-    padding: 18px 18px;
+    padding: 18px 16px;
   }
 }
 
 @media (max-width: 640px) {
+  .order-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .order-header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .order-card-footer {
     flex-direction: column;
     align-items: stretch;
@@ -661,11 +672,13 @@
   .view-order-btn {
     width: 100%;
     justify-content: center;
+    min-height: 42px;
   }
 
   .order-tracking {
     overflow-x: auto;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
   }
 

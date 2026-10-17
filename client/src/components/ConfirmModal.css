@@ -93,3 +93,26 @@
     transform: scale(1) translateY(0);
   }
 }
+
+@media (max-width: 480px) {
+  .confirm-modal-backdrop {
+    padding: 16px;
+  }
+
+  .confirm-modal {
+    padding: 22px 18px;
+    border-radius: 12px;
+  }
+
+  .confirm-modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .confirm-modal-actions button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+  }
+}

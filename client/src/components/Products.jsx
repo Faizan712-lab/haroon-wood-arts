@@ -102,6 +102,17 @@ function getPaginationPages(currentPage, totalPages) {
   return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages];
 }
 
+function getSortLabel(sortValue) {
+  switch (sortValue) {
+    case "price_asc": return "Price: Low to High";
+    case "price_desc": return "Price: High to Low";
+    case "rating": return "Highest Rated";
+    case "reviewed": return "Most Reviewed";
+    case "discount": return "Discount %";
+    default: return "Newest";
+  }
+}
+
 function Products({
 
   selectedCategory
@@ -123,6 +134,7 @@ function Products({
   const {
     addToCart,
     cartItems,
+    increaseQty,
     decreaseQty,
     removeFromCart
   } =
@@ -194,7 +206,7 @@ function Products({
   const fetchProducts = useCallback(async (signal) => {
     const params = new URLSearchParams();
     params.set("page", String(isShopPage ? page : 1));
-    params.set("limit", "10");
+    params.set("limit", isShopPage ? "10" : "12");
 
     if (isShopPage) {
       if (filters.search) params.set("search", filters.search);
@@ -318,6 +330,52 @@ function Products({
     setFilters(updater);
   }
 
+  const hasActiveFilters = Boolean(
+    (filters.search && filters.search.trim()) ||
+    filters.category ||
+    filters.min ||
+    filters.max ||
+    filters.inStock ||
+    filters.onSale ||
+    filters.rating ||
+    (filters.sort && filters.sort !== "newest")
+  );
+
+  const activeFiltersCount = (
+    ((filters.search && filters.search.trim()) ? 1 : 0) +
+    (filters.category ? 1 : 0) +
+    (filters.min || filters.max ? 1 : 0) +
+    (filters.inStock ? 1 : 0) +
+    (filters.onSale ? 1 : 0) +
+    (filters.rating ? 1 : 0) +
+    (filters.sort && filters.sort !== "newest" ? 1 : 0)
+  );
+
+  const clearAllFilters = useCallback(() => {
+    updateFilters({
+      search: "",
+      category: "",
+      min: "",
+      max: "",
+      inStock: false,
+      onSale: false,
+      rating: "",
+      sort: "newest"
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isShopPage) return;
+    if (filtersOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [filtersOpen, isShopPage]);
+
   function changePage(nextPage) {
     if (!pagination || nextPage < 1 || nextPage > pagination.totalPages || nextPage === page) {
       return;
@@ -342,23 +400,25 @@ function Products({
   }
 
   function buyNow(e, product) {
-
     e.stopPropagation();
 
-    const variants =
-      getProductVariants(product);
+    const variants = getProductVariants(product);
 
     if (isOutOfStock(product)) {
       return;
     }
 
     if (variants.length > 0) {
+      setSelectedVariants(previous => {
+        const next = { ...previous };
+        delete next[product.id];
+        return next;
+      });
       setSizePickerProduct(product);
       return;
     }
 
-    const selectedVariant =
-      null;
+    const selectedVariant = null;
 
     const cartProduct = {
       ...product,
@@ -369,26 +429,19 @@ function Products({
         product.finalPrice ||
         product.discountedPrice ||
         product.price,
-      variantId:
-        selectedVariant?.id,
-      variantLabel:
-        selectedVariant?.size ||
-        selectedVariant?.label,
-      variantDimensions:
-        selectedVariant?.dimensions
+      variantId: selectedVariant?.id,
+      variantLabel: selectedVariant?.size || selectedVariant?.label,
+      variantDimensions: selectedVariant?.dimensions,
+      availableStock: product.stock,
+      stock: product.stock
     };
 
     addToCart(cartProduct);
 
     setCartToast({
-
       product: cartProduct,
-
-      quantity:
-        getProductQuantity(cartProduct) + 1
-
+      quantity: getProductQuantity(cartProduct) + 1
     });
-
   }
 
   function getProductKey(product) {
@@ -396,71 +449,27 @@ function Products({
   }
 
   function getProductQuantity(product) {
-    const productKey =
-      getProductKey(product);
+    const productKey = getProductKey(product);
 
-    const cartItem =
-      cartItems.find(
-        item =>
-          String(item.cartKey || getProductKey(item)) ===
-          String(productKey)
-      );
-
-    return cartItem?.quantity || 0;
-
-  }
-
-  function addMoreFromToast() {
-
-    if (!cartToast?.product)
-      return;
-
-    addToCart(cartToast.product);
-
-    setCartToast(prev => ({
-
-      ...prev,
-
-      quantity:
-        (prev.quantity || 0) + 1
-
-    }));
-
-  }
-
-  function removeOneFromToast() {
-
-    if (!cartToast?.product)
-      return;
-
-    if (cartToast.quantity <= 1) {
-
-      removeFromCart(
-        getProductKey(cartToast.product)
-      );
-
-      setCartToast(null);
-
-      return;
-
-    }
-
-    decreaseQty(
-      getProductKey(cartToast.product)
+    const cartItem = cartItems.find(
+      item => String(item.cartKey || getProductKey(item)) === String(productKey)
     );
 
-    setCartToast(prev => ({
+    return cartItem?.quantity || 0;
+  }
 
-      ...prev,
+  function handleToastDecrease(itemKey, currentQty) {
+    if (!itemKey) return;
+    if (currentQty <= 1) return;
+    decreaseQty(itemKey);
+    setCartToast(prev => (prev ? { ...prev, quantity: Math.max(1, currentQty - 1) } : null));
+  }
 
-      quantity:
-        Math.max(
-          (prev.quantity || 1) - 1,
-          1
-        )
-
-    }));
-
+  function handleToastIncrease(itemKey, currentQty, maxStock) {
+    if (!itemKey) return;
+    if (maxStock !== undefined && maxStock !== null && currentQty >= maxStock) return;
+    increaseQty(itemKey);
+    setCartToast(prev => (prev ? { ...prev, quantity: currentQty + 1 } : null));
   }
 
   function confirmSizeSelection() {
@@ -468,11 +477,12 @@ function Products({
       return;
     }
 
-    const variants =
-      getProductVariants(sizePickerProduct);
-
+    const variants = getProductVariants(sizePickerProduct);
+    const selectedIndex = selectedVariants[sizePickerProduct.id];
     const selectedVariant =
-      variants[selectedVariants[sizePickerProduct.id]];
+      selectedIndex !== undefined && selectedIndex !== null
+        ? variants[selectedIndex]
+        : null;
 
     if (!selectedVariant) {
       toast.error("Please select a size before adding this product.");
@@ -488,21 +498,18 @@ function Products({
         sizePickerProduct.finalPrice ||
         sizePickerProduct.discountedPrice ||
         sizePickerProduct.price,
-      variantId:
-        selectedVariant?.id,
-      variantLabel:
-        selectedVariant?.size ||
-        selectedVariant?.label,
-      variantDimensions:
-        selectedVariant?.dimensions
+      variantId: selectedVariant?.id,
+      variantLabel: selectedVariant?.size || selectedVariant?.label,
+      variantDimensions: selectedVariant?.dimensions,
+      availableStock: selectedVariant?.stock !== undefined ? selectedVariant.stock : sizePickerProduct.stock,
+      stock: selectedVariant?.stock !== undefined ? selectedVariant.stock : sizePickerProduct.stock
     };
 
     addToCart(cartProduct);
 
     setCartToast({
       product: cartProduct,
-      quantity:
-        getProductQuantity(cartProduct) + 1
+      quantity: getProductQuantity(cartProduct) + 1
     });
 
     setSizePickerProduct(null);
@@ -512,42 +519,228 @@ function Products({
 
     <>
 
-      <section className="products">
+      <section className={isShopPage ? "products shop-page-products" : "products"}>
 
         <div className="container">
 
-          {/* TAG */}
+          {isShopPage ? (
+            <header className="shop-header">
+              <span className="shop-header-tag">HAROON STORES</span>
+              <h1 className="shop-header-title">
+                {filters.category ? `${filters.category} Collection` : "Kashmiri Handcrafted Collection"}
+              </h1>
+            </header>
+          ) : (
+            <>
+              {/* TAG */}
+              <p className="section-tag">
+                OUR PRODUCTS
+              </p>
 
-          <p className="section-tag">
+              {/* TITLE */}
+              <h2 className="section-title">
+                {filters.category
+                  ? `${filters.category} Collection`
+                  : "Featured Products"}
+              </h2>
 
-            OUR PRODUCTS
-
-          </p>
-
-          {/* TITLE */}
-
-          <h2 className="section-title">
-
-            {filters.category
-
-              ? `${filters.category} Collection`
-
-              : "Featured Products"}
-
-          </h2>
-
-          {!isShopPage && (
-            <button
-              type="button"
-              className="products-view-all"
-              onClick={() => navigate("/shop")}
-            >
-              View All Products →
-            </button>
+              <button
+                type="button"
+                className="products-view-all"
+                onClick={() => navigate("/shop")}
+              >
+                View All Products →
+              </button>
+            </>
           )}
 
           {isShopPage && (
-            <div className="shop-filter-shell">
+            <div className="shop-toolbar-wrapper">
+              {/* Mobile Toolbar (visible on screens <= 860px) */}
+              <div className="shop-mobile-toolbar">
+                <div className="shop-mobile-search">
+                  <svg className="shop-search-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input
+                    type="search"
+                    placeholder="Search crafts, boxes, trays..."
+                    value={filters.search}
+                    onChange={(event) => updateFilters(previous => ({ ...previous, search: event.target.value }))}
+                    aria-label="Search products"
+                  />
+                  {filters.search && (
+                    <button
+                      type="button"
+                      className="shop-search-clear-btn"
+                      aria-label="Clear search"
+                      onClick={() => updateFilters(previous => ({ ...previous, search: "" }))}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="shop-mobile-bar-actions">
+                  <button
+                    type="button"
+                    className={`shop-mobile-filter-btn ${hasActiveFilters ? "has-filters" : ""}`}
+                    aria-expanded={filtersOpen}
+                    onClick={() => setFiltersOpen(true)}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    <span>Filters</span>
+                    {activeFiltersCount > 0 && (
+                      <span className="filter-badge-counter">{activeFiltersCount}</span>
+                    )}
+                  </button>
+
+                  <div className="shop-mobile-sort-select-wrap">
+                    <select
+                      id="shop-mobile-sort"
+                      value={filters.sort}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, sort: event.target.value }))}
+                      aria-label="Sort products"
+                    >
+                      <option value="newest">Sort: Newest</option>
+                      <option value="price_asc">Sort: Price: Low to High</option>
+                      <option value="price_desc">Sort: Price: High to Low</option>
+                      <option value="rating">Sort: Highest Rated</option>
+                      <option value="reviewed">Sort: Most Reviewed</option>
+                      <option value="discount">Sort: Biggest Discount</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop Filter Panel (visible on screens > 860px) */}
+              <div className="shop-desktop-toolbar">
+                <div className="shop-desktop-top-row">
+                  <div className="shop-search-field">
+                    <svg className="shop-search-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input
+                      type="search"
+                      placeholder="Search Kashmiri crafts, boxes, tables, dry fruit trays..."
+                      value={filters.search}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, search: event.target.value }))}
+                      aria-label="Search products"
+                    />
+                    {filters.search && (
+                      <button
+                        type="button"
+                        className="shop-search-clear-btn"
+                        aria-label="Clear search"
+                        onClick={() => updateFilters(previous => ({ ...previous, search: "" }))}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="shop-sort-control">
+                    <span className="sort-label">Sort by:</span>
+                    <select
+                      value={filters.sort}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, sort: event.target.value }))}
+                      aria-label="Sort products"
+                    >
+                      <option value="newest">Newest Arrivals</option>
+                      <option value="price_asc">Price: Low to High</option>
+                      <option value="price_desc">Price: High to Low</option>
+                      <option value="rating">Highest Rated</option>
+                      <option value="reviewed">Most Reviewed</option>
+                      <option value="discount">Biggest Discount</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="shop-desktop-filters-row">
+                  <label className="filter-item">
+                    <span className="filter-label">Category</span>
+                    <select
+                      value={filters.category}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, category: event.target.value }))}
+                    >
+                      <option value="">All Categories</option>
+                      {categories.map(category => (
+                        <option key={category.id || category.name} value={category.name}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="filter-item filter-price-group">
+                    <span className="filter-label">Price Range (Rs.)</span>
+                    <div className="price-inputs-row">
+                      <input
+                        type="number"
+                        placeholder="Min"
+                        value={filters.min}
+                        onChange={(event) => updateFilters(previous => ({ ...previous, min: event.target.value }))}
+                        aria-label="Minimum price"
+                      />
+                      <span className="price-dash">–</span>
+                      <input
+                        type="number"
+                        placeholder="Max"
+                        value={filters.max}
+                        onChange={(event) => updateFilters(previous => ({ ...previous, max: event.target.value }))}
+                        aria-label="Maximum price"
+                      />
+                    </div>
+                  </div>
+
+                  <label className="filter-item">
+                    <span className="filter-label">Rating</span>
+                    <select
+                      value={filters.rating}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, rating: event.target.value }))}
+                    >
+                      <option value="">Any Rating</option>
+                      <option value="4">4★ & above</option>
+                    </select>
+                  </label>
+
+                  <div className="filter-checkbox-group">
+                    <label className={`filter-toggle-pill ${filters.inStock ? "active" : ""}`}>
+                      <input
+                        type="checkbox"
+                        checked={filters.inStock}
+                        onChange={(event) => updateFilters(previous => ({ ...previous, inStock: event.target.checked }))}
+                      />
+                      <span>In Stock Only</span>
+                    </label>
+
+                    <label className={`filter-toggle-pill ${filters.onSale ? "active" : ""}`}>
+                      <input
+                        type="checkbox"
+                        checked={filters.onSale}
+                        onChange={(event) => updateFilters(previous => ({ ...previous, onSale: event.target.checked }))}
+                      />
+                      <span>On Sale</span>
+                    </label>
+                  </div>
+
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      className="filter-reset-action-btn"
+                      onClick={clearAllFilters}
+                    >
+                      Reset All
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Mobile Filter Drawer / Bottom Sheet */}
               {filtersOpen && (
                 <button
                   type="button"
@@ -556,183 +749,248 @@ function Products({
                   onClick={() => setFiltersOpen(false)}
                 />
               )}
-              <button
-                type="button"
-                className="shop-filter-toggle"
-                aria-expanded={filtersOpen}
-                onClick={() =>
-                  setFiltersOpen(previous => !previous)
-                }
-              >
-                Filters
-              </button>
 
-              <div
-                className={
-                  filtersOpen
-                    ? "shop-filters open"
-                    : "shop-filters"
-                }
-              >
-                <div className="shop-filter-sheet-header">
-                  <h3>Filters</h3>
+              <div className={`shop-filters-sheet ${filtersOpen ? "open" : ""}`} role="dialog" aria-modal="true" aria-label="Filter products">
+                <div className="sheet-header">
+                  <div className="sheet-title-row">
+                    <h3>Filters</h3>
+                    {activeFiltersCount > 0 && (
+                      <span className="sheet-active-pill">{activeFiltersCount} active</span>
+                    )}
+                  </div>
                   <button
                     type="button"
+                    className="sheet-close-btn"
                     aria-label="Close filters"
                     onClick={() => setFiltersOpen(false)}
                   >
                     ×
                   </button>
                 </div>
-                <label className="filter-control">
-                  <span>Category</span>
-                  <select
-                    value={filters.category}
-                    onChange={(event) =>
-                      updateFilters(previous => ({
-                        ...previous,
-                        category: event.target.value
-                      }))
-                    }
-                  >
-                <option value="">All Categories</option>
-                {categories.map(category => (
-                  <option
-                    key={category.id || category.name}
-                    value={category.name}
-                  >
-                    {category.name}
-                  </option>
-                ))}
-                  </select>
-                </label>
 
-                <label className="filter-control filter-price-control">
-                  <span>Price</span>
-                  <span className="filter-price-inputs">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.min}
-                    onChange={(event) =>
-                      updateFilters(previous => ({
-                        ...previous,
-                        min: event.target.value
-                      }))
-                    }
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.max}
-                    onChange={(event) =>
-                      updateFilters(previous => ({
-                        ...previous,
-                        max: event.target.value
-                      }))
-                    }
-                  />
-                  </span>
-                </label>
+                <div className="sheet-body">
+                  <div className="sheet-group">
+                    <label className="sheet-label">Category</label>
+                    <select
+                      className="sheet-select"
+                      value={filters.category}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, category: event.target.value }))}
+                    >
+                      <option value="">All Categories</option>
+                      {categories.map(category => (
+                        <option key={category.id || category.name} value={category.name}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <label className="filter-check">
-                <input
-                  type="checkbox"
-                  checked={filters.inStock}
-                  onChange={(event) =>
-                    updateFilters(previous => ({
-                      ...previous,
-                      inStock: event.target.checked
-                    }))
-                  }
-                />
-                In stock only
-              </label>
+                  <div className="sheet-group">
+                    <label className="sheet-label">Price Range (Rs.)</label>
+                    <div className="sheet-price-row">
+                      <input
+                        type="number"
+                        placeholder="Min Price"
+                        value={filters.min}
+                        onChange={(event) => updateFilters(previous => ({ ...previous, min: event.target.value }))}
+                        aria-label="Min price"
+                      />
+                      <span className="sheet-price-sep">to</span>
+                      <input
+                        type="number"
+                        placeholder="Max Price"
+                        value={filters.max}
+                        onChange={(event) => updateFilters(previous => ({ ...previous, max: event.target.value }))}
+                        aria-label="Max price"
+                      />
+                    </div>
+                  </div>
 
-              <label className="filter-check">
-                <input
-                  type="checkbox"
-                  checked={filters.onSale}
-                  onChange={(event) =>
-                    updateFilters(previous => ({
-                      ...previous,
-                      onSale: event.target.checked
-                    }))
-                  }
-                />
-                On sale
-              </label>
+                  <div className="sheet-group">
+                    <label className="sheet-label">Availability & Offers</label>
+                    <div className="sheet-checkbox-stack">
+                      <label className={`sheet-checkbox-card ${filters.inStock ? "checked" : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={filters.inStock}
+                          onChange={(event) => updateFilters(previous => ({ ...previous, inStock: event.target.checked }))}
+                        />
+                        <div className="checkbox-text">
+                          <strong>In Stock Only</strong>
+                          <span>Exclude items currently sold out</span>
+                        </div>
+                      </label>
 
-                <label className="filter-control">
-                  <span>Minimum reviews</span>
-                  <select
-                    value={filters.rating}
-                    onChange={(event) =>
-                      updateFilters(previous => ({
-                        ...previous,
-                        rating: event.target.value
-                      }))
-                    }
-                  >
-                <option value="">Any rating</option>
-                <option value="4">4★ & above</option>
-                  </select>
-                </label>
+                      <label className={`sheet-checkbox-card ${filters.onSale ? "checked" : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={filters.onSale}
+                          onChange={(event) => updateFilters(previous => ({ ...previous, onSale: event.target.checked }))}
+                        />
+                        <div className="checkbox-text">
+                          <strong>On Sale</strong>
+                          <span>Show only items with active discounts</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
 
-                <label className="filter-control">
-                  <span>Sort by</span>
-                  <select
-                    value={filters.sort}
-                    onChange={(event) =>
-                      updateFilters(previous => ({
-                        ...previous,
-                        sort: event.target.value
-                      }))
-                    }
-                  >
-                <option value="newest">Newest</option>
-                <option value="price_asc">Price low to high</option>
-                <option value="price_desc">Price high to low</option>
-                <option value="rating">Highest rated</option>
-                <option value="reviewed">Most reviewed</option>
-                <option value="discount">Discount %</option>
-                  </select>
-                </label>
-                <div className="shop-filter-actions">
+                  <div className="sheet-group">
+                    <label className="sheet-label">Customer Rating</label>
+                    <select
+                      className="sheet-select"
+                      value={filters.rating}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, rating: event.target.value }))}
+                    >
+                      <option value="">Any Rating</option>
+                      <option value="4">4★ & above</option>
+                    </select>
+                  </div>
+
+                  <div className="sheet-group">
+                    <label className="sheet-label">Sort By</label>
+                    <select
+                      className="sheet-select"
+                      value={filters.sort}
+                      onChange={(event) => updateFilters(previous => ({ ...previous, sort: event.target.value }))}
+                    >
+                      <option value="newest">Newest Arrivals</option>
+                      <option value="price_asc">Price: Low to High</option>
+                      <option value="price_desc">Price: High to Low</option>
+                      <option value="rating">Highest Rated</option>
+                      <option value="reviewed">Most Reviewed</option>
+                      <option value="discount">Biggest Discount</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="sheet-footer">
                   <button
                     type="button"
-                    className="filter-clear-btn"
-                    onClick={() => updateFilters({
-                      search: "",
-                      category: "",
-                      min: "",
-                      max: "",
-                      inStock: false,
-                      onSale: false,
-                      rating: "",
-                      sort: "newest"
-                    })}
+                    className="sheet-clear-btn"
+                    onClick={clearAllFilters}
+                    disabled={!hasActiveFilters}
                   >
                     Clear All
                   </button>
                   <button
                     type="button"
-                    className="filter-apply-btn"
+                    className="sheet-apply-btn"
                     onClick={() => setFiltersOpen(false)}
                   >
-                    Apply Filters
+                    View Products {pagination?.total !== undefined ? `(${pagination.total})` : ""}
                   </button>
                 </div>
               </div>
+
+              {/* Active Filter Chips */}
+              {hasActiveFilters && (
+                <div className="shop-active-chips-strip" role="region" aria-label="Active filters">
+                  <span className="chips-title">Active Filters:</span>
+                  <div className="chips-wrapper">
+                    {filters.search && (
+                      <span className="active-chip">
+                        Search: "{filters.search}"
+                        <button
+                          type="button"
+                          aria-label="Remove search filter"
+                          onClick={() => updateFilters(previous => ({ ...previous, search: "" }))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {filters.category && (
+                      <span className="active-chip">
+                        Category: {filters.category}
+                        <button
+                          type="button"
+                          aria-label="Remove category filter"
+                          onClick={() => updateFilters(previous => ({ ...previous, category: "" }))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {(filters.min || filters.max) && (
+                      <span className="active-chip">
+                        Rs. {filters.min || "0"} – {filters.max ? `Rs. ${filters.max}` : "Above"}
+                        <button
+                          type="button"
+                          aria-label="Remove price filter"
+                          onClick={() => updateFilters(previous => ({ ...previous, min: "", max: "" }))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {filters.inStock && (
+                      <span className="active-chip">
+                        In Stock Only
+                        <button
+                          type="button"
+                          aria-label="Remove stock filter"
+                          onClick={() => updateFilters(previous => ({ ...previous, inStock: false }))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {filters.onSale && (
+                      <span className="active-chip">
+                        On Sale
+                        <button
+                          type="button"
+                          aria-label="Remove sale filter"
+                          onClick={() => updateFilters(previous => ({ ...previous, onSale: false }))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {filters.rating && (
+                      <span className="active-chip">
+                        4★ & above
+                        <button
+                          type="button"
+                          aria-label="Remove rating filter"
+                          onClick={() => updateFilters(previous => ({ ...previous, rating: "" }))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {filters.sort && filters.sort !== "newest" && (
+                      <span className="active-chip">
+                        Sort: {getSortLabel(filters.sort)}
+                        <button
+                          type="button"
+                          aria-label="Reset sort order"
+                          onClick={() => updateFilters(previous => ({ ...previous, sort: "newest" }))}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="chips-clear-all"
+                      onClick={clearAllFilters}
+                    >
+                      Clear All ({activeFiltersCount})
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* EMPTY */}
+          {/* EMPTY & LOADING STATES */}
 
           {loading ? (
 
             <div className="product-grid" aria-busy="true" aria-label="Loading products">
-              <ProductCardSkeleton count={12} />
+              <ProductCardSkeleton count={isShopPage ? 10 : 12} />
             </div>
 
           ) : loadError ? (
@@ -765,6 +1023,16 @@ function Products({
                   )
                   : "No products match the current selection. Try adjusting your filters or browse again later."}
               </p>
+
+              {isShopPage && hasActiveFilters && (
+                <button
+                  type="button"
+                  className="empty-clear-filters-btn"
+                  onClick={clearAllFilters}
+                >
+                  Clear All Filters
+                </button>
+              )}
 
             </div>
 
@@ -953,8 +1221,10 @@ function Products({
             <nav className="product-pagination" aria-label="Product pages">
               <button
                 type="button"
+                className="pagination-nav-btn prev-btn"
                 onClick={() => changePage(page - 1)}
                 disabled={!pagination.hasPreviousPage}
+                aria-label="Previous page"
               >
                 Previous
               </button>
@@ -967,7 +1237,7 @@ function Products({
                     <button
                       type="button"
                       key={item}
-                      className={item === page ? "is-current" : ""}
+                      className={`pagination-number-btn ${item === page ? "is-current" : ""}`}
                       aria-current={item === page ? "page" : undefined}
                       onClick={() => changePage(item)}
                     >
@@ -977,185 +1247,232 @@ function Products({
                 ))}
               </div>
 
-              <span className="product-pagination-status">
-                Page {page} of {pagination.totalPages}
-              </span>
-
               <button
                 type="button"
+                className="pagination-nav-btn next-btn"
                 onClick={() => changePage(page + 1)}
                 disabled={!pagination.hasNextPage}
+                aria-label="Next page"
               >
                 Next
               </button>
+
+              <div className="product-pagination-status">
+                Page {page} of {pagination.totalPages} ({pagination.total} {pagination.total === 1 ? "product" : "products"})
+              </div>
             </nav>
           )}
 
         </div>
 
-        {cartToast && (
+        {/* ADDED TO CART MODAL */}
+        {cartToast && (() => {
+          const toastItemKey = cartToast?.product ? (cartToast.product.cartKey || getProductKey(cartToast.product)) : null;
+          const currentToastCartItem = cartToast?.product
+            ? cartItems.find(item => String(item.cartKey || getProductKey(item)) === String(toastItemKey))
+            : null;
+          const currentToastQty = currentToastCartItem?.quantity ?? cartToast?.quantity ?? 1;
+          const maxToastStock = currentToastCartItem?.availableStock ?? currentToastCartItem?.stock ?? cartToast?.product?.availableStock ?? cartToast?.product?.stock;
+          const isDecreaseDisabled = currentToastQty <= 1;
+          const isIncreaseDisabled = maxToastStock !== undefined && maxToastStock !== null && currentToastQty >= maxToastStock;
 
-          <div className="cart-toast">
-
-            <button
-
-              className="cart-toast-close"
-
-              type="button"
-
-              aria-label="Close cart popup"
-
-              onClick={() =>
-                setCartToast(null)
-              }
-
-            >
-
-              x
-
-            </button>
-
-            <div className="cart-toast-text">
-
-              <strong>
-                Added to cart
-              </strong>
-
-              <span>
-                {cartToast.product.name}
-              </span>
-
-              <div className="cart-toast-qty">
-
-                <button
-
-                  type="button"
-
-                  aria-label="Remove one item"
-
-                  onClick={removeOneFromToast}
-
-                >
-
-                  -
-
-                </button>
-
-                <strong>
-
-                  Qty:
-                  {" "}
-                  {cartToast.quantity}
-
-                </strong>
-
-                <button
-
-                  type="button"
-
-                  aria-label="Add one more item"
-
-                  onClick={addMoreFromToast}
-
-                >
-
-                  +
-
-                </button>
-
-              </div>
-
-            </div>
-
-            <button
-
-              className="cart-toast-btn"
-
-              onClick={() =>
-                navigate("/cart")
-              }
-
-            >
-
-              Go to Cart
-
-            </button>
-
-          </div>
-
-        )}
-
-        {sizePickerProduct && (
-          <div
-            className="size-picker-overlay"
-            onClick={() =>
-              setSizePickerProduct(null)
-            }
-          >
+          return (
             <div
-              className="size-picker-modal"
-              onClick={(event) =>
-                event.stopPropagation()
-              }
+              className="cart-toast-overlay"
+              onClick={() => setCartToast(null)}
             >
-              <button
-                type="button"
-                className="size-picker-close"
-                aria-label="Close size picker"
-                onClick={() =>
-                  setSizePickerProduct(null)
-                }
+              <div
+                className="cart-toast-modal"
+                onClick={(e) => e.stopPropagation()}
               >
-                x
-              </button>
+                <button
+                  className="cart-toast-close"
+                  type="button"
+                  aria-label="Close popup"
+                  onClick={() => setCartToast(null)}
+                >
+                  ×
+                </button>
 
-              <h3>Select size</h3>
-              <p>{sizePickerProduct.name}</p>
+                <div className="cart-toast-header">
+                  <span className="cart-toast-badge" aria-hidden="true">✓</span>
+                  <h3 className="cart-toast-heading">Added to Cart</h3>
+                </div>
 
-              <div className="size-picker-options">
-                {getProductVariants(sizePickerProduct).map((variant, variantIndex) => (
-                  <button
-                    key={variant.id || variantIndex}
-                    type="button"
-                    className={
-                      selectedVariants[sizePickerProduct.id] === variantIndex
-                        ? "size-picker-option active"
-                        : "size-picker-option"
-                    }
-                    onClick={() =>
-                      setSelectedVariants(previous => ({
-                        ...previous,
-                        [sizePickerProduct.id]: variantIndex
-                      }))
-                    }
-                  >
-                    <strong>
-                      {variant.size || variant.label}
-                    </strong>
-                    {variant.dimensions && (
-                      <span>
-                        {variant.dimensions}
+                <div className="cart-toast-product">
+                  <div className="cart-toast-thumb-wrap">
+                    <img
+                      src={getPrimaryImage(cartToast.product)}
+                      alt={cartToast.product.name}
+                      onError={handleImageFallback}
+                      className="cart-toast-thumb"
+                    />
+                  </div>
+                  <div className="cart-toast-info">
+                    <h4 className="cart-toast-pname">{cartToast.product.name}</h4>
+                    {cartToast.product.variantLabel && (
+                      <span className="cart-toast-variant">
+                        Option: <strong>{cartToast.product.variantLabel}</strong>
+                        {cartToast.product.variantDimensions && ` (${cartToast.product.variantDimensions})`}
                       </span>
                     )}
-                    {variant.price && (
-                      <small>
-                        Rs. {variant.discountedPrice || variant.finalPrice || variant.price}
-                      </small>
+                    {cartToast.product.price && (
+                      <span className="cart-toast-price">
+                        Rs. {cartToast.product.price}
+                      </span>
                     )}
-                  </button>
-                ))}
-              </div>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                className="size-picker-confirm"
-                onClick={confirmSizeSelection}
-              >
-                Add To Cart
-              </button>
+                <div className="cart-toast-qty-row">
+                  <span className="cart-toast-qty-label">Quantity</span>
+                  <div className="cart-qty-selector">
+                    <button
+                      type="button"
+                      className="cart-qty-btn"
+                      aria-label="Decrease quantity"
+                      disabled={isDecreaseDisabled}
+                      onClick={() => handleToastDecrease(toastItemKey, currentToastQty)}
+                    >
+                      −
+                    </button>
+                    <span className="cart-qty-value">{currentToastQty}</span>
+                    <button
+                      type="button"
+                      className="cart-qty-btn"
+                      aria-label="Increase quantity"
+                      disabled={isIncreaseDisabled}
+                      onClick={() => handleToastIncrease(toastItemKey, currentToastQty, maxToastStock)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="cart-toast-btn"
+                  onClick={() => {
+                    setCartToast(null);
+                    navigate("/cart");
+                  }}
+                >
+                  Go to Cart
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
+
+        {/* SELECT SIZE MODAL */}
+        {sizePickerProduct && (() => {
+          const pickerVariants = getProductVariants(sizePickerProduct);
+          const selectedIndex = selectedVariants[sizePickerProduct.id];
+          const selectedVariant =
+            selectedIndex !== undefined && selectedIndex !== null
+              ? pickerVariants[selectedIndex]
+              : null;
+
+          return (
+            <div
+              className="size-picker-overlay"
+              onClick={() => setSizePickerProduct(null)}
+            >
+              <div
+                className="size-picker-modal"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="size-picker-close"
+                  aria-label="Close size picker"
+                  onClick={() => setSizePickerProduct(null)}
+                >
+                  ×
+                </button>
+
+                <div className="size-picker-header">
+                  <div className="size-picker-title-row">
+                    <h3 className="size-picker-title">Select Size</h3>
+                    {selectedVariant && (
+                      <span className="size-picker-selected-tag">
+                        Selected: <strong>{selectedVariant.size || selectedVariant.label}</strong>
+                      </span>
+                    )}
+                  </div>
+                  <p className="size-picker-pname">{sizePickerProduct.name}</p>
+                </div>
+
+                <div className="size-picker-options">
+                  {pickerVariants.map((variant, variantIndex) => {
+                    const isSelected = selectedIndex === variantIndex;
+                    const isOutOfStockOption = variant.stock === 0;
+
+                    return (
+                      <button
+                        key={variant.id || variantIndex}
+                        type="button"
+                        disabled={isOutOfStockOption}
+                        className={`size-picker-option ${isSelected ? "active" : ""} ${isOutOfStockOption ? "disabled" : ""}`}
+                        onClick={() => {
+                          if (!isOutOfStockOption) {
+                            setSelectedVariants(previous => {
+                              const current = previous[sizePickerProduct.id];
+                              if (current === variantIndex) {
+                                const next = { ...previous };
+                                delete next[sizePickerProduct.id];
+                                return next;
+                              }
+                              return {
+                                ...previous,
+                                [sizePickerProduct.id]: variantIndex
+                              };
+                            });
+                          }
+                        }}
+                      >
+                        <div className="size-picker-option-left">
+                          <strong className="size-picker-option-name">
+                            {variant.size || variant.label}
+                          </strong>
+                          {variant.dimensions && (
+                            <span className="size-picker-option-dim">
+                              {variant.dimensions}
+                            </span>
+                          )}
+                          {variant.stock !== undefined && (
+                            <span className={`size-picker-option-stock ${variant.stock <= 5 ? "low" : ""}`}>
+                              {variant.stock > 0 ? `${variant.stock} left in stock` : "Out of stock"}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="size-picker-option-right">
+                          {variant.price && (
+                            <span className="size-picker-option-price">
+                              Rs. {variant.discountedPrice || variant.finalPrice || variant.price}
+                            </span>
+                          )}
+                          <span className={`size-picker-radio ${isSelected ? "checked" : ""}`} aria-hidden="true">
+                            {isSelected ? "✓" : ""}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  className="size-picker-confirm"
+                  onClick={confirmSizeSelection}
+                >
+                  Add To Cart
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
       </section>
 

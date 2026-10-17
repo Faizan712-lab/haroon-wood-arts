@@ -92,7 +92,7 @@
   }
 
   .ck-stepper__container {
-    max-width: 300px;
+    max-width: min(100%, 300px);
   }
 
   .ck-stepper__circle {

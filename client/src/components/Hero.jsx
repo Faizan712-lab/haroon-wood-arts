@@ -137,11 +137,16 @@ function Hero() {
           className="hero-btn"
 
           whileHover={{
-            scale: 1.08
+            y: -2
           }}
 
           whileTap={{
-            scale: 0.95
+            y: 1
+          }}
+
+          transition={{
+            duration: 0.2,
+            ease: "easeOut"
           }}
 
           onClick={() =>
@@ -150,7 +155,24 @@ function Hero() {
 
         >
 
-          Shop Now →
+          <span className="hero-btn-text">Shop Now</span>
+          <svg
+            className="hero-btn-arrow"
+            width="17"
+            height="17"
+            viewBox="0 0 17 17"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M3.5 8.5H13.5M13.5 8.5L9.5 4.5M13.5 8.5L9.5 12.5"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
 
         </motion.button>
 

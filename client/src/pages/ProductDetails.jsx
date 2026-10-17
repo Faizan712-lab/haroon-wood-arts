@@ -42,19 +42,13 @@ function RatingStars({
   rating,
   reviewCount
 }) {
-  const safeRating =
-    Number(rating || 0);
-
-  const count =
-    Number(reviewCount || 0);
-
-  const roundedRating =
-    Math.round(safeRating);
+  const safeRating = Number(rating || 0);
+  const count = Number(reviewCount || 0);
 
   if (count === 0) {
     return (
-      <div className="product-rating-summary">
-        <span>No reviews yet</span>
+      <div className="product-rating-summary no-reviews">
+        <span className="rating-empty-tag">No reviews yet</span>
       </div>
     );
   }
@@ -65,22 +59,32 @@ function RatingStars({
         className="rating-stars"
         aria-label={`${safeRating.toFixed(1)} out of 5 stars`}
       >
-        {[1, 2, 3, 4, 5].map(star => (
-          <span
-            key={star}
-            className={
-              star <= roundedRating
-                ? "rating-star filled"
-                : "rating-star"
-            }
-          >
-            {star <= roundedRating ? "★" : "☆"}
-          </span>
-        ))}
+        {[1, 2, 3, 4, 5].map(star => {
+          const isFilled = star <= Math.floor(safeRating);
+          const isHalf = !isFilled && star === Math.ceil(safeRating) && (safeRating % 1 >= 0.25);
+          return (
+            <span
+              key={star}
+              className={
+                isFilled
+                  ? "rating-star filled"
+                  : isHalf
+                  ? "rating-star half"
+                  : "rating-star empty"
+              }
+            >
+              {isFilled ? "★" : isHalf ? "★" : "☆"}
+            </span>
+          );
+        })}
       </span>
 
-      <span>
-        {`${safeRating.toFixed(1)} (${count} ${count === 1 ? "review" : "reviews"})`}
+      <span className="rating-score">
+        {safeRating.toFixed(1)}
+      </span>
+
+      <span className="rating-count">
+        ({count} {count === 1 ? "review" : "reviews"})
       </span>
     </div>
   );
@@ -91,8 +95,7 @@ function formatReviewDate(value) {
     return "";
   }
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
     return "";
@@ -106,218 +109,115 @@ function formatReviewDate(value) {
 }
 
 function ProductDetails() {
-
   const { id } = useParams();
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
-  const { addToCart } =
-    useContext(CartContext);
+  const { addToCart } = useContext(CartContext);
+  const { isWishlisted, toggleWishlist } = useContext(WishlistContext);
 
-  const {
-    isWishlisted,
-    toggleWishlist
-  } =
-    useContext(WishlistContext);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSizeIndex, setSelectedSizeIndex] = useState(null);
+  const [sizeError, setSizeError] = useState(false);
 
-  const [product,
-    setProduct] =
-    useState(null);
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
-  const [loading,
-    setLoading] =
-    useState(true);
-
-  const [selectedSizeIndex,
-    setSelectedSizeIndex] =
-    useState(null);
-
-  const [rating,
-    setRating] =
-    useState(5);
-
-  const [hoverRating,
-    setHoverRating] =
-    useState(0);
-
-  const [comment,
-    setComment] =
-    useState("");
-
-  const [isReviewing,
-    setIsReviewing] =
-    useState(false);
-
-  const [loadError,
-    setLoadError] =
-    useState("");
-
-  const [selectedImageIndex,
-    setSelectedImageIndex] =
-    useState(0);
-
-  const [galleryKey,
-    setGalleryKey] =
-    useState(0);
-
-  const [previewOpen,
-    setPreviewOpen] =
-    useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [galleryKey, setGalleryKey] = useState(0);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   /* GET PRODUCT */
-
   useEffect(() => {
-
     async function fetchProduct() {
-
       try {
-
         setLoading(true);
         setLoadError("");
 
         const response = await fetch(
           getApiUrl(`/api/products/${id}`),
-          {
-            cache: "no-store"
-          }
+          { cache: "no-store" }
         );
 
-        const data =
-          await response.json();
+        const data = await response.json();
 
         if (response.ok && data.success && data.product) {
-
-          setProduct(
-            data.product
-          );
-
+          setProduct(data.product);
           return;
-
         }
 
         const listResponse = await fetch(
           getApiUrl("/api/products"),
-          {
-            cache: "no-store"
-          }
+          { cache: "no-store" }
         );
 
-        const listData =
-          await listResponse.json();
+        const listData = await listResponse.json();
 
         if (listResponse.ok && listData.success) {
-
-          const matchedProduct =
-            (listData.products || []).find(item =>
-              String(item.id) === String(id)
-            );
+          const matchedProduct = (listData.products || []).find(item =>
+            String(item.id) === String(id)
+          );
 
           if (matchedProduct) {
-
             setProduct(matchedProduct);
             return;
-
           }
-
         }
 
-        {
-          const message =
-            data.message || "Product not found";
-
-          setLoadError(message);
-
-          setProduct(null);
-          toast.error(message);
-
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Failed to load product:",
-          error
-        );
-
-        setLoadError(
-          "Unable to load this product right now."
-        );
-
+        const message = data.message || "Product not found";
+        setLoadError(message);
         setProduct(null);
-        toast.error(
-          "Unable to load this product right now."
-        );
-
+        toast.error(message);
+      } catch (error) {
+        console.error("Failed to load product:", error);
+        setLoadError("Unable to load this product right now.");
+        setProduct(null);
+        toast.error("Unable to load this product right now.");
       } finally {
-
         setLoading(false);
-
       }
-
     }
 
     fetchProduct();
-
   }, [id]);
 
   if (loading) {
-
     return (
-
       <div className="product-not-found">
-
         <div className="product-state-card">
           <span className="product-loader"></span>
-          <h1>
-            Loading product
-          </h1>
-          <p>
-            Fetching the latest details from the store.
-          </p>
+          <h1>Loading product</h1>
+          <p>Fetching the latest details from the store.</p>
         </div>
-
       </div>
-
     );
-
   }
 
   /* NOT FOUND */
-
   if (!product) {
-
     return (
-
       <div className="product-not-found">
-
         <div className="product-state-card">
-          <h1>
-            Product not found
-          </h1>
+          <h1>Product not found</h1>
           <p>
             {loadError || "This product may have been removed or is unavailable."}
           </p>
           <button
             type="button"
-            onClick={() =>
-              navigate("/shop")
-            }
+            onClick={() => navigate("/shop")}
           >
             Back to Shop
           </button>
         </div>
-
       </div>
-
     );
-
   }
 
-  const variants =
-    getProductVariants(product);
-
-  const selectedSize =
-    variants[selectedSizeIndex];
+  const variants = getProductVariants(product);
+  const selectedSize = variants[selectedSizeIndex];
 
   const productImages =
     selectedSize?.images?.length > 0
@@ -351,22 +251,44 @@ function ProductDetails() {
     }
 
     if (variants.length > 0 && !selectedSize) {
+      setSizeError(true);
       toast.error("Please select a size before adding this product.");
       return;
     }
 
+    setSizeError(false);
     addToCart({
       ...product,
       price: displayPrice,
       productId: product.id,
-      variantId:
-        selectedSize?.id,
-      variantLabel:
-        selectedSize?.size ||
-        selectedSize?.label,
-      variantDimensions:
-        selectedSize?.dimensions
+      variantId: selectedSize?.id,
+      variantLabel: selectedSize?.size || selectedSize?.label,
+      variantDimensions: selectedSize?.dimensions
     });
+  }
+
+  function handleBuyNow() {
+    if (isOutOfStock(product)) {
+      return;
+    }
+
+    if (variants.length > 0 && !selectedSize) {
+      setSizeError(true);
+      toast.error("Please select a size before purchasing.");
+      return;
+    }
+
+    setSizeError(false);
+    addToCart({
+      ...product,
+      price: displayPrice,
+      productId: product.id,
+      variantId: selectedSize?.id,
+      variantLabel: selectedSize?.size || selectedSize?.label,
+      variantDimensions: selectedSize?.dimensions
+    });
+
+    navigate("/checkout");
   }
 
   async function submitReview(e) {
@@ -390,13 +312,10 @@ function ProductDetails() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Failed to save review"
-        );
+        throw new Error(data.message || "Failed to save review");
       }
 
       setProduct(data.product);
@@ -410,15 +329,11 @@ function ProductDetails() {
   }
 
   return (
-
     <div className="product-details-page">
-
       <div className="product-details-container">
 
-        {/* LEFT IMAGE */}
-
+        {/* LEFT: IMAGE GALLERY */}
         <div className="product-left">
-
           <div className="product-gallery">
             <div className="image-container product-details-image-container">
               <button
@@ -435,52 +350,53 @@ function ProductDetails() {
                 />
               </button>
 
-            {getStockLabel(product) && (
-              <span
-                className={
-                  isOutOfStock(product)
-                    ? "stock-badge out"
-                    : "stock-badge low"
-                }
+              {getStockLabel(product) && (
+                <span
+                  className={
+                    isOutOfStock(product)
+                      ? "stock-badge out"
+                      : "stock-badge low"
+                  }
+                >
+                  {getStockLabel(product)}
+                </span>
+              )}
+
+              <button
+                type="button"
+                className={`wishlist-heart ${
+                  isWishlisted(product.id) ? "saved" : ""
+                }`}
+                aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                title={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                onClick={() => toggleWishlist(product)}
               >
-                {getStockLabel(product)}
-              </span>
-            )}
-
-            <button
-              type="button"
-              className={
-                isWishlisted(product.id)
-                  ? "wishlist-heart saved"
-                  : "wishlist-heart"
-              }
-              aria-label="Toggle wishlist"
-              onClick={() =>
-                toggleWishlist(product)
-              }
-            >
-              {isWishlisted(product.id) ? "♥" : "♡"}
-            </button>
-          </div>
-
-            <p className="product-image-count">
-              Image {Math.min(selectedImageIndex + 1, productImages.length || 1)} / {productImages.length || 1}
-            </p>
+                {isWishlisted(product.id) ? "♥" : "♡"}
+              </button>
+            </div>
 
             {productImages.length > 1 && (
-              <div className="product-gallery-thumbs">
+              <p className="product-image-count">
+                Image {Math.min(selectedImageIndex + 1, productImages.length || 1)} of {productImages.length || 1}
+              </p>
+            )}
+
+            {productImages.length > 1 && (
+              <div
+                className="product-gallery-thumbs"
+                role="tablist"
+                aria-label="Product thumbnails"
+              >
                 {productImages.map((image, index) => (
                   <button
                     key={`${image}-${index}`}
                     type="button"
-                    className={
-                      selectedImageIndex === index
-                        ? "gallery-thumb active"
-                        : "gallery-thumb"
-                    }
-                    onClick={() =>
-                      setSelectedImageIndex(index)
-                    }
+                    role="tab"
+                    aria-selected={selectedImageIndex === index}
+                    className={`gallery-thumb ${
+                      selectedImageIndex === index ? "active" : ""
+                    }`}
+                    onClick={() => setSelectedImageIndex(index)}
                     aria-label={`View image ${index + 1}`}
                   >
                     <img
@@ -494,170 +410,284 @@ function ProductDetails() {
               </div>
             )}
           </div>
-
         </div>
 
-        {/* RIGHT INFO */}
-
+        {/* RIGHT: PRODUCT INFO */}
         <div className="product-right">
-          <p className="product-description">
-            {product.description}
-          </p>
 
-          <h1>
-            {product.name}
-          </h1>
-
-          <p className="product-price">
-
-            {hasDiscount && (
-              <span>
-                Rs. {originalPrice}
+          {/* 1. Category Tag & Product Name */}
+          <div className="product-header-group">
+            {product.category && (
+              <span className="product-category-tag">
+                {product.category}
               </span>
             )}
+            <h1 className="product-title">
+              {product.name}
+            </h1>
+          </div>
 
-            Rs. {displayPrice}
-
-            {hasDiscount && (
-              <small className="discount-badge">
-                {product.discountPercent}% OFF
-              </small>
-            )}
-
-          </p>
-
+          {/* 2. Star Rating and Review Count */}
           <RatingStars
             rating={product.averageRating}
             reviewCount={product.reviewCount}
           />
 
-          {variants.length > 0 && (
+          {/* 3 & 4. Current Selling Price, Original Price, and Discount */}
+          <div className="product-price-section">
+            <div className="product-price-row">
+              <span className="product-selling-price">
+                Rs. {displayPrice}
+              </span>
 
-            <div className="product-size-panel">
+              {hasDiscount && (
+                <span className="product-original-price">
+                  Rs. {originalPrice}
+                </span>
+              )}
 
-              <h3>
-                Select Size
-              </h3>
-
-              <div className="product-size-options">
-
-                {variants.map((size, index) => (
-
-                  <button
-                    key={size.id || index}
-                    type="button"
-                    className={
-                      selectedSizeIndex === index
-                        ? "size-option active"
-                        : "size-option"
-                    }
-                    onClick={() => {
-                      setSelectedSizeIndex(index);
-                      setSelectedImageIndex(0);
-                      setGalleryKey(previous => previous + 1);
-                    }}
-                  >
-                    <strong>
-                      {size.size || size.label}
-                    </strong>
-                    {size.dimensions && (
-                      <span>
-                        {size.dimensions}
-                      </span>
-                    )}
-                    {size.stock !== undefined && (
-                      <span>
-                        Stock: {size.stock}
-                      </span>
-                    )}
-                    {size.price && (
-                      <small>
-                        Rs. {size.discountedPrice || size.price}
-                      </small>
-                    )}
-                  </button>
-
-                ))}
-
-              </div>
-
+              {hasDiscount && (
+                <span className="discount-badge">
+                  {product.discountPercent}% OFF
+                </span>
+              )}
             </div>
+          </div>
 
+          {/* 5. Availability & Stock Status */}
+          <div className="product-stock-section">
+            {isOutOfStock(product) ? (
+              <span className="product-stock-pill out">
+                <span className="stock-dot"></span> Out of Stock
+              </span>
+            ) : getStockLabel(product) ? (
+              <span className="product-stock-pill low">
+                <span className="stock-dot"></span> {getStockLabel(product)}
+              </span>
+            ) : (
+              <span className="product-stock-pill in-stock">
+                <span className="stock-dot"></span> In Stock
+              </span>
+            )}
+          </div>
+
+          {/* 6. Product Description */}
+          {product.description && product.description.trim() && (
+            <div className="product-description-block">
+              <h3 className="section-label">Description</h3>
+              <p className="product-description-text">
+                {product.description}
+              </p>
+            </div>
           )}
 
-          {/* old description removed */}
+          {/* 7. Size or Product Options */}
+          {variants.length > 0 && (
+            <div className="product-size-panel">
+              <div className="size-panel-header">
+                <h3 className="section-label">Select Option</h3>
+                {selectedSize && (
+                  <span className="selected-size-display">
+                    Selected: <strong>{selectedSize.size || selectedSize.label}</strong>
+                  </span>
+                )}
+              </div>
 
+              <div className={`product-size-options ${sizeError ? "has-validation-error" : ""}`}>
+                {variants.map((size, index) => {
+                  const isSelected = selectedSizeIndex === index;
+                  return (
+                    <button
+                      key={size.id || index}
+                      type="button"
+                      className={`size-option ${isSelected ? "active" : ""}`}
+                      onClick={() => {
+                        if (selectedSizeIndex === index) {
+                          setSelectedSizeIndex(null);
+                          setSelectedImageIndex(0);
+                          setGalleryKey(prev => prev + 1);
+                        } else {
+                          setSelectedSizeIndex(index);
+                          setSizeError(false);
+                          setSelectedImageIndex(0);
+                          setGalleryKey(prev => prev + 1);
+                        }
+                      }}
+                    >
+                      <div className="size-option-top">
+                        <strong className="size-name">
+                          {size.size || size.label}
+                        </strong>
+                        {isSelected && (
+                          <span className="size-selected-indicator">✓</span>
+                        )}
+                      </div>
 
+                      {size.dimensions && (
+                        <span className="size-dim">
+                          {size.dimensions}
+                        </span>
+                      )}
 
+                      <div className="size-option-meta">
+                        {size.price && (
+                          <span className="size-price-val">
+                            Rs. {size.discountedPrice || size.price}
+                          </span>
+                        )}
+                        {size.stock !== undefined && (
+                          <span className="size-stock-val">
+                            Stock: {size.stock}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
 
+              {sizeError && (
+                <p className="size-error-message">
+                  Please select a size option to proceed.
+                </p>
+              )}
+            </div>
+          )}
 
-          <button
+          {/* 8. Purchase Actions: Add to Cart, Buy Now, and Wishlist */}
+          <div className="product-purchase-section">
+            <div className="product-actions-group">
+              <button
+                type="button"
+                className="add-cart-btn"
+                onClick={handleAddToCart}
+                disabled={isOutOfStock(product)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+                <span>
+                  {isOutOfStock(product)
+                    ? "Out of Stock"
+                    : "Add To Cart"}
+                </span>
+              </button>
 
-            className="add-cart-btn"
+              <button
+                type="button"
+                className="buy-now-btn"
+                onClick={handleBuyNow}
+                disabled={isOutOfStock(product)}
+              >
+                <span>
+                  {isOutOfStock(product)
+                    ? "Unavailable"
+                    : "Buy Now"}
+                </span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
 
-            onClick={handleAddToCart}
-            disabled={
-              isOutOfStock(product)
-            }
+              <button
+                type="button"
+                className={`product-action-wishlist-btn ${
+                  isWishlisted(product.id) ? "saved" : ""
+                }`}
+                aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                title={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                onClick={() => toggleWishlist(product)}
+              >
+                {isWishlisted(product.id) ? "♥" : "♡"}
+              </button>
+            </div>
 
-          >
+            {/* Subtle Brand Identity Badges */}
+            <div className="product-features-row">
+              <div className="feature-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97928" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>Authentic Kashmiri Craft</span>
+              </div>
+              <div className="feature-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97928" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>Quality Handcrafted</span>
+              </div>
+              <div className="feature-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97928" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="3" width="15" height="13"></rect>
+                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                  <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                  <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                </svg>
+                <span>Carefully Packaged</span>
+              </div>
+            </div>
+          </div>
 
-            {isOutOfStock(product)
-              ? "Out of Stock"
-              : "Add To Cart"}
-
-          </button>
-
+          {/* 9. Customer Reviews */}
           <section className="product-review-panel">
-
-            <h2>
-              Customer Reviews
-            </h2>
+            <div className="review-section-header">
+              <h2>Customer Reviews</h2>
+              {product.reviewCount > 0 && (
+                <span className="review-count-badge">
+                  {product.reviewCount} {product.reviewCount === 1 ? "review" : "reviews"}
+                </span>
+              )}
+            </div>
 
             <form
               className="review-form"
               onSubmit={submitReview}
             >
-              <h3>
-                Write a review
-              </h3>
+              <h3>Write a Review</h3>
 
-              <div className="review-stars">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    type="button"
-                    className={
-                      star <= (hoverRating || rating)
-                        ? "active"
-                        : ""
-                    }
-                    onMouseEnter={() =>
-                      setHoverRating(star)
-                    }
-                    onMouseLeave={() =>
-                      setHoverRating(0)
-                    }
-                    onClick={() =>
-                      setRating(star)
-                    }
-                    aria-label={`Rate ${star} stars`}
-                  >
-                    ★
-                  </button>
-                ))}
+              <div className="review-rating-row">
+                <span className="review-rating-prompt">Your Rating:</span>
+                <div className="review-stars">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={
+                        star <= (hoverRating || rating)
+                          ? "active"
+                          : ""
+                      }
+                      onMouseEnter={() =>
+                        setHoverRating(star)
+                      }
+                      onMouseLeave={() =>
+                        setHoverRating(0)
+                      }
+                      onClick={() =>
+                        setRating(star)
+                      }
+                      aria-label={`Rate ${star} stars`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <textarea
-                placeholder="Write a review"
+                placeholder="Share your experience with this handcrafted item..."
                 value={comment}
                 onChange={(e) =>
                   setComment(e.target.value)
                 }
+                rows={3}
               />
 
               <button
                 type="submit"
+                className="review-submit-btn"
                 disabled={isReviewing}
               >
                 {isReviewing ? "Saving..." : "Submit Review"}
@@ -667,7 +697,7 @@ function ProductDetails() {
             <div className="review-list">
               {product.reviews?.length > 0 ? (
                 product.reviews.map(review => (
-                  <article key={review.id}>
+                  <article key={review.id} className="review-card">
                     <div className="review-avatar">
                       {(review.customerName || "C")
                         .charAt(0)
@@ -680,20 +710,20 @@ function ProductDetails() {
                           {review.customerName}
                         </strong>
                         {formatReviewDate(review.createdAt) && (
-                          <span>
+                          <span className="review-date">
                             {formatReviewDate(review.createdAt)}
                           </span>
                         )}
                       </div>
 
-                      <div className="review-item-stars">
+                      <div className="review-item-stars" aria-label={`${review.rating} stars`}>
                         {[1, 2, 3, 4, 5].map(star => (
                           <span
                             key={star}
                             className={
                               star <= Number(review.rating || 0)
                                 ? "filled"
-                                : ""
+                                : "empty"
                             }
                           >
                             {star <= Number(review.rating || 0) ? "★" : "☆"}
@@ -701,27 +731,30 @@ function ProductDetails() {
                         ))}
                       </div>
 
-                    {review.comment && (
-                      <p>
-                        {review.comment}
-                      </p>
-                    )}
+                      {review.comment && (
+                        <p className="review-comment-text">
+                          {review.comment}
+                        </p>
+                      )}
                     </div>
                   </article>
                 ))
               ) : (
-                <p>
-                  No reviews yet.
-                </p>
+                <div className="no-reviews-box">
+                  <p className="no-reviews-title">No reviews yet</p>
+                  <p className="no-reviews-sub">
+                    Be the first to review this Kashmiri handcrafted item.
+                  </p>
+                </div>
               )}
             </div>
-
           </section>
 
         </div>
 
       </div>
 
+      {/* FULLSCREEN IMAGE MODAL */}
       {previewOpen && (
         <div
           className="image-preview-modal"
@@ -733,8 +766,9 @@ function ProductDetails() {
             type="button"
             className="image-preview-close"
             onClick={() => setPreviewOpen(false)}
+            aria-label="Close preview"
           >
-            Close
+            ✕ Close
           </button>
           <img
             src={activeImage}
@@ -745,9 +779,7 @@ function ProductDetails() {
       )}
 
     </div>
-
   );
-
 }
 
 export default ProductDetails;

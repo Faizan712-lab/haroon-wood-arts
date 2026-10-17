@@ -577,12 +577,24 @@
     box-shadow: 18px 0 35px rgba(0,0,0,0.28);
     transform: translateX(-105%);
     transition: transform 0.28s ease;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 
   }
 
   .mobile-menu-open .nav-links {
     transform: translateX(0);
+  }
+
+  .mobile-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 999;
+    cursor: pointer;
   }
 
   .nav-links .cart-icon {

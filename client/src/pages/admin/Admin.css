@@ -463,13 +463,52 @@ body{
 }
 
 .add-product-form input,
-.add-product-form textarea,
-.add-product-form select{
+.add-product-form textarea {
   padding:16px;
   border-radius:14px;
   border:1px solid #ddd;
   font-size:16px;
   outline:none;
+}
+
+.add-product-form select {
+  padding: 14px 38px 14px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #E8D5C5;
+  background: #FFF9F3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A2D1C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat calc(100% - 14px) center;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: #4A2D1C;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(74, 45, 28, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.add-product-form select:hover {
+  background-color: #FDF4EB;
+  border-color: #D4BEAC;
+}
+
+.add-product-form select:focus {
+  border-color: #d97928;
+  background-color: #FFF9F3;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
+}
+
+.add-product-form select option {
+  background-color: #FFF9F3;
+  color: #4A2D1C;
+  font-weight: 600;
+}
+
+.add-product-form select option:checked {
+  background-color: #F5E5D5;
+  color: #4A2D1C;
+  font-weight: 700;
 }
 
 .add-product-form textarea{
@@ -1029,16 +1068,50 @@ body{
   color:#555;
 }
 
-.status-dropdown{
-  padding:14px 18px;
-  border-radius:14px;
-  border:1px solid #ddd;
-  background:white;
-  font-size:15px;
-  font-weight:600;
-  min-width:220px;
-  outline:none;
-  cursor:pointer;
+.status-dropdown {
+  min-height: 44px;
+  padding: 0 36px 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid #E8D5C5;
+  background: #FFF9F3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A2D1C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat calc(100% - 12px) center;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4A2D1C;
+  min-width: 200px;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(74, 45, 28, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.status-dropdown:hover:not(:disabled) {
+  background-color: #FDF4EB;
+  border-color: #D4BEAC;
+}
+
+.status-dropdown:focus {
+  border-color: #d97928;
+  background-color: #FFF9F3;
+  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
+}
+
+.status-dropdown:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.status-dropdown option {
+  background-color: #FFF9F3;
+  color: #4A2D1C;
+  font-weight: 600;
+}
+
+.status-dropdown option:checked {
+  background-color: #F5E5D5;
+  color: #4A2D1C;
+  font-weight: 700;
 }
 
 /* ======================================== */
@@ -3137,15 +3210,44 @@ body{
 .admin-form-field select,
 .admin-edit-modal label select {
   appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #7b6f68 50%),
-    linear-gradient(135deg, #7b6f68 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) 20px,
-    calc(100% - 12px) 20px;
-  background-size: 6px 6px, 6px 6px;
+  -webkit-appearance: none;
+  background-color: #FFF9F3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A2D1C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-position: calc(100% - 14px) center;
   background-repeat: no-repeat;
+  padding-right: 36px;
+  border: 1.5px solid #E8D5C5;
+  border-radius: 10px;
+  color: #4A2D1C;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(74, 45, 28, 0.04);
+}
+
+.admin-form-field select:hover,
+.admin-edit-modal label select:hover {
+  background-color: #FDF4EB;
+  border-color: #D4BEAC;
+}
+
+.admin-form-field select:focus,
+.admin-edit-modal label select:focus {
+  border-color: #d97928;
+  background-color: #FFF9F3;
+  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
+}
+
+.admin-form-field select option,
+.admin-edit-modal label select option {
+  background-color: #FFF9F3;
+  color: #4A2D1C;
+  font-weight: 600;
+}
+
+.admin-form-field select option:checked,
+.admin-edit-modal label select option:checked {
+  background-color: #F5E5D5;
+  color: #4A2D1C;
+  font-weight: 700;
 }
 
 .admin-stock-field {
@@ -5571,7 +5673,6 @@ body{
 }
 
 .admin-edit-field input,
-.admin-edit-field select,
 .admin-edit-field textarea {
   padding: 9px 12px;
   border: 1px solid #D7C4B4;
@@ -5583,8 +5684,48 @@ body{
   transition: border-color 0.2s;
 }
 
+.admin-edit-field select {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 34px 0 12px;
+  background: #FFF9F3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A2D1C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat calc(100% - 11px) center;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid #E8D5C5;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4A2D1C;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(74, 45, 28, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.admin-edit-field select:hover {
+  background-color: #FDF4EB;
+  border-color: #D4BEAC;
+}
+
+.admin-edit-field select:focus {
+  border-color: #d97928;
+  background-color: #FFF9F3;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
+}
+
+.admin-edit-field select option {
+  background-color: #FFF9F3;
+  color: #4A2D1C;
+  font-weight: 600;
+}
+
+.admin-edit-field select option:checked {
+  background-color: #F5E5D5;
+  color: #4A2D1C;
+  font-weight: 700;
+}
+
 .admin-edit-field input:focus,
-.admin-edit-field select:focus,
 .admin-edit-field textarea:focus {
   border-color: #684832;
   box-shadow: 0 0 0 3px rgba(104, 72, 50, 0.12);
@@ -5820,7 +5961,6 @@ body{
 }
 
 .admin-input-label input,
-.admin-input-label select,
 .admin-input-label textarea {
   padding: 9px 12px;
   border: 1px solid #D7C4B4;
@@ -5831,8 +5971,48 @@ body{
   outline: none;
 }
 
+.admin-input-label select {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 34px 0 12px;
+  background: #FFF9F3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A2D1C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat calc(100% - 11px) center;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid #E8D5C5;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4A2D1C;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(74, 45, 28, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.admin-input-label select:hover {
+  background-color: #FDF4EB;
+  border-color: #D4BEAC;
+}
+
+.admin-input-label select:focus {
+  border-color: #d97928;
+  background-color: #FFF9F3;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
+}
+
+.admin-input-label select option {
+  background-color: #FFF9F3;
+  color: #4A2D1C;
+  font-weight: 600;
+}
+
+.admin-input-label select option:checked {
+  background-color: #F5E5D5;
+  color: #4A2D1C;
+  font-weight: 700;
+}
+
 .admin-input-label input:focus,
-.admin-input-label select:focus,
 .admin-input-label textarea:focus {
   border-color: #684832;
   box-shadow: 0 0 0 3px rgba(104, 72, 50, 0.12);
@@ -6417,22 +6597,45 @@ body{
 
 .admin-select-filter {
   height: 44px;
-  border: 1.5px solid #D7C4B4;
+  min-height: 44px;
+  border: 1.5px solid #E8D5C5;
   border-radius: 10px;
-  padding: 0 14px;
+  padding: 0 34px 0 13px;
   font-size: 13px;
   font-weight: 600;
-  background: #FFFFFF;
-  color: #3E2723;
+  background: #FFF9F3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A2D1C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat calc(100% - 11px) center;
+  appearance: none;
+  -webkit-appearance: none;
+  color: #4A2D1C;
   outline: none;
   cursor: pointer;
   box-sizing: border-box;
-  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(74, 45, 28, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.admin-select-filter:hover {
+  background-color: #FDF4EB;
+  border-color: #D4BEAC;
 }
 
 .admin-select-filter:focus {
-  border-color: #684832;
-  box-shadow: 0 0 0 3px rgba(104, 72, 50, 0.12);
+  border-color: #d97928;
+  background-color: #FFF9F3;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
+}
+
+.admin-select-filter option {
+  background-color: #FFF9F3;
+  color: #4A2D1C;
+  font-weight: 600;
+}
+
+.admin-select-filter option:checked {
+  background-color: #F5E5D5;
+  color: #4A2D1C;
+  font-weight: 700;
 }
 
 .admin-clear-all-filters-btn {

@@ -3,459 +3,363 @@
 /* ======================================== */
 
 .contact-page {
-
   min-height: 100vh;
-
-  padding: 90px 20px;
-
-  background:
-    linear-gradient(
-      to bottom,
-      #f8f5f1,
-      #ffffff
-    );
-
+  padding: 70px 24px 90px;
+  background: linear-gradient(180deg, #faf7f2 0%, #ffffff 100%);
   position: relative;
-
   overflow: hidden;
-
 }
 
 /* ======================================== */
-/* HERO */
+/* HERO SECTION */
 /* ======================================== */
 
 .contact-hero {
-
   text-align: center;
-
-  max-width: 850px;
-
-  margin: 0 auto 75px;
-
+  max-width: 720px;
+  margin: 0 auto 54px;
 }
 
 .contact-tag {
-
   display: inline-block;
-
-  color: #e8904a;
-
+  color: #bd7336;
   font-weight: 700;
-
-  letter-spacing: 3px;
-
-  margin-bottom: 18px;
-
-  font-size: 14px;
-
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
 }
 
 .contact-hero h1 {
-
-  font-size: 64px;
-
-  color: #3e2723;
-
-  margin-bottom: 22px;
-
+  font-size: clamp(32px, 5vw, 48px);
+  color: #2c1b14;
+  margin: 0 0 16px;
   font-weight: 800;
-
-  line-height: 1.1;
-
+  line-height: 1.18;
+  letter-spacing: -0.01em;
 }
 
 .contact-subtitle {
-
-  font-size: 20px;
-
-  color: #666;
-
-  line-height: 1.8;
-
+  font-size: clamp(15px, 2vw, 17px);
+  color: #65544b;
+  line-height: 1.65;
+  margin: 0;
 }
 
 /* ======================================== */
-/* CONTAINER */
+/* CONTAINER & CARD */
 /* ======================================== */
 
 .contact-container {
-
-  max-width: 1080px;
-
-  margin: auto;
-
+  max-width: 1040px;
+  margin: 0 auto;
 }
-
-/* ======================================== */
-/* CARD */
-/* ======================================== */
 
 .contact-card {
-
-  background: white;
-
-  padding: 36px;
-
-  border-radius: 22px;
-
-  box-shadow:
-    0 20px 50px rgba(0,0,0,0.06);
-
-  border: 1px solid #f1e4d8;
-
+  background: #ffffff;
+  padding: 36px 36px 32px;
+  border-radius: 20px;
+  border: 1px solid #ebd9c8;
+  box-shadow: 0 12px 36px rgba(62, 39, 35, 0.05);
   position: relative;
-
-  overflow: hidden;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      3,
-      minmax(0, 1fr)
-    );
-
-  gap: 18px;
-
 }
 
-/* TOP GRADIENT */
-
+/* Top brand accent stripe */
 .contact-card::before {
-
   content: "";
-
   position: absolute;
-
   top: 0;
-
   left: 0;
-
-  width: 100%;
-
-  height: 6px;
-
-  background:
-    linear-gradient(
-      90deg,
-      #e8904a,
-      #cf7d38
-    );
-
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #bd7336 0%, #e8904a 50%, #bd7336 100%);
+  border-radius: 20px 20px 0 0;
 }
 
 /* ======================================== */
-/* CONTACT ITEM */
+/* CONTACT GRID */
 /* ======================================== */
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
 
 .contact-item {
-
   display: flex;
-
   align-items: flex-start;
-
   gap: 16px;
-
-  padding: 22px;
-
-  border-radius: 18px;
-
-  background:
-    linear-gradient(
-      145deg,
-      #fffaf5,
-      #ffffff
-    );
-
-  border: 1px solid #f4e5d8;
-
-  margin-bottom: 0;
-
-  transition: 0.35s;
-
+  padding: 22px 20px;
+  border-radius: 14px;
+  background: #fdfbf8;
+  border: 1px solid #f0e3d6;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
-
-/* HOVER */
 
 .contact-item:hover {
-
-  transform:
-    translateY(-4px);
-
-  box-shadow:
-    0 15px 30px rgba(0,0,0,0.06);
-
+  transform: translateY(-2px);
+  border-color: #dfc7b2;
+  box-shadow: 0 8px 22px rgba(62, 39, 35, 0.06);
 }
 
 /* ======================================== */
-/* ICON */
+/* ICONS */
 /* ======================================== */
 
-.contact-icon {
-
-  width: 54px;
-
-  height: 54px;
-
-  min-width: 54px;
-
-  border-radius: 50%;
-
+.contact-icon-wrapper {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 10px;
+  background: #f6ebe1;
   display: flex;
-
   align-items: center;
-
   justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
 
-  font-size: 22px;
+.contact-icon-phone {
+  font-size: 17px;
+  color: #bd7336;
+}
 
-  color: #c8742d;
-
-  background:
-    linear-gradient(
-      135deg,
-      #fff1e5,
-      #ffe3cc
-    );
-
-  box-shadow:
-    inset 0 2px 8px rgba(255,255,255,0.8);
-
+.contact-icon-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
 /* ======================================== */
-/* TEXT */
+/* BODY & TYPOGRAPHY */
 /* ======================================== */
 
-.contact-item h3 {
+.contact-item-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
 
-  font-size: 20px;
-
-  color: #3e2723;
-
-  margin-bottom: 8px;
-
+.contact-item-body h3 {
+  font-size: 17px;
+  color: #2c1b14;
+  margin: 0 0 6px;
   font-weight: 700;
-
+  line-height: 1.3;
 }
 
-.contact-item p {
-
-  color: #666;
-
+.contact-link {
+  color: #bd7336;
+  font-weight: 600;
   font-size: 15px;
-
-  line-height: 1.7;
-
+  text-decoration: none;
+  line-height: 1.4;
+  transition: color 0.2s ease;
+  word-break: break-word;
 }
 
-/* ======================================== */
-/* MAP LINK */
-/* ======================================== */
+.contact-link:hover {
+  color: #8f4f1d;
+  text-decoration: underline;
+}
+
+.contact-address {
+  font-size: 13.5px;
+  color: #55433c;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  word-break: break-word;
+}
 
 .map-link {
-
-  color: #e8904a;
-
+  display: inline-flex;
+  align-items: center;
+  color: #bd7336;
   text-decoration: none;
-
-  font-size: 15px;
-
+  font-size: 13px;
   font-weight: 700;
-
-  transition: 0.3s;
-
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .map-link:hover {
+  color: #8f4f1d;
+  transform: translateX(2px);
+}
 
-  color: #cf7d38;
-
+.contact-subtext {
+  font-size: 12px;
+  color: #8c766b;
+  margin: 5px 0 0;
+  line-height: 1.3;
 }
 
 /* ======================================== */
-/* WHATSAPP BUTTON */
+/* WHATSAPP ACTION */
 /* ======================================== */
+
+.contact-action-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #f2e6dc;
+}
 
 .whatsapp-btn {
-
-  grid-column: 1 / -1;
-
-  width: 100%;
-
-  margin-top: 20px;
-
-  display: flex;
-
+  display: inline-flex;
   align-items: center;
-
   justify-content: center;
-
-  gap: 14px;
-
-  padding: 18px;
-
-  border-radius: 16px;
-
+  gap: 10px;
+  padding: 13px 28px;
+  border-radius: 10px;
   text-decoration: none;
-
-  font-size: 18px;
-
+  font-size: 15px;
   font-weight: 700;
-
-  color: white;
-
-  background:
-    linear-gradient(
-      135deg,
-      #25d366,
-      #1da851
-    );
-
-  transition: 0.35s;
-
-  box-shadow:
-    0 14px 32px rgba(37,211,102,0.3);
-
+  color: #ffffff;
+  background: #25d366;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.25);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-
-/* HOVER */
 
 .whatsapp-btn:hover {
-
-  transform:
-    translateY(-4px);
-
-  box-shadow:
-    0 20px 40px rgba(37,211,102,0.4);
-
+  background: #20ba5a;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.32);
 }
 
-/* WHATSAPP LOGO */
+.whatsapp-btn:active {
+  background: #1c9e4d;
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.2);
+}
 
 .whatsapp-logo {
-
-  width: 24px;
-
-  height: 24px;
-
-  flex: 0 0 auto;
-
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 /* ======================================== */
-/* RESPONSIVE */
+/* RESPONSIVE DESIGN */
 /* ======================================== */
 
-@media(max-width:768px) {
-
-  .contact-page {
-
-    padding: 65px 18px;
-
-  }
-
-  .contact-hero {
-
-    margin-bottom: 50px;
-
-  }
-
-  .contact-hero h1 {
-
-    font-size: 46px;
-
-  }
-
-  .contact-subtitle {
-
-    font-size: 17px;
-
+@media (max-width: 960px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .contact-card {
-
-    grid-template-columns: 1fr;
-
-    padding: 28px 22px;
-
+    padding: 28px 24px;
   }
-
-  .contact-item {
-
-    flex-direction: row;
-
-    text-align: left;
-
-    padding: 18px;
-
-  }
-
 }
 
-@media(max-width:520px) {
-
+@media (max-width: 600px) {
   .contact-page {
-    padding: 44px 14px 56px;
+    padding: 44px 16px 64px;
   }
 
   .contact-hero {
-    margin-bottom: 38px;
+    margin-bottom: 34px;
   }
 
-  .contact-tag {
-    font-size: 12px;
-    letter-spacing: 2px;
+  .contact-card {
+    padding: 22px 16px;
+    border-radius: 16px;
   }
 
-  .contact-hero h1 {
-
-    font-size: 34px;
-
+  .contact-item {
+    padding: 16px 14px;
+    gap: 14px;
   }
 
-  .contact-subtitle {
-
-    font-size: 16px;
-
+  .contact-icon-wrapper {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 9px;
   }
 
-  .contact-item h3 {
-
-    font-size: 20px;
-
-  }
-
-  .contact-item p {
-
+  .contact-icon-phone {
     font-size: 15px;
+  }
 
+  .contact-icon-img {
+    width: 19px;
+    height: 19px;
+  }
+
+  .contact-item-body h3 {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .contact-link {
+    font-size: 14.5px;
+  }
+
+  .contact-address {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .contact-action-row {
+    margin-top: 20px;
+    padding-top: 20px;
   }
 
   .whatsapp-btn {
+    width: 100%;
+    max-width: 320px;
+    padding: 12px 20px;
+    font-size: 14.5px;
+  }
+}
 
-    font-size: 16px;
-
-    padding: 16px;
-
+@media (max-width: 360px) {
+  .contact-page {
+    padding: 36px 12px 50px;
   }
 
-  .contact-card {
-    padding: 28px 16px;
-    border-radius: 20px;
+  .contact-hero h1 {
+    font-size: 28px;
   }
 
   .contact-item {
-    padding: 20px 14px;
-    border-radius: 18px;
+    padding: 14px 12px;
+    gap: 12px;
   }
 
-  .contact-icon {
-    width: 60px;
-    height: 60px;
-    min-width: 60px;
-    font-size: 26px;
+  .contact-icon-wrapper {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
   }
 
+  .contact-icon-phone {
+    font-size: 14px;
+  }
+
+  .contact-icon-img {
+    width: 17px;
+    height: 17px;
+  }
+
+  .contact-item-body h3 {
+    font-size: 15px;
+  }
+
+  .contact-link {
+    font-size: 13.5px;
+  }
+
+  .contact-address {
+    font-size: 12px;
+  }
+
+  .whatsapp-btn {
+    font-size: 14px;
+  }
 }

@@ -920,11 +920,12 @@
 /* ─── Responsive Breakpoints ─── */
 @media (max-width: 768px) {
   .order-details-page {
-    padding: 28px 16px 48px;
+    padding: 24px 14px 48px;
   }
 
   .details-card {
-    padding: 22px 18px;
+    padding: 20px 16px;
+    border-radius: 14px;
   }
 
   .order-meta {
@@ -955,7 +956,8 @@
 
   .details-order-tracking {
     overflow-x: auto;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
   }
 
@@ -979,8 +981,21 @@
     margin-top: 13px;
   }
 
+  .details-return-tracking-timeline {
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .details-return-tracking-segment {
+    min-width: 76px;
+    flex: 0 0 76px;
+  }
+
   .back-btn {
     width: 100%;
     text-align: center;
+    min-height: 44px;
   }
 }
