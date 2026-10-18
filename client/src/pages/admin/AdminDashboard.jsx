@@ -7,7 +7,6 @@ import {
   FaCheckCircle,
   FaClipboardList,
   FaClock,
-  FaExclamationTriangle,
   FaFolderOpen,
   FaMoneyBillWave,
   FaPlusCircle,
@@ -97,14 +96,6 @@ function AdminDashboard() {
     return !["delivered", "cancelled", "refund completed", "payment pending", "payment expired"].includes(status);
   }).length;
 
-  const lowStockProducts = products.filter(product => {
-    const isOutOfStock =
-      product.stockStatus === "out_of_stock" ||
-      product.stock_status === "out_of_stock" ||
-      (Number(product.stock || 0) <= 5 && (!product.variants || product.variants.length === 0));
-    return isOutOfStock;
-  });
-
   function openOrderStatus(status) {
     navigate(`/admin/orders?status=${encodeURIComponent(status)}`);
   }
@@ -158,7 +149,7 @@ function AdminDashboard() {
     {
       label: "Total Catalog Items",
       value: products.length,
-      subtext: `${lowStockProducts.length} low or out of stock`,
+      subtext: "Products available in the catalog",
       icon: <FaShoppingBag />,
       accent: "#8D6E63",
       onClick: () => navigate("/admin/products")
@@ -186,7 +177,7 @@ function AdminDashboard() {
     },
     {
       label: "View Products",
-      description: "Manage products and stock",
+      description: "Manage catalog products",
       icon: <FaShoppingBag />,
       onClick: () => navigate("/admin/products")
     }
@@ -252,23 +243,6 @@ function AdminDashboard() {
           ))}
         </div>
       </div>
-
-      {/* LOW STOCK ALERT (if any) */}
-      {lowStockProducts.length > 0 && (
-        <div className="admin-alert-banner">
-          <FaExclamationTriangle className="admin-alert-icon" />
-          <div className="admin-alert-text">
-            <strong>Stock Alert:</strong> {lowStockProducts.length} product(s) have low stock or are marked out of stock.
-          </div>
-          <button
-            type="button"
-            className="admin-alert-link"
-            onClick={() => navigate("/admin/products")}
-          >
-            Review Stock →
-          </button>
-        </div>
-      )}
 
       {/* RECENT ORDERS TABLE */}
       <div className="admin-section-block">

@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { validateCartQuantity } = require("../utils/cartQuantity");
 const {
   uploadedImagePaths,
   deleteCloudinaryImages
@@ -286,7 +287,7 @@ async function getReviews(productId) {
 
 async function saveVariants(productId, variants, fallbackPrice, fallbackStock) {
   const [existingRows] = await db.promise().execute(
-    "SELECT id, variant_images FROM product_variants WHERE product_id = ?",
+    "SELECT id, variant_images, stock FROM product_variants WHERE product_id = ?",
     [productId]
   );
   const previousImages = existingRows.flatMap(row => parseImages(row.variant_images));
@@ -301,7 +302,11 @@ async function saveVariants(productId, variants, fallbackPrice, fallbackStock) {
         id: hasValidId ? parsedId : null,
         size: String(variant.size || variant.label || "").trim(),
         price: Number(variant.price || fallbackPrice || 0),
-        stock: Number(variant.stock ?? fallbackStock ?? 0),
+        stock: Number(
+          variant.stock !== undefined && variant.stock !== null && variant.stock !== ""
+            ? variant.stock
+            : existingRows.find(row => Number(row.id) === parsedId)?.stock ?? fallbackStock ?? 0
+        ),
         images: parseImages(variant.variant_images ?? variant.images)
       };
     });
@@ -407,9 +412,6 @@ const getProducts = async (req, res) => {
     if (max !== null) {
       where.push(`${finalPriceSql} <= ?`);
       params.push(max);
-    }
-    if (String(req.query.stock || "").toLowerCase() === "in_stock") {
-      where.push("products.stock_status <> 'out_of_stock' AND products.stock > 0");
     }
     if (String(req.query.sale || "") === "1") {
       where.push("products.discount_percent > 0");
@@ -565,8 +567,9 @@ const addProduct = async (req, res) => {
     return res.status(400).json({ success: false, message: "A valid non-negative price is required." });
   }
 
-  const parsedStock = Number(stock !== undefined && stock !== null && stock !== "" ? stock : 0);
-  if (!Number.isFinite(parsedStock) || parsedStock < 0) {
+  const hasStockInput = stock !== undefined && stock !== null && stock !== "";
+  const parsedStock = hasStockInput ? Number(stock) : 0;
+  if (hasStockInput && (!Number.isFinite(parsedStock) || parsedStock < 0)) {
     return res.status(400).json({ success: false, message: "A valid non-negative stock quantity is required." });
   }
 
@@ -580,10 +583,8 @@ const addProduct = async (req, res) => {
       ? parseRequestArray(variants)
       : parseRequestArray(sizes);
 
-  const normalizedStockStatus =
-    (stockStatus || stock_status) === "out_of_stock"
-      ? "out_of_stock"
-      : "in_stock";
+  const requestedStockStatus = stockStatus || stock_status;
+  const normalizedStockStatus = requestedStockStatus === "out_of_stock" ? "out_of_stock" : "in_stock";
 
   let variantUploadedImages = [];
 
@@ -764,8 +765,9 @@ const updateProduct = async (req, res) => {
     return res.status(400).json({ success: false, message: "A valid non-negative price is required." });
   }
 
-  const parsedStock = Number(stock !== undefined && stock !== null && stock !== "" ? stock : 0);
-  if (!Number.isFinite(parsedStock) || parsedStock < 0) {
+  const hasStockInput = stock !== undefined && stock !== null && stock !== "";
+  const parsedStock = hasStockInput ? Number(stock) : 0;
+  if (hasStockInput && (!Number.isFinite(parsedStock) || parsedStock < 0)) {
     return res.status(400).json({ success: false, message: "A valid non-negative stock quantity is required." });
   }
 
@@ -779,16 +781,15 @@ const updateProduct = async (req, res) => {
       ? parseRequestArray(variants)
       : parseRequestArray(sizes);
 
-  const normalizedStockStatus =
-    (stockStatus || stock_status) === "out_of_stock"
-      ? "out_of_stock"
-      : "in_stock";
+  const hasStockStatusInput = stockStatus !== undefined || stock_status !== undefined;
+  const requestedStockStatus = stockStatus || stock_status;
+  const normalizedStockStatus = requestedStockStatus === "out_of_stock" ? "out_of_stock" : "in_stock";
 
   let variantUploadedImages = [];
 
   try {
     const [existingRows] = await db.promise().execute(
-      "SELECT image, product_images FROM products WHERE id = ? LIMIT 1",
+      "SELECT image, product_images, stock, stock_status FROM products WHERE id = ? LIMIT 1",
       [req.params.id]
     );
 
@@ -800,6 +801,10 @@ const updateProduct = async (req, res) => {
       existingRows[0].product_images,
       existingRows[0].image
     );
+    const preservedStock = hasStockInput ? parsedStock : Number(existingRows[0].stock || 0);
+    const preservedStockStatus = hasStockStatusInput
+      ? normalizedStockStatus
+      : (existingRows[0].stock_status || "in_stock");
     const incomingImages = await requestImages(req);
     const nextImages = incomingImages.length > 0 ? incomingImages : parseImages(image);
     const resolvedVariants = await resolveVariantImages(req, productVariants);
@@ -832,8 +837,8 @@ const updateProduct = async (req, res) => {
         category || "",
         nextImages[0] || image || "",
         JSON.stringify(nextImages),
-        parsedStock,
-        normalizedStockStatus,
+        preservedStock,
+        preservedStockStatus,
         JSON.stringify([]),
         req.params.id
       ]
@@ -846,7 +851,7 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    await saveVariants(req.params.id, productVariants, parsedPrice, parsedStock);
+    await saveVariants(req.params.id, productVariants, parsedPrice, preservedStock);
     await deleteCloudinaryImages(removedImages(previousImages, nextImages));
 
     const [rows] = await db.promise().execute(
@@ -940,15 +945,38 @@ const reconcileCart = async (req, res) => {
       });
     }
 
-    const productIds = [
-      ...new Set(
-        items
-          .map(item => Number(item.productId || item.id))
-          .filter(id => Number.isInteger(id) && id > 0)
-      )
-    ];
+    const quantityByProductVariant = new Map();
+    const productIds = [];
+    for (const item of items) {
+      const productId = Number(item?.productId || item?.id);
+      const quantityCheck = validateCartQuantity(item?.quantity);
+      if (!Number.isInteger(productId) || productId <= 0 || !quantityCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          message: quantityCheck.message || "Invalid product or quantity."
+        });
+      }
 
-    if (productIds.length === 0) {
+      const variantId = item?.variantId ? Number(item.variantId) : null;
+      if (variantId !== null && (!Number.isInteger(variantId) || variantId <= 0)) {
+        return res.status(400).json({ success: false, message: "Invalid product or quantity." });
+      }
+
+      const key = `${productId}:${variantId || "default"}`;
+      const combinedQuantity = (quantityByProductVariant.get(key) || 0) + quantityCheck.quantity;
+      if (combinedQuantity > 500) {
+        return res.status(400).json({
+          success: false,
+          message: "You can order a maximum of 500 units per product."
+        });
+      }
+      quantityByProductVariant.set(key, combinedQuantity);
+      productIds.push(productId);
+    }
+
+    const uniqueProductIds = [...new Set(productIds)];
+
+    if (uniqueProductIds.length === 0) {
       return res.status(200).json({
         success: true,
         items: [],
@@ -958,10 +986,10 @@ const reconcileCart = async (req, res) => {
       });
     }
 
-    const placeholders = productIds.map(() => "?").join(",");
+    const placeholders = uniqueProductIds.map(() => "?").join(",");
     const [productRows] = await db.promise().execute(
       `SELECT * FROM products WHERE id IN (${placeholders})`,
-      productIds
+      uniqueProductIds
     );
 
     const products = await attachVariants(productRows.map(mapProduct));
@@ -970,11 +998,10 @@ const reconcileCart = async (req, res) => {
     const reconciledItems = [];
     const priceChanges = [];
     const unavailableItems = [];
-    const stockIssues = [];
 
     for (const item of items) {
       const productId = Number(item.productId || item.id);
-      const requestedQuantity = Math.max(1, Number(item.quantity || 1));
+      const requestedQuantity = validateCartQuantity(item.quantity).quantity;
       const clientPrice = Number(item.price);
       const product = productMap.get(productId);
 
@@ -990,12 +1017,9 @@ const reconcileCart = async (req, res) => {
           productId,
           isUnavailable: true,
           unavailableReason: "Product has been removed from catalog.",
-          availableStock: 0
         });
         continue;
       }
-
-      const isProductOutOfStock = product.stockStatus === "out_of_stock" || product.stock_status === "out_of_stock";
 
       let selectedVariant = null;
       let variantNotFound = false;
@@ -1028,7 +1052,6 @@ const reconcileCart = async (req, res) => {
           name: product.name,
           isUnavailable: true,
           unavailableReason: "The selected size/option is no longer available.",
-          availableStock: 0
         });
         continue;
       }
@@ -1036,44 +1059,6 @@ const reconcileCart = async (req, res) => {
       const authoritativePrice = selectedVariant
         ? Number(selectedVariant.finalPrice || selectedVariant.discountedPrice || selectedVariant.price || product.finalPrice)
         : Number(product.finalPrice || product.discountedPrice || product.price);
-
-      const availableStock = selectedVariant
-        ? Number(selectedVariant.stock || 0)
-        : Number(product.stock || 0);
-
-      const isOutOfStock = isProductOutOfStock || availableStock <= 0;
-
-      if (isOutOfStock) {
-        unavailableItems.push({
-          cartKey: item.cartKey || `${productId}-${item.variantId || "default"}`,
-          productId,
-          name: product.name,
-          reason: "This product is currently out of stock."
-        });
-        reconciledItems.push({
-          ...item,
-          productId,
-          name: product.name,
-          price: authoritativePrice,
-          isUnavailable: true,
-          unavailableReason: "Out of stock.",
-          availableStock: 0
-        });
-        continue;
-      }
-
-      let quantity = requestedQuantity;
-      if (quantity > availableStock) {
-        stockIssues.push({
-          cartKey: item.cartKey || `${productId}-${item.variantId || "default"}`,
-          productId,
-          name: product.name,
-          requestedQuantity,
-          availableStock,
-          reason: `Only ${availableStock} item(s) available in stock.`
-        });
-        quantity = availableStock;
-      }
 
       if (Number.isFinite(clientPrice) && Math.abs(clientPrice - authoritativePrice) > 0.01) {
         priceChanges.push({
@@ -1090,12 +1075,11 @@ const reconcileCart = async (req, res) => {
         productId,
         name: product.name,
         price: authoritativePrice,
-        quantity,
+        quantity: requestedQuantity,
         variantId: selectedVariant?.id || item.variantId,
         variantLabel: selectedVariant?.size || selectedVariant?.label || item.variantLabel,
         image: selectedVariant?.images?.[0] || product.image || item.image,
-        isUnavailable: false,
-        availableStock
+        isUnavailable: false
       });
     }
 
@@ -1104,7 +1088,7 @@ const reconcileCart = async (req, res) => {
       items: reconciledItems,
       priceChanges,
       unavailableItems,
-      stockIssues
+      stockIssues: []
     });
   } catch (err) {
     console.error("Cart reconciliation failed:", err);

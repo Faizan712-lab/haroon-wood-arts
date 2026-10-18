@@ -70,7 +70,7 @@ function createImageUpload(folder, maxFiles = 8, fieldFolders = {}) {
   return multer({
     storage,
     limits: {
-      fileSize: 5 * 1024 * 1024,
+      fileSize: 15 * 1024 * 1024,
       files: maxFiles,
       fieldSize: 50 * 1024 * 1024
     },

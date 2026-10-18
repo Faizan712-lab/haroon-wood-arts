@@ -42,9 +42,7 @@ import {
 from "../utils/imageFallback";
 
 import {
-  getProductVariants,
-  getStockLabel,
-  isOutOfStock
+  getProductVariants
 } from "../utils/productDisplay";
 
 function RatingStars({
@@ -195,7 +193,6 @@ function Products({
       category: selectedCategory || searchParams.get("category") || "",
       min: searchParams.get("min") || "",
       max: searchParams.get("max") || "",
-      inStock: searchParams.get("stock") === "in_stock",
       onSale: searchParams.get("sale") === "1",
       rating: searchParams.get("rating") || "",
       sort: searchParams.get("sort") || "newest"
@@ -213,7 +210,6 @@ function Products({
       if (filters.category) params.set("category", filters.category);
       if (filters.min) params.set("min", filters.min);
       if (filters.max) params.set("max", filters.max);
-      if (filters.inStock) params.set("stock", "in_stock");
       if (filters.onSale) params.set("sale", "1");
       if (filters.rating) params.set("rating", filters.rating);
       if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
@@ -285,7 +281,6 @@ function Products({
       category: selectedCategory || params.get("category") || "",
       min: params.get("min") || "",
       max: params.get("max") || "",
-      inStock: params.get("stock") === "in_stock",
       onSale: params.get("sale") === "1",
       rating: params.get("rating") || "",
       sort: params.get("sort") || "newest"
@@ -306,7 +301,6 @@ function Products({
     if (filters.category) params.set("category", filters.category);
     if (filters.min) params.set("min", filters.min);
     if (filters.max) params.set("max", filters.max);
-    if (filters.inStock) params.set("stock", "in_stock");
     if (filters.onSale) params.set("sale", "1");
     if (filters.rating) params.set("rating", filters.rating);
     if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
@@ -335,7 +329,6 @@ function Products({
     filters.category ||
     filters.min ||
     filters.max ||
-    filters.inStock ||
     filters.onSale ||
     filters.rating ||
     (filters.sort && filters.sort !== "newest")
@@ -345,7 +338,6 @@ function Products({
     ((filters.search && filters.search.trim()) ? 1 : 0) +
     (filters.category ? 1 : 0) +
     (filters.min || filters.max ? 1 : 0) +
-    (filters.inStock ? 1 : 0) +
     (filters.onSale ? 1 : 0) +
     (filters.rating ? 1 : 0) +
     (filters.sort && filters.sort !== "newest" ? 1 : 0)
@@ -357,7 +349,6 @@ function Products({
       category: "",
       min: "",
       max: "",
-      inStock: false,
       onSale: false,
       rating: "",
       sort: "newest"
@@ -404,10 +395,6 @@ function Products({
 
     const variants = getProductVariants(product);
 
-    if (isOutOfStock(product)) {
-      return;
-    }
-
     if (variants.length > 0) {
       setSelectedVariants(previous => {
         const next = { ...previous };
@@ -432,11 +419,9 @@ function Products({
       variantId: selectedVariant?.id,
       variantLabel: selectedVariant?.size || selectedVariant?.label,
       variantDimensions: selectedVariant?.dimensions,
-      availableStock: product.stock,
-      stock: product.stock
     };
 
-    addToCart(cartProduct);
+    if (addToCart(cartProduct) === false) return;
 
     setCartToast({
       product: cartProduct,
@@ -465,10 +450,9 @@ function Products({
     setCartToast(prev => (prev ? { ...prev, quantity: Math.max(1, currentQty - 1) } : null));
   }
 
-  function handleToastIncrease(itemKey, currentQty, maxStock) {
+  function handleToastIncrease(itemKey, currentQty) {
     if (!itemKey) return;
-    if (maxStock !== undefined && maxStock !== null && currentQty >= maxStock) return;
-    increaseQty(itemKey);
+    if (increaseQty(itemKey) === false) return;
     setCartToast(prev => (prev ? { ...prev, quantity: currentQty + 1 } : null));
   }
 
@@ -501,11 +485,9 @@ function Products({
       variantId: selectedVariant?.id,
       variantLabel: selectedVariant?.size || selectedVariant?.label,
       variantDimensions: selectedVariant?.dimensions,
-      availableStock: selectedVariant?.stock !== undefined ? selectedVariant.stock : sizePickerProduct.stock,
-      stock: selectedVariant?.stock !== undefined ? selectedVariant.stock : sizePickerProduct.stock
     };
 
-    addToCart(cartProduct);
+    if (addToCart(cartProduct) === false) return;
 
     setCartToast({
       product: cartProduct,
@@ -709,15 +691,6 @@ function Products({
                   </label>
 
                   <div className="filter-checkbox-group">
-                    <label className={`filter-toggle-pill ${filters.inStock ? "active" : ""}`}>
-                      <input
-                        type="checkbox"
-                        checked={filters.inStock}
-                        onChange={(event) => updateFilters(previous => ({ ...previous, inStock: event.target.checked }))}
-                      />
-                      <span>In Stock Only</span>
-                    </label>
-
                     <label className={`filter-toggle-pill ${filters.onSale ? "active" : ""}`}>
                       <input
                         type="checkbox"
@@ -807,19 +780,8 @@ function Products({
                   </div>
 
                   <div className="sheet-group">
-                    <label className="sheet-label">Availability & Offers</label>
+                    <label className="sheet-label">Special Offers</label>
                     <div className="sheet-checkbox-stack">
-                      <label className={`sheet-checkbox-card ${filters.inStock ? "checked" : ""}`}>
-                        <input
-                          type="checkbox"
-                          checked={filters.inStock}
-                          onChange={(event) => updateFilters(previous => ({ ...previous, inStock: event.target.checked }))}
-                        />
-                        <div className="checkbox-text">
-                          <strong>In Stock Only</strong>
-                          <span>Exclude items currently sold out</span>
-                        </div>
-                      </label>
 
                       <label className={`sheet-checkbox-card ${filters.onSale ? "checked" : ""}`}>
                         <input
@@ -924,18 +886,7 @@ function Products({
                         </button>
                       </span>
                     )}
-                    {filters.inStock && (
-                      <span className="active-chip">
-                        In Stock Only
-                        <button
-                          type="button"
-                          aria-label="Remove stock filter"
-                          onClick={() => updateFilters(previous => ({ ...previous, inStock: false }))}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    )}
+
                     {filters.onSale && (
                       <span className="active-chip">
                         On Sale
@@ -1046,11 +997,7 @@ function Products({
 
                   <motion.div
 
-                    className={
-                      isOutOfStock(item)
-                        ? "product-card out-of-stock"
-                        : "product-card"
-                    }
+                    className="product-card"
 
                     key={item.id}
 
@@ -1093,18 +1040,6 @@ function Products({
                       onError={handleImageFallback}
 
                       />
-
-                      {getStockLabel(item) && (
-                        <span
-                          className={
-                            isOutOfStock(item)
-                              ? "stock-badge out"
-                              : "stock-badge low"
-                          }
-                        >
-                          {getStockLabel(item)}
-                        </span>
-                      )}
 
                       <button
                         type="button"
@@ -1184,25 +1119,15 @@ function Products({
                       </button>
 
                       <button
-
                         className="buy-now-btn"
-                        disabled={
-                          isOutOfStock(item)
-                        }
-
                         onClick={(e) =>
                           buyNow(
                             e,
                             item
                           )
                         }
-
                       >
-
-                        {isOutOfStock(item)
-                          ? "Out of Stock"
-                          : "Buy Now"}
-
+                        Buy Now
                       </button>
 
                     </div>
@@ -1272,9 +1197,8 @@ function Products({
             ? cartItems.find(item => String(item.cartKey || getProductKey(item)) === String(toastItemKey))
             : null;
           const currentToastQty = currentToastCartItem?.quantity ?? cartToast?.quantity ?? 1;
-          const maxToastStock = currentToastCartItem?.availableStock ?? currentToastCartItem?.stock ?? cartToast?.product?.availableStock ?? cartToast?.product?.stock;
           const isDecreaseDisabled = currentToastQty <= 1;
-          const isIncreaseDisabled = maxToastStock !== undefined && maxToastStock !== null && currentToastQty >= maxToastStock;
+          const isIncreaseDisabled = currentToastQty >= 500;
 
           return (
             <div
@@ -1342,7 +1266,7 @@ function Products({
                       className="cart-qty-btn"
                       aria-label="Increase quantity"
                       disabled={isIncreaseDisabled}
-                      onClick={() => handleToastIncrease(toastItemKey, currentToastQty, maxToastStock)}
+                      onClick={() => handleToastIncrease(toastItemKey, currentToastQty)}
                     >
                       +
                     </button>
@@ -1406,29 +1330,25 @@ function Products({
                 <div className="size-picker-options">
                   {pickerVariants.map((variant, variantIndex) => {
                     const isSelected = selectedIndex === variantIndex;
-                    const isOutOfStockOption = variant.stock === 0;
 
                     return (
                       <button
                         key={variant.id || variantIndex}
                         type="button"
-                        disabled={isOutOfStockOption}
-                        className={`size-picker-option ${isSelected ? "active" : ""} ${isOutOfStockOption ? "disabled" : ""}`}
+                        className={`size-picker-option ${isSelected ? "active" : ""}`}
                         onClick={() => {
-                          if (!isOutOfStockOption) {
-                            setSelectedVariants(previous => {
-                              const current = previous[sizePickerProduct.id];
-                              if (current === variantIndex) {
-                                const next = { ...previous };
-                                delete next[sizePickerProduct.id];
-                                return next;
-                              }
-                              return {
-                                ...previous,
-                                [sizePickerProduct.id]: variantIndex
-                              };
-                            });
-                          }
+                          setSelectedVariants(previous => {
+                            const current = previous[sizePickerProduct.id];
+                            if (current === variantIndex) {
+                              const next = { ...previous };
+                              delete next[sizePickerProduct.id];
+                              return next;
+                            }
+                            return {
+                              ...previous,
+                              [sizePickerProduct.id]: variantIndex
+                            };
+                          });
                         }}
                       >
                         <div className="size-picker-option-left">
@@ -1438,11 +1358,6 @@ function Products({
                           {variant.dimensions && (
                             <span className="size-picker-option-dim">
                               {variant.dimensions}
-                            </span>
-                          )}
-                          {variant.stock !== undefined && (
-                            <span className={`size-picker-option-stock ${variant.stock <= 5 ? "low" : ""}`}>
-                              {variant.stock > 0 ? `${variant.stock} left in stock` : "Out of stock"}
                             </span>
                           )}
                         </div>

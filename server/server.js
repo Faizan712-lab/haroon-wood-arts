@@ -126,7 +126,7 @@ app.use((error, req, res, next) => {
     return res.status(400).json({
       success: false,
       message: error.code === "LIMIT_FILE_SIZE"
-        ? "Each image must be 5MB or smaller."
+        ? "Image size must not exceed 15 MB."
         : "Upload up to 8 JPG, PNG, or WEBP images."
     });
   }

@@ -294,11 +294,11 @@ function Orders() {
 
     if (
       file.size >
-      5 * 1024 * 1024
+      15 * 1024 * 1024
     ) {
 
       setPopupMessage(
-        "Image too large. Use image under 5MB."
+        "Image too large. Use image under 15MB."
       );
 
       setShowPopup(true);

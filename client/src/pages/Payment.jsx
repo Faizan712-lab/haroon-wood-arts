@@ -303,7 +303,7 @@ function Payment() {
             navigate("/cart");
             return;
           }
-          if (orderRes.status === 400 && (orderData.message?.includes("unavailable") || orderData.message?.includes("stock"))) {
+          if (orderRes.status === 400 && orderData.message?.includes("unavailable")) {
             clearCheckoutSessionId(checkoutSessionId);
             toast.error(orderData.message);
             navigate("/cart");

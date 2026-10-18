@@ -917,7 +917,7 @@
   transform: translateY(-1px);
 }
 
-/* ─── Responsive Breakpoints ─── */
+/* ─── Responsive Breakpoints (Mobile Enhancements) ─── */
 @media (max-width: 768px) {
   .order-details-page {
     padding: 24px 14px 48px;
@@ -940,62 +940,277 @@
   .order-meta .order-meta-delivered-on {
     grid-column: auto;
   }
+
+  .order-id-value {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 }
 
 @media (max-width: 600px) {
   .order-meta {
     grid-template-columns: 1fr;
     gap: 10px;
-    padding: 14px 16px;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .details-status-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .details-status-summary-icon {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    margin-top: 2px;
+  }
+
+  .details-status-summary h4 {
+    font-size: 13.5px;
+    margin-bottom: 2px;
+  }
+
+  .details-status-summary p {
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .details-order-tracking {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    padding: 14px 0 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .details-order-tracking::-webkit-scrollbar {
+    display: none;
+  }
+
+  .details-order-tracking-segment {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .details-order-tracking-step {
+    min-width: 0;
+    width: auto;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 10px;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .details-order-tracking-step span:not(.details-order-tracking-icon) {
+    font-size: 10px;
+    line-height: 1.15;
+    max-width: 60px;
+    word-break: normal;
+    text-align: center;
+  }
+
+  .details-order-tracking-icon {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    font-size: 11px;
+  }
+
+  .details-order-tracking-line {
+    flex: 1 1 0;
+    min-width: 6px;
+    height: 2px;
+    margin-top: 12px;
+  }
+
+  .details-return-tracking-timeline {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding: 12px 0 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .details-return-tracking-timeline::-webkit-scrollbar {
+    display: none;
+  }
+
+  .details-return-tracking-segment {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .details-return-tracking-step {
+    min-width: 0;
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .details-return-tracking-label {
+    font-size: 10px;
+    line-height: 1.15;
+    max-width: 60px;
+    text-align: center;
+  }
+
+  .details-return-tracking-icon {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    font-size: 11px;
+  }
+
+  .details-return-tracking-line {
+    flex: 1 1 0;
+    min-width: 6px;
+    height: 2px;
+    margin-top: 12px;
+  }
+
+  .details-item {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .details-item-image {
+    width: 58px;
+    height: 58px;
+    min-width: 58px;
+  }
+
+  .item-info h4 {
+    font-size: 14px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .item-qty {
+    font-size: 12px;
+  }
+
+  .item-price {
+    font-size: 13.5px;
   }
 
   .details-payment {
     max-width: 100%;
     margin-left: 0;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #fcfbf9;
+    border: 1px solid #ede8e3;
+    box-sizing: border-box;
   }
 
-  .details-order-tracking {
-    overflow-x: auto;
-    padding-bottom: 8px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+  .details-payment-row {
+    padding: 6px 0;
+    font-size: 13px;
   }
 
-  .details-order-tracking-segment {
-    min-width: 76px;
-    flex: 0 0 76px;
+  .details-payment-total-row .details-total {
+    font-size: 15.5px;
   }
 
-  .details-order-tracking-step {
-    min-width: 52px;
-    font-size: 10.5px;
+  .details-action-box {
+    padding: 14px;
+    border-radius: 12px;
   }
 
-  .details-order-tracking-icon {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
+  .details-action-box textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 14px;
   }
 
-  .details-order-tracking-line {
-    margin-top: 13px;
-  }
-
-  .details-return-tracking-timeline {
-    overflow-x: auto;
-    padding-bottom: 8px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-
-  .details-return-tracking-segment {
-    min-width: 76px;
-    flex: 0 0 76px;
+  .details-cancel-btn,
+  .details-return-btn,
+  .details-return-toggle,
+  .details-complete-payment-btn {
+    width: 100%;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13.5px;
+    border-radius: 8px;
+    touch-action: manipulation;
   }
 
   .back-btn {
     width: 100%;
     text-align: center;
     min-height: 44px;
+    font-size: 14px;
+    border-radius: 8px;
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 480px) {
+  .order-details-page {
+    padding: 18px 12px 40px;
+  }
+
+  .order-details-page h1 {
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+
+  .details-card {
+    padding: 16px 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .order-details-page {
+    padding: 14px 8px 36px;
+  }
+
+  .details-card {
+    padding: 14px 10px;
+    border-radius: 12px;
+  }
+
+  .details-order-tracking-step span:not(.details-order-tracking-icon) {
+    font-size: 9.5px;
+    max-width: 52px;
+  }
+
+  .details-order-tracking-icon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    font-size: 10px;
+  }
+
+  .details-order-tracking-line {
+    margin-top: 11px;
+    min-width: 4px;
+  }
+
+  .details-payment-row {
+    font-size: 12px;
   }
 }

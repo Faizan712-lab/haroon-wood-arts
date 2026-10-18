@@ -239,6 +239,11 @@ function Checkout() {
     setIsCheckingOut(true);
     try {
       const reconResult = await reconcileCart();
+      if (reconResult?.quantityError) {
+        toast.error(reconResult?.error || "Please correct the quantities in your cart.");
+        navigate("/cart");
+        return;
+      }
       if (reconResult?.hasUnavailableItems) {
         toast.error("Some items are no longer available. Please review your cart.");
         navigate("/cart");

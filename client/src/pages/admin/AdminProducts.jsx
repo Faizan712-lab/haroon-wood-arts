@@ -4,13 +4,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  FaCheckCircle,
   FaEdit,
   FaFilter,
   FaPlus,
   FaSearch,
   FaTimes,
-  FaTimesCircle,
   FaTrash
 } from "react-icons/fa";
 
@@ -31,7 +29,6 @@ function AdminProducts() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [stockUpdatingId, setStockUpdatingId] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -60,47 +57,6 @@ function AdminProducts() {
       setProducts([]);
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  /* TOGGLE IN_STOCK / OUT_OF_STOCK */
-  async function toggleStockStatus(product) {
-    if (stockUpdatingId) return;
-
-    const currentStatus = product.stockStatus || product.stock_status || "in_stock";
-    const nextStatus = currentStatus === "out_of_stock" ? "in_stock" : "out_of_stock";
-
-    try {
-      setStockUpdatingId(product.id);
-      const response = await fetch(getApiUrl(`/api/products/${product.id}/stock-status`), {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stockStatus: nextStatus })
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Failed to update stock status");
-      }
-
-      setProducts(previous =>
-        previous.map(item =>
-          String(item.id) === String(product.id)
-            ? (data.product || { ...item, stockStatus: nextStatus, stock_status: nextStatus })
-            : item
-        )
-      );
-
-      toast.success(
-        nextStatus === "in_stock"
-          ? `"${product.name}" marked as In Stock`
-          : `"${product.name}" marked as Out of Stock`
-      );
-    } catch (error) {
-      toast.error(error.message || "Failed to update stock status");
-    } finally {
-      setStockUpdatingId(null);
     }
   }
 
@@ -164,10 +120,6 @@ function AdminProducts() {
               size.price === undefined || size.price === null
                 ? ""
                 : String(size.price),
-            stock:
-              size.stock === undefined || size.stock === null
-                ? ""
-                : String(size.stock),
             images: imgs
           };
         })
@@ -176,7 +128,6 @@ function AdminProducts() {
             id: "",
             size: "",
             price: "",
-            stock: "",
             images: []
           }
         ];
@@ -192,11 +143,6 @@ function AdminProducts() {
       description: product.description || "",
       image: getPrimaryImage(product) || "",
       images: getImageList(product),
-      stock: product.stock !== undefined && product.stock !== null ? String(product.stock) : "0",
-      stockStatus:
-        product.stockStatus ||
-        product.stock_status ||
-        "in_stock",
       variants: normalizeSizes(product)
     });
   }
@@ -228,8 +174,8 @@ function AdminProducts() {
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
-        reject(new Error("Each image must be 5MB or smaller."));
+      if (file.size > 15 * 1024 * 1024) {
+        reject(new Error("Image size must not exceed 15 MB."));
         return;
       }
 
@@ -343,7 +289,6 @@ function AdminProducts() {
           id: "",
           size: "",
           price: "",
-          stock: "",
           images: []
         }
       ]
@@ -423,17 +368,11 @@ function AdminProducts() {
       return;
     }
 
-    const parsedStock = Number(editForm.stock);
-    if (!Number.isInteger(parsedStock) || parsedStock < 0) {
-      toast.error("Please enter a valid base stock quantity");
-      return;
-    }
-
     try {
       setIsSavingEdit(true);
 
       const payload = new FormData();
-      ["name", "price", "discountPercent", "category", "description", "stock", "stockStatus", "image"].forEach(field => {
+      ["name", "price", "discountPercent", "category", "description", "image"].forEach(field => {
         payload.append(field, String(editForm[field] ?? ""));
       });
 
@@ -451,10 +390,6 @@ function AdminProducts() {
                 ? Number(editForm.price || 0)
                 : Number(size.price),
             size: size.size.trim(),
-            stock:
-              size.stock === ""
-                ? Number(editForm.stock || 0)
-                : Number(size.stock),
             images: size.images || []
           }))
         )
@@ -630,11 +565,6 @@ function AdminProducts() {
       ) : (
         <div className="admin-products-grid">
           {filteredProducts.map(product => {
-            const isOutOfStock =
-              product.stockStatus === "out_of_stock" ||
-              product.stock_status === "out_of_stock" ||
-              (Number(product.stock || 0) <= 0 && (!product.variants || product.variants.length === 0));
-
             return (
               <div key={product.id} className="admin-product-card">
                 {/* IMAGE */}
@@ -650,15 +580,6 @@ function AdminProducts() {
                 {/* BADGE ROW */}
                 <div className="admin-badge-row">
                   <span className="admin-category-badge">{product.category || "Uncategorized"}</span>
-                  {isOutOfStock ? (
-                    <span className="admin-status-badge admin-status-badge--out-of-stock">
-                      Out of Stock
-                    </span>
-                  ) : (
-                    <span className="admin-status-badge admin-status-badge--in-stock">
-                      In Stock ({product.stock ?? 0})
-                    </span>
-                  )}
                 </div>
 
                 {/* INFO */}
@@ -682,7 +603,7 @@ function AdminProducts() {
                       <strong>Variants ({product.variants.length}):</strong>
                       <p>
                         {product.variants
-                          .map(v => `${v.size || v.size_label || "Variant"}: ₹${Number(v.price).toFixed(2)} (Stock: ${v.stock ?? 0})`)
+                          .map(v => `${v.size || v.size_label || "Variant"}: ₹${Number(v.price).toFixed(2)}`)
                           .join(" • ")}
                       </p>
                     </div>
@@ -704,25 +625,6 @@ function AdminProducts() {
                     onClick={() => openEditProduct(product)}
                   >
                     <FaEdit /> Edit Product
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`admin-action-btn ${isOutOfStock ? "admin-action-btn--restock" : "admin-action-btn--stock-out"}`}
-                    onClick={() => toggleStockStatus(product)}
-                    disabled={stockUpdatingId === product.id}
-                  >
-                    {stockUpdatingId === product.id ? (
-                      "Updating..."
-                    ) : isOutOfStock ? (
-                      <>
-                        <FaCheckCircle /> Mark In Stock
-                      </>
-                    ) : (
-                      <>
-                        <FaTimesCircle /> Mark Out of Stock
-                      </>
-                    )}
                   </button>
 
                   <button
@@ -845,47 +747,7 @@ function AdminProducts() {
                 </div>
               </section>
 
-              {/* GROUP 3: INVENTORY & AVAILABILITY */}
-              <section className="admin-edit-section">
-                <h3 className="admin-section-heading">Inventory & Availability</h3>
-                <div className="admin-edit-grid">
-                  <label className="admin-edit-field">
-                    <span>Base Stock Quantity *</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={editForm.stock}
-                      onChange={(event) =>
-                        updateEditField("stock", event.target.value)
-                      }
-                      placeholder="e.g. 50"
-                      required
-                    />
-                    <small className="admin-field-helper">
-                      Available units for the base product.
-                    </small>
-                  </label>
-
-                  <label className="admin-edit-field">
-                    <span>Stock Status</span>
-                    <select
-                      value={editForm.stockStatus}
-                      onChange={(event) =>
-                        updateEditField("stockStatus", event.target.value)
-                      }
-                    >
-                      <option value="in_stock">In Stock (Available for purchase)</option>
-                      <option value="out_of_stock">Out of Stock (Temporarily unavailable)</option>
-                    </select>
-                    <small className="admin-field-helper">
-                      Customers cannot purchase items marked out of stock.
-                    </small>
-                  </label>
-                </div>
-              </section>
-
-              {/* GROUP 4: PRODUCT VARIANTS */}
+              {/* GROUP 3: PRODUCT VARIANTS */}
               <section className="admin-edit-section">
                 <div className="variant-builder-header">
                   <h3 className="admin-section-heading">Product Variants (Sizes / Dimensions)</h3>
@@ -898,7 +760,7 @@ function AdminProducts() {
                   </button>
                 </div>
                 <p className="variant-helper-text">
-                  Configure specific sizes, prices, and stock quantities. Variant prices and stock take precedence over base values.
+                  Configure specific sizes and prices. Variant prices take precedence over the base price.
                 </p>
 
                 <div className="variant-rows-container">
@@ -928,20 +790,6 @@ function AdminProducts() {
                               updateEditSize(index, "price", event.target.value)
                             }
                             placeholder={`Base: ₹${editForm.price || 0}`}
-                          />
-                        </label>
-
-                        <label className="admin-edit-field">
-                          <span>Variant Stock</span>
-                          <input
-                            type="number"
-                            step="1"
-                            min="0"
-                            value={size.stock}
-                            onChange={(event) =>
-                              updateEditSize(index, "stock", event.target.value)
-                            }
-                            placeholder={`Base: ${editForm.stock || 0}`}
                           />
                         </label>
 
@@ -1014,7 +862,7 @@ function AdminProducts() {
                 </div>
               </section>
 
-              {/* GROUP 5: PRODUCT IMAGES */}
+              {/* GROUP 4: PRODUCT IMAGES */}
               <section className="admin-edit-section">
                 <h3 className="admin-section-heading">Product Gallery ({editForm.images.length}/8)</h3>
 

@@ -1,5 +1,11 @@
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { getApiUrl } from "../utils/api";
+import {
+  MAX_CART_ITEM_QUANTITY,
+  MAX_CART_ITEM_QUANTITY_MESSAGE,
+  validateCartQuantities
+} from "../utils/cartLimits";
 
 export const CartContext = createContext();
 
@@ -9,7 +15,34 @@ function getStoredCartItems() {
   try {
     const storedCart = window.localStorage.getItem(CART_STORAGE_KEY);
     const parsedCart = storedCart ? JSON.parse(storedCart) : [];
-    return Array.isArray(parsedCart) ? parsedCart : [];
+    if (!Array.isArray(parsedCart)) return [];
+
+    const mergedItems = new Map();
+    parsedCart.forEach(item => {
+      if (!item || typeof item !== "object") return;
+      const cartItem = { ...item };
+      delete cartItem.stock;
+      delete cartItem.stockStatus;
+      delete cartItem.stock_status;
+      delete cartItem.availableStock;
+      const productId = cartItem.productId || cartItem.id || "0";
+      const variantId = cartItem.variantId || "default";
+      const cartKey = `${productId}-${variantId}`;
+      const quantity = Math.max(1, Math.floor(Number(cartItem.quantity) || 1));
+      const existing = mergedItems.get(cartKey);
+
+      mergedItems.set(cartKey, {
+        ...(existing || cartItem),
+        ...cartItem,
+        cartKey,
+        quantity: Math.min(
+          MAX_CART_ITEM_QUANTITY,
+          (existing?.quantity || 0) + quantity
+        )
+      });
+    });
+
+    return Array.from(mergedItems.values());
   } catch {
     return [];
   }
@@ -37,15 +70,15 @@ export function CartProvider({ children }) {
   // Helper to generate a reliable cart key for items
   function getCartKey(product) {
     if (!product) return "unknown";
-    if (product.cartKey) return String(product.cartKey);
     const pid = product.productId || product.id || "0";
     const vid = product.variantId || "default";
     return `${pid}-${vid}`;
   }
 
-  // Reconcile cart against authoritative database values (prices, availability, stock)
+  // Reconcile cart against authoritative database values (prices and product/variant existence).
   const reconcileCart = useCallback(async (customItems = null, force = false) => {
     const itemsToVerify = customItems || cartItemsRef.current;
+    const currentReqId = ++reconcileReqIdRef.current;
     if (!Array.isArray(itemsToVerify) || itemsToVerify.length === 0) {
       setReconcileNotices({ priceChanges: [], unavailableItems: [], stockIssues: [] });
       setReconcileError(null);
@@ -53,7 +86,13 @@ export function CartProvider({ children }) {
       return { success: true, items: [], hasUnavailableItems: false };
     }
 
-    const currentReqId = ++reconcileReqIdRef.current;
+    const quantityError = validateCartQuantities(itemsToVerify);
+    if (quantityError) {
+      setReconcileError(quantityError);
+      setIsReconciling(false);
+      return { success: false, quantityError: true, error: quantityError };
+    }
+
     setIsReconciling(true);
     setReconcileError(null);
 
@@ -110,10 +149,10 @@ export function CartProvider({ children }) {
               price: Number(serverItem.price ?? currentItem.price),
               isUnavailable: Boolean(serverItem.isUnavailable),
               unavailableReason: serverItem.unavailableReason || null,
-              availableStock: serverItem.availableStock,
-              quantity: serverItem.availableStock !== undefined && serverItem.availableStock > 0
-                ? Math.min(currentItem.quantity, serverItem.availableStock)
-                : currentItem.quantity
+              quantity: Math.min(
+                MAX_CART_ITEM_QUANTITY,
+                Math.max(1, Number(currentItem.quantity) || 1)
+              )
             };
           });
         });
@@ -121,7 +160,7 @@ export function CartProvider({ children }) {
         setReconcileNotices({
           priceChanges: data.priceChanges || [],
           unavailableItems: data.unavailableItems || [],
-          stockIssues: data.stockIssues || []
+          stockIssues: []
         });
 
         const hasUnavail = (data.unavailableItems && data.unavailableItems.length > 0) || data.items.some(i => i.isUnavailable);
@@ -168,27 +207,50 @@ export function CartProvider({ children }) {
   }, [cartItems]);
 
   function addToCart(product) {
-    const cartKey = product.cartKey || getCartKey(product);
-    setCartItems(prev => {
-      const exists = prev.find(item => (item.cartKey || getCartKey(item)) === cartKey);
-      if (exists) {
-        return prev.map(item =>
+    const quantityToAdd = Number(product.quantity ?? 1);
+    if (!Number.isSafeInteger(quantityToAdd) || quantityToAdd <= 0) {
+      toast.error("Please enter a valid quantity.");
+      return false;
+    }
+
+    const cartKey = getCartKey(product);
+    const storefrontProduct = { ...product };
+    delete storefrontProduct.stock;
+    delete storefrontProduct.stockStatus;
+    delete storefrontProduct.stock_status;
+    delete storefrontProduct.availableStock;
+    const previous = cartItemsRef.current;
+    const existing = previous.find(item => (item.cartKey || getCartKey(item)) === cartKey);
+    const currentQuantity = Math.max(0, Number(existing?.quantity) || 0);
+
+    if (
+      quantityToAdd > MAX_CART_ITEM_QUANTITY ||
+      currentQuantity + quantityToAdd > MAX_CART_ITEM_QUANTITY
+    ) {
+      toast.error(MAX_CART_ITEM_QUANTITY_MESSAGE);
+      return false;
+    }
+
+    const nextItems = existing
+      ? previous.map(item =>
           (item.cartKey || getCartKey(item)) === cartKey
-            ? { ...item, quantity: item.quantity + (product.quantity || 1) }
+            ? { ...item, quantity: currentQuantity + quantityToAdd }
             : item
-        );
-      }
-      return [
-        ...prev,
-        {
-          ...product,
-          productId: product.productId || product.id,
-          cartKey,
-          quantity: product.quantity || 1,
-          isUnavailable: false
-        }
-      ];
-    });
+        )
+      : [
+          ...previous,
+          {
+            ...storefrontProduct,
+            productId: storefrontProduct.productId || storefrontProduct.id,
+            cartKey,
+            quantity: quantityToAdd,
+            isUnavailable: false
+          }
+        ];
+
+    cartItemsRef.current = nextItems;
+    setCartItems(nextItems);
+    return true;
   }
 
   function removeFromCart(targetKeyOrId) {
@@ -240,18 +302,24 @@ export function CartProvider({ children }) {
 
   function increaseQty(targetKeyOrId) {
     const target = String(targetKeyOrId);
-    setCartItems(prev =>
-      prev.map(item => {
-        const key = String(item.cartKey || getCartKey(item));
-        if (key === target || String(item.id) === target) {
-          if (item.availableStock !== undefined && item.quantity >= item.availableStock) {
-            return item;
-          }
-          return { ...item, quantity: item.quantity + 1 };
-        }
-        return item;
-      })
+    const item = cartItemsRef.current.find(current =>
+      String(current.cartKey || getCartKey(current)) === target || String(current.id) === target
     );
+    if (!item) return false;
+    if (Number(item.quantity) >= MAX_CART_ITEM_QUANTITY) {
+      toast.error(MAX_CART_ITEM_QUANTITY_MESSAGE);
+      return false;
+    }
+
+    const nextItems = cartItemsRef.current.map(current => {
+      const key = String(current.cartKey || getCartKey(current));
+      return key === target || String(current.id) === target
+        ? { ...current, quantity: Number(current.quantity) + 1 }
+        : current;
+    });
+    cartItemsRef.current = nextItems;
+    setCartItems(nextItems);
+    return true;
   }
 
   function decreaseQty(targetKeyOrId) {

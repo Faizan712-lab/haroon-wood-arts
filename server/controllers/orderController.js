@@ -20,6 +20,7 @@ const {
   createRazorpayOrder: createRemoteRazorpayOrder,
   getRazorpayPayment
 } = require("../services/razorpayService");
+const { validateCartQuantity } = require("../utils/cartQuantity");
 
 function runQuery(sql, params = []) {
   return db.promise().execute(sql, params);
@@ -143,40 +144,12 @@ function isResumeWindowExpired(order) {
   return new Date(order.payment_resume_expires_at).getTime() <= Date.now();
 }
 
-async function restorePendingOrderStock(connection, orderId) {
-  const [items] = await connection.execute(
-    `SELECT product_id, variant_id, quantity
-     FROM order_items
-     WHERE order_id = ?
-     FOR UPDATE`,
-    [orderId]
-  );
-
-  for (const item of items) {
-    const quantity = Number(item.quantity || 0);
-    if (!Number.isInteger(quantity) || quantity <= 0) continue;
-
-    if (item.variant_id) {
-      await connection.execute(
-        "UPDATE product_variants SET stock = stock + ? WHERE id = ?",
-        [quantity, item.variant_id]
-      );
-    } else if (item.product_id) {
-      await connection.execute(
-        "UPDATE products SET stock = stock + ? WHERE id = ?",
-        [quantity, item.product_id]
-      );
-    }
-  }
-}
-
 async function expirePendingOrderInTransaction(connection, order, isDue = false) {
   if (!isPaymentPendingOrder(order) || (!isDue && !isResumeWindowExpired(order))) {
     return false;
   }
 
-  await restorePendingOrderStock(connection, order.id);
-  await connection.execute(
+  const [result] = await connection.execute(
     `UPDATE orders
      SET status = ?,
          payment_attempt_state = ?,
@@ -191,7 +164,7 @@ async function expirePendingOrderInTransaction(connection, order, isDue = false)
     ]
   );
 
-  return true;
+  return result.affectedRows === 1;
 }
 
 async function expireDuePendingOrders() {
@@ -636,13 +609,30 @@ async function createOrder(req, res) {
     }
 
     const authoritativeItems = [];
+    const quantityByProductVariant = new Map();
 
     for (const requestedItem of items) {
+      if (!requestedItem || typeof requestedItem !== "object" || Array.isArray(requestedItem)) {
+        throw new Error("Invalid product or quantity.");
+      }
+
       const productId = Number(requestedItem.productId || requestedItem.id);
       const variantId = requestedItem.variantId ? Number(requestedItem.variantId) : null;
-      const quantity = Number(requestedItem.quantity || 0);
+      const quantityCheck = validateCartQuantity(requestedItem.quantity);
 
-      if (!Number.isInteger(productId) || productId <= 0 || !Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
+      if (!Number.isInteger(productId) || productId <= 0 || !quantityCheck.valid) {
+        throw new Error(quantityCheck.message || "Invalid product or quantity.");
+      }
+
+      const quantity = quantityCheck.quantity;
+      const productVariantKey = `${productId}:${variantId || "default"}`;
+      const combinedQuantity = (quantityByProductVariant.get(productVariantKey) || 0) + quantity;
+      if (combinedQuantity > 500) {
+        throw new Error("You can order a maximum of 500 units per product.");
+      }
+      quantityByProductVariant.set(productVariantKey, combinedQuantity);
+
+      if (variantId !== null && (!Number.isInteger(variantId) || variantId <= 0)) {
         throw new Error("Invalid product or quantity.");
       }
 
@@ -652,7 +642,7 @@ async function createOrder(req, res) {
       );
       const product = productRows[0];
 
-      if (!product || product.stock_status === "out_of_stock") {
+      if (!product) {
         throw new Error("A selected product is unavailable.");
       }
 
@@ -662,7 +652,6 @@ async function createOrder(req, res) {
       );
 
       let unitPrice;
-      let availableStock;
       let variant = null;
 
       if (variantId) {
@@ -671,34 +660,20 @@ async function createOrder(req, res) {
           throw new Error("Selected product variant is unavailable.");
         }
         unitPrice = finalProductPrice(product, variant.price || product.price);
-        availableStock = Number(variant.stock || 0);
       } else {
         if (productVariants.length > 0) {
           throw new Error("Please select a product variant.");
         }
         unitPrice = finalProductPrice(product, product.price);
-        availableStock = Number(product.stock || 0);
       }
 
-      if (!Number.isFinite(unitPrice) || unitPrice < 0 || availableStock < quantity) {
-        throw new Error("Insufficient stock for a selected product.");
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+        throw new Error("Selected product price is invalid.");
       }
 
       const expectedPrice = Number(requestedItem.price);
       if (Number.isFinite(expectedPrice) && Math.abs(expectedPrice - unitPrice) > 0.01) {
         throw new Error(`PRICE_CHANGED:${product.name}:${expectedPrice}:${unitPrice}`);
-      }
-
-      if (variant) {
-        await connection.execute(
-          "UPDATE product_variants SET stock = stock - ? WHERE id = ? AND stock >= ?",
-          [quantity, variant.id, quantity]
-        );
-      } else {
-        await connection.execute(
-          "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?",
-          [quantity, product.id, quantity]
-        );
       }
 
       authoritativeItems.push({
@@ -855,7 +830,9 @@ async function createOrder(req, res) {
       "A selected product is unavailable.",
       "Selected product variant is unavailable.",
       "Please select a product variant.",
-      "Insufficient stock for a selected product."
+      "Quantity must be a positive whole number.",
+      "You can order a maximum of 500 units per product.",
+      "Selected product price is invalid."
     ];
 
     if (error.message && clientValidationErrors.includes(error.message)) {

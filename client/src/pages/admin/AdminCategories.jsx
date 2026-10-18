@@ -84,6 +84,12 @@ function AdminCategories() {
     const file = event.target.files[0];
     if (!file) return;
 
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Image size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setAddImage(reader.result);
@@ -162,6 +168,12 @@ function AdminCategories() {
   function handleEditImage(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Image size must not exceed 15 MB.");
+      event.target.value = "";
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = () => {

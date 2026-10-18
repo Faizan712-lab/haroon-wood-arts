@@ -221,7 +221,7 @@ function OrderDetails() {
     if (status === "payment expired") {
       return {
         title: "Payment Expired",
-        message: "This pending payment expired and the reserved stock was released.",
+        message: "This pending payment expired. You can start a new order from your cart.",
         Icon: FaTimesCircle,
         className: "payment-expired"
       };
@@ -362,8 +362,8 @@ function OrderDetails() {
 
     if (!file) return;
 
-    if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
-      toast.error("Upload an image under 5MB");
+    if (!file.type.startsWith("image/") || file.size > 15 * 1024 * 1024) {
+      toast.error("Upload an image under 15MB");
       return;
     }
 
@@ -848,7 +848,7 @@ function OrderDetails() {
                       <span className="details-return-upload-title">
                         Add return evidence
                       </span>
-                      <small>JPG, PNG or WebP · Max 5MB</small>
+                      <small>JPG, PNG or WebP · Max 15MB</small>
                       <span className="details-return-upload-button">
                         Choose Image
                       </span>

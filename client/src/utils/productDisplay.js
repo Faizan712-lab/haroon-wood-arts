@@ -3,7 +3,6 @@ export function getProductVariants(product) {
     ? product.variants
     : product?.sizes || [];
 }
-
 export function getVariantLabel(item) {
   const label =
     item?.variantLabel ||
@@ -35,37 +34,4 @@ export function getVariantLabel(item) {
     cleanLabel || cleanDimensions;
 
   return value ? `Size: ${value}` : "";
-}
-
-export function isOutOfStock(product) {
-  const stock =
-    Number(product?.stock);
-
-  return (
-    product?.stockStatus === "out_of_stock" ||
-    product?.stock_status === "out_of_stock" ||
-    (
-      Number.isFinite(stock) &&
-      stock <= 0
-    )
-  );
-}
-
-export function getStockLabel(product) {
-  if (isOutOfStock(product)) {
-    return "Out of Stock";
-  }
-
-  const stock =
-    Number(product?.stock);
-
-  if (
-    Number.isFinite(stock) &&
-    stock > 0 &&
-    stock <= 10
-  ) {
-    return `Only ${stock} left`;
-  }
-
-  return "";
 }

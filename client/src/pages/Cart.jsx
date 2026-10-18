@@ -144,7 +144,7 @@ function Cart() {
             <div className="cart-notice-content">
               <strong>Items Currently Unavailable:</strong>
               <p>
-                One or more items in your cart are currently out of stock or no longer available.
+                One or more items in your cart are no longer available in the catalog or selected options.
                 Please remove them to proceed with checkout.
               </p>
             </div>
@@ -229,12 +229,6 @@ function Cart() {
                           <span className="cart-unit-label"> each</span>
                         </div>
 
-                        {item.availableStock !== undefined && item.availableStock <= 5 && item.availableStock > 0 && !isUnavailable && (
-                          <span className="cart-low-stock-warning">
-                            Only {item.availableStock} left in stock
-                          </span>
-                        )}
-
                         {isUnavailable && (
                           <p className="cart-unavailable-desc">
                             Cannot be purchased. Please remove from cart.
@@ -260,7 +254,7 @@ function Cart() {
                               type="button"
                               className="cart-qty-btn"
                               onClick={() => increaseQty(itemKey)}
-                              disabled={item.availableStock !== undefined && itemQty >= item.availableStock}
+                              disabled={itemQty >= 500}
                               aria-label="Increase quantity"
                             >
                               +

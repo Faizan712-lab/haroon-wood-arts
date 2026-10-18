@@ -20,10 +20,6 @@ import {
   handleImageFallback
 } from "../utils/imageFallback";
 
-import {
-  getStockLabel,
-  isOutOfStock
-} from "../utils/productDisplay";
 
 import {
   FaArrowLeft,
@@ -140,15 +136,13 @@ function Wishlist() {
                   : rawPrice;
 
               const hasDiscount = discountPercent > 0 && discountedPrice < rawPrice;
-              const stockLabel = getStockLabel(product);
-              const outOfStock = isOutOfStock(product);
               const avgRating = Number(product.averageRating || product.average_rating || 0);
               const reviewCount = Number(product.reviewCount || product.review_count || 0);
 
               return (
                 <article
                   key={productId}
-                  className={`wishlist-card ${outOfStock ? "out-of-stock" : ""}`}
+                  className="wishlist-card"
                 >
                   {/* Product Image Area */}
                   <div
@@ -161,15 +155,6 @@ function Wishlist() {
                       loading="lazy"
                       onError={handleImageFallback}
                     />
-
-                    {/* Stock Status Badge */}
-                    {stockLabel && (
-                      <span
-                        className={`wishlist-stock-badge ${outOfStock ? "out" : "low"}`}
-                      >
-                        {stockLabel}
-                      </span>
-                    )}
 
                     {/* Remove Heart Button */}
                     <button

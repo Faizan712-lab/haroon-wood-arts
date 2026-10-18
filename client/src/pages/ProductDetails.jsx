@@ -33,9 +33,7 @@ import {
 from "../utils/imageFallback";
 
 import {
-  getProductVariants,
-  getStockLabel,
-  isOutOfStock
+  getProductVariants
 } from "../utils/productDisplay";
 
 function RatingStars({
@@ -246,10 +244,6 @@ function ProductDetails() {
     displayPrice < originalPrice;
 
   function handleAddToCart() {
-    if (isOutOfStock(product)) {
-      return;
-    }
-
     if (variants.length > 0 && !selectedSize) {
       setSizeError(true);
       toast.error("Please select a size before adding this product.");
@@ -268,10 +262,6 @@ function ProductDetails() {
   }
 
   function handleBuyNow() {
-    if (isOutOfStock(product)) {
-      return;
-    }
-
     if (variants.length > 0 && !selectedSize) {
       setSizeError(true);
       toast.error("Please select a size before purchasing.");
@@ -279,7 +269,7 @@ function ProductDetails() {
     }
 
     setSizeError(false);
-    addToCart({
+    const added = addToCart({
       ...product,
       price: displayPrice,
       productId: product.id,
@@ -287,6 +277,7 @@ function ProductDetails() {
       variantLabel: selectedSize?.size || selectedSize?.label,
       variantDimensions: selectedSize?.dimensions
     });
+    if (added === false) return;
 
     navigate("/checkout");
   }
@@ -349,18 +340,6 @@ function ProductDetails() {
                   onError={handleImageFallback}
                 />
               </button>
-
-              {getStockLabel(product) && (
-                <span
-                  className={
-                    isOutOfStock(product)
-                      ? "stock-badge out"
-                      : "stock-badge low"
-                  }
-                >
-                  {getStockLabel(product)}
-                </span>
-              )}
 
               <button
                 type="button"
@@ -454,23 +433,6 @@ function ProductDetails() {
             </div>
           </div>
 
-          {/* 5. Availability & Stock Status */}
-          <div className="product-stock-section">
-            {isOutOfStock(product) ? (
-              <span className="product-stock-pill out">
-                <span className="stock-dot"></span> Out of Stock
-              </span>
-            ) : getStockLabel(product) ? (
-              <span className="product-stock-pill low">
-                <span className="stock-dot"></span> {getStockLabel(product)}
-              </span>
-            ) : (
-              <span className="product-stock-pill in-stock">
-                <span className="stock-dot"></span> In Stock
-              </span>
-            )}
-          </div>
-
           {/* 6. Product Description */}
           {product.description && product.description.trim() && (
             <div className="product-description-block">
@@ -535,11 +497,6 @@ function ProductDetails() {
                             Rs. {size.discountedPrice || size.price}
                           </span>
                         )}
-                        {size.stock !== undefined && (
-                          <span className="size-stock-val">
-                            Stock: {size.stock}
-                          </span>
-                        )}
                       </div>
                     </button>
                   );
@@ -561,31 +518,21 @@ function ProductDetails() {
                 type="button"
                 className="add-cart-btn"
                 onClick={handleAddToCart}
-                disabled={isOutOfStock(product)}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                   <line x1="3" y1="6" x2="21" y2="6"></line>
                   <path d="M16 10a4 4 0 0 1-8 0"></path>
                 </svg>
-                <span>
-                  {isOutOfStock(product)
-                    ? "Out of Stock"
-                    : "Add To Cart"}
-                </span>
+                <span>Add To Cart</span>
               </button>
 
               <button
                 type="button"
                 className="buy-now-btn"
                 onClick={handleBuyNow}
-                disabled={isOutOfStock(product)}
               >
-                <span>
-                  {isOutOfStock(product)
-                    ? "Unavailable"
-                    : "Buy Now"}
-                </span>
+                <span>Buy Now</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>

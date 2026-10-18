@@ -41,10 +41,7 @@ import {
   handleImageFallback
 } from "../utils/imageFallback";
 
-import {
-  getStockLabel,
-  isOutOfStock
-} from "../utils/productDisplay";
+
 
 import {
   FaUser,
@@ -278,8 +275,8 @@ function UserProfile() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage("Profile image must be 5MB or smaller.");
+    if (file.size > 15 * 1024 * 1024) {
+      setMessage("Profile image must not exceed 15 MB.");
       return;
     }
 
@@ -792,17 +789,6 @@ function UserProfile() {
                   <div className="profile-wishlist-info">
                     <h3>{product.name}</h3>
                     <strong>Rs. {product.price}</strong>
-                  {getStockLabel(product) && (
-                    <span
-                      className={
-                        isOutOfStock(product)
-                          ? "profile-stock-badge out"
-                          : "profile-stock-badge low"
-                      }
-                    >
-                      {getStockLabel(product)}
-                    </span>
-                  )}
                     <ProfileRating
                       rating={product.averageRating}
                       reviewCount={product.reviewCount}

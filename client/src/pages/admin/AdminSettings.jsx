@@ -102,8 +102,8 @@ function AdminSettings() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Profile image must be 5MB or smaller.");
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Profile image must not exceed 15 MB.");
       return;
     }
 

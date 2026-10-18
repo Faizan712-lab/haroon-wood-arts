@@ -17,14 +17,11 @@ function AdminAddProduct() {
   const [discountPercent, setDiscountPercent] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
-  const [stock, setStock] = useState("50");
-  const [stockStatus, setStockStatus] = useState("in_stock");
   const [productImages, setProductImages] = useState([]);
   const [variants, setVariants] = useState([
     {
       size: "",
       price: "",
-      stock: "",
       images: []
     }
   ]);
@@ -68,8 +65,8 @@ function AdminAddProduct() {
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
-        reject(new Error("Each image must be 5MB or smaller."));
+      if (file.size > 15 * 1024 * 1024) {
+        reject(new Error("Image size must not exceed 15 MB."));
         return;
       }
 
@@ -87,8 +84,8 @@ function AdminAddProduct() {
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
-        reject(new Error("Each image must be 5MB or smaller."));
+      if (file.size > 15 * 1024 * 1024) {
+        reject(new Error("Image size must not exceed 15 MB."));
         return;
       }
 
@@ -246,7 +243,6 @@ function AdminAddProduct() {
       {
         size: "",
         price: "",
-        stock: "",
         images: []
       }
     ]);
@@ -318,12 +314,6 @@ function AdminAddProduct() {
       return;
     }
 
-    const parsedBaseStock = Number(stock);
-    if (!Number.isInteger(parsedBaseStock) || parsedBaseStock < 0) {
-      toast.error("Please enter a valid base stock quantity");
-      return;
-    }
-
     if (productImages.length === 0) {
       toast.error("Please upload at least one product image");
       return;
@@ -338,8 +328,6 @@ function AdminAddProduct() {
       payload.append("discountPercent", String(discountPercent || 0));
       payload.append("category", category);
       payload.append("description", description || "");
-      payload.append("stock", String(parsedBaseStock));
-      payload.append("stockStatus", stockStatus);
 
       const resolvedVariants = await appendVariantImages(payload, variants);
       payload.append(
@@ -353,10 +341,6 @@ function AdminAddProduct() {
                 variant.price === ""
                   ? parsedBasePrice
                   : Number(variant.price),
-              stock:
-                variant.stock === ""
-                  ? parsedBaseStock
-                  : Number(variant.stock),
               images: variant.images || []
             }))
         )
@@ -383,17 +367,14 @@ function AdminAddProduct() {
         setDiscountPercent("");
         setCategory("");
         setDescription("");
-        setStock("50");
         setProductImages([]);
         setVariants([
           {
             size: "",
             price: "",
-            stock: "",
             images: []
           }
         ]);
-        setStockStatus("in_stock");
       } else {
         toast.error(data.message || "Failed to add product");
       }
@@ -530,49 +511,13 @@ function AdminAddProduct() {
           </div>
         </section>
 
-        {/* GROUP 3: INVENTORY & AVAILABILITY */}
-        <section className="admin-form-group">
-          <h2 className="admin-group-title">3. Inventory & Availability</h2>
-          <div className="admin-form-row admin-form-row--two">
-            <label className="admin-input-label">
-              <span>Base Stock Quantity *</span>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                placeholder="e.g. 50"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
-                required
-              />
-              <span className="admin-input-help">
-                Total units available for order.
-              </span>
-            </label>
-
-            <label className="admin-input-label">
-              <span>Catalog Stock Status</span>
-              <select
-                value={stockStatus}
-                onChange={(event) => setStockStatus(event.target.value)}
-              >
-                <option value="in_stock">In Stock (Available for purchase)</option>
-                <option value="out_of_stock">Out of Stock (Shown as unavailable)</option>
-              </select>
-              <span className="admin-input-help">
-                You can easily toggle stock availability anytime in Manage Products.
-              </span>
-            </label>
-          </div>
-        </section>
-
-        {/* GROUP 4: VARIANTS */}
+        {/* GROUP 3: VARIANTS */}
         <section className="admin-form-group">
           <div className="admin-group-header">
             <div>
-              <h2 className="admin-group-title">4. Product Variants (Optional)</h2>
+              <h2 className="admin-group-title">3. Product Variants (Optional)</h2>
               <p className="admin-group-subtext">
-                Add dimensions or sizes. Variant price and stock override base values.
+                Add dimensions or sizes. Variant prices override the base price.
               </p>
             </div>
             <button
@@ -607,18 +552,6 @@ function AdminAddProduct() {
                       placeholder={`Base: ₹${price || 0}`}
                       value={variant.price}
                       onChange={(e) => updateSize(index, "price", e.target.value)}
-                    />
-                  </label>
-
-                  <label className="admin-input-label">
-                    <span>Variant Stock</span>
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      placeholder={`Base: ${stock || 0}`}
-                      value={variant.stock}
-                      onChange={(e) => updateSize(index, "stock", e.target.value)}
                     />
                   </label>
 
@@ -691,11 +624,11 @@ function AdminAddProduct() {
           </div>
         </section>
 
-        {/* GROUP 5: PRODUCT IMAGES */}
+        {/* GROUP 4: PRODUCT IMAGES */}
         <section className="admin-form-group">
           <div className="admin-group-header">
             <div>
-              <h2 className="admin-group-title">5. Product Gallery Photos</h2>
+              <h2 className="admin-group-title">4. Product Gallery Photos</h2>
               <p className="admin-group-subtext">
                 Upload up to 8 high quality photos showing multiple angles of the product.
               </p>
@@ -706,7 +639,7 @@ function AdminAddProduct() {
           <label className="admin-file-dropzone">
             <span className="admin-dropzone-icon">📷</span>
             <span className="admin-dropzone-text">Click or drag images to upload</span>
-            <span className="admin-dropzone-hint">PNG, JPG or WEBP (Max 5MB each)</span>
+            <span className="admin-dropzone-hint">PNG, JPG or WEBP (Max 15MB each)</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"

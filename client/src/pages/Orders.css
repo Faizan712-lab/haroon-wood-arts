@@ -640,7 +640,7 @@
   }
 }
 
-/* ─── Responsive Breakpoints ─── */
+/* ─── Responsive Breakpoints (Mobile Enhancements) ─── */
 @media (max-width: 768px) {
   .orders-page {
     padding: 24px 14px 48px;
@@ -648,6 +648,18 @@
 
   .order-card {
     padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .order-main-info h3 {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .order-main-info h3 span {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 }
 
@@ -656,49 +668,198 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+    padding-bottom: 12px;
   }
 
   .order-header-right {
     width: 100%;
+    display: flex;
     justify-content: flex-start;
+  }
+
+  .user-order-status {
+    max-width: 100%;
+    font-size: 11.5px;
+    padding: 4px 10px;
+    min-height: 26px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .order-item {
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .order-item-image {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+  }
+
+  .order-item-name {
+    font-size: 13.5px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .order-item-meta {
+    font-size: 12px;
+    margin-top: 1px;
+  }
+
+  .order-item-price {
+    font-size: 13.5px;
+    margin-top: 2px;
+  }
+
+  .order-tracking {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 0 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .order-tracking::-webkit-scrollbar {
+    display: none;
+  }
+
+  .order-tracking-segment {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .order-tracking-step {
+    min-width: 0;
+    width: auto;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .order-tracking-label {
+    font-size: 10px;
+    line-height: 1.15;
+    text-align: center;
+    max-width: 60px;
+    word-break: normal;
+    padding: 0 1px;
+  }
+
+  .order-tracking-icon {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    font-size: 11px;
+  }
+
+  .order-tracking-line {
+    flex: 1 1 0;
+    min-width: 6px;
+    height: 2px;
+    margin-top: 12px;
+  }
+
+  .order-delivered-date {
+    font-size: 12px;
+    margin-top: 8px;
   }
 
   .order-card-footer {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
+    padding-top: 12px;
+    margin-top: 12px;
+  }
+
+  .order-total-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-size: 13.5px;
+  }
+
+  .pending-payment-action {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .complete-payment-btn {
+    width: 100%;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 13px;
   }
 
   .view-order-btn {
     width: 100%;
     justify-content: center;
     min-height: 42px;
+    font-size: 13.5px;
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 480px) {
+  .orders-page {
+    padding: 18px 12px 40px;
   }
 
-  .order-tracking {
-    overflow-x: auto;
-    padding-bottom: 8px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+  .orders-page h1 {
+    font-size: 22px;
+    margin-bottom: 18px;
   }
 
-  .order-tracking-segment {
-    min-width: 72px;
-    flex: 0 0 72px;
+  .order-card {
+    padding: 15px 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .orders-page {
+    padding: 14px 8px 36px;
   }
 
-  .order-tracking-step {
-    min-width: 50px;
-    font-size: 10.5px;
+  .order-card {
+    padding: 14px 10px;
+    border-radius: 12px;
+  }
+
+  .order-main-info h3 {
+    font-size: 14.5px;
+  }
+
+  .order-tracking-label {
+    font-size: 9.5px;
+    max-width: 52px;
   }
 
   .order-tracking-icon {
-    width: 26px;
-    height: 26px;
-    font-size: 12px;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    font-size: 10px;
   }
 
   .order-tracking-line {
-    margin-top: 12px;
+    margin-top: 11px;
+    min-width: 4px;
   }
 }
