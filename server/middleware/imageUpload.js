@@ -10,6 +10,10 @@ const extensionsByMime = {
   "image/webp": new Set([".webp"])
 };
 const cloudinaryFolderPrefix = "haroon-stores";
+const {
+  validateImageBuffer,
+  optimizeImage
+} = require("../utils/imageOptimizer");
 
 function storageProvider() {
   return String(process.env.STORAGE_PROVIDER || "local").trim().toLowerCase();
@@ -100,34 +104,130 @@ function uploadedFiles(req, fieldName = null) {
   return Object.values(req.files || {}).flat();
 }
 
-function validateUploadedImages(req, res, next) {
+function cleanupUploadedFiles(files) {
+  if (!Array.isArray(files)) return;
+  for (const file of files) {
+    if (file && file.path) {
+      try {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      } catch (err) {
+        console.error(`Failed to clean up uploaded file ${file.path}:`, err.message);
+      }
+    }
+  }
+}
+
+async function validateUploadedImages(req, res, next) {
   const files = uploadedFiles(req);
   try {
     for (const file of files) {
       const bytes = file.buffer || fs.readFileSync(file.path);
-      if (!hasExpectedImageSignature(bytes, file.mimetype)) {
-        if (file.path) fs.unlinkSync(file.path);
-        return res.status(400).json({ success: false, message: "Invalid image file content." });
+      const validation = await validateImageBuffer(bytes, file.mimetype);
+      if (!validation.isValid) {
+        cleanupUploadedFiles(files);
+        return res.status(400).json({
+          success: false,
+          message: validation.error || "Invalid image file content."
+        });
       }
     }
     return next();
   } catch (error) {
+    cleanupUploadedFiles(files);
     return next(error);
   }
 }
 
-function uploadToCloudinary(file, folder) {
-  const cloudinary = getCloudinary();
-  const publicId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-
+function streamBufferToCloudinary(cloudinary, buffer, options) {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream({
+    const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) return reject(error);
+      resolve(result.secure_url);
+    });
+    stream.end(buffer);
+  });
+}
+
+async function uploadToCloudinary(file, folder) {
+  const cloudinary = getCloudinary();
+  const baseId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
+  // Special handling for return dispute evidence:
+  // Dual-upload: preserve full uncompressed original + generate compressed WebP preview
+  if (folder === "returns") {
+    const originalPublicId = `${cloudinaryFolderPrefix}/${folder}/original-${baseId}`;
+    const previewPublicId = `${cloudinaryFolderPrefix}/${folder}/preview-${baseId}`;
+    const uploadedPublicIds = [];
+
+    // Step 1: In-memory optimization first. If this fails, no network requests are made.
+    const optimized = await optimizeImage(file.buffer, { folder: "returns" });
+
+    // Step 2: Upload streams with individual success tracking
+    const originalPromise = streamBufferToCloudinary(cloudinary, file.buffer, {
       folder: `${cloudinaryFolderPrefix}/${folder}`,
-      public_id: publicId,
+      public_id: `original-${baseId}`,
       resource_type: "image",
       overwrite: false
-    }, (error, result) => error ? reject(error) : resolve(result.secure_url));
-    stream.end(file.buffer);
+    }).then(url => {
+      uploadedPublicIds.push(originalPublicId);
+      return url;
+    });
+
+    const previewPromise = streamBufferToCloudinary(cloudinary, optimized.buffer, {
+      folder: `${cloudinaryFolderPrefix}/${folder}`,
+      public_id: `preview-${baseId}`,
+      resource_type: "image",
+      format: optimized.format || "webp",
+      overwrite: false
+    }).then(url => {
+      uploadedPublicIds.push(previewPublicId);
+      return url;
+    });
+
+    const settled = await Promise.allSettled([
+      originalPromise,
+      previewPromise
+    ]);
+
+    const firstRejected = settled.find(item => item.status === "rejected");
+    if (firstRejected) {
+      // Both in-flight streams have settled completely before cleanup runs
+      if (uploadedPublicIds.length > 0) {
+        try {
+          const destroyResults = await Promise.allSettled(
+            uploadedPublicIds.map(id =>
+              cloudinary.uploader.destroy(id, { resource_type: "image", invalidate: true })
+            )
+          );
+          destroyResults.forEach((result, idx) => {
+            if (result.status === "rejected") {
+              console.error(`Failed to clean up Cloudinary return asset ${uploadedPublicIds[idx]}:`, result.reason);
+            }
+          });
+        } catch (cleanupError) {
+          console.error("Failed during Cloudinary return cleanup:", cleanupError);
+        }
+      }
+      throw firstRejected.reason;
+    }
+
+    return JSON.stringify({
+      preview: settled[1].value,
+      original: settled[0].value
+    });
+  }
+
+  // Standard flow: compress before uploading to Cloudinary
+  const optimized = await optimizeImage(file.buffer, { folder });
+
+  return streamBufferToCloudinary(cloudinary, optimized.buffer, {
+    folder: `${cloudinaryFolderPrefix}/${folder}`,
+    public_id: baseId,
+    resource_type: "image",
+    format: optimized.format || "webp",
+    overwrite: false
   });
 }
 
@@ -135,12 +235,98 @@ async function uploadedImagePaths(req, folder, fieldName = null) {
   const files = uploadedFiles(req, fieldName);
 
   if (isCloudinaryStorage()) {
-    return Promise.all(files.map(file => uploadToCloudinary(file, folder)));
+    const uploadedResults = [];
+    const settled = await Promise.allSettled(
+      files.map(async file => {
+        const uploadedUrl = await uploadToCloudinary(file, folder);
+        uploadedResults.push(uploadedUrl);
+        return uploadedUrl;
+      })
+    );
+
+    const firstRejected = settled.find(item => item.status === "rejected");
+    if (firstRejected) {
+      // All in-flight Cloudinary uploads have completely settled before rollback runs
+      if (uploadedResults.length > 0) {
+        try {
+          await deleteCloudinaryImages(uploadedResults);
+        } catch (cleanupErr) {
+          console.error("Failed to clean up partial Cloudinary batch uploads:", cleanupErr);
+        }
+      }
+      throw firstRejected.reason;
+    }
+
+    return settled.map(item => item.value);
   }
 
-  return files.map(file =>
-    `/uploads/${path.basename(path.dirname(file.path))}/${file.filename}`
+  // Local storage provider handling
+  const createdLocalFiles = [];
+  const filesToUnlinkOnSuccess = [];
+
+  const settled = await Promise.allSettled(
+    files.map(async file => {
+      const rawBuffer = fs.readFileSync(file.path);
+      const dir = path.dirname(file.path);
+      const ext = path.extname(file.filename);
+      const subfolder = path.basename(dir);
+
+      if (folder === "returns") {
+        const optimized = await optimizeImage(rawBuffer, { folder: "returns" });
+        const previewFileName = `preview-${path.basename(file.filename, ext)}.webp`;
+        const previewFilePath = path.join(dir, previewFileName);
+
+        fs.writeFileSync(previewFilePath, optimized.buffer);
+        createdLocalFiles.push(previewFilePath);
+
+        return JSON.stringify({
+          preview: `/uploads/${subfolder}/${previewFileName}`,
+          original: `/uploads/${subfolder}/${file.filename}`
+        });
+      }
+
+      const optimized = await optimizeImage(rawBuffer, { folder });
+      const webpFileName = `${path.basename(file.filename, ext)}.webp`;
+      const webpFilePath = path.join(dir, webpFileName);
+
+      fs.writeFileSync(webpFilePath, optimized.buffer);
+      if (webpFilePath !== file.path) {
+        createdLocalFiles.push(webpFilePath);
+        filesToUnlinkOnSuccess.push(file.path);
+      }
+
+      return `/uploads/${subfolder}/${webpFileName}`;
+    })
   );
+
+  const firstRejected = settled.find(item => item.status === "rejected");
+
+  if (firstRejected) {
+    // If any item failed in the local batch, clean up all files created during this operation
+    for (const createdPath of createdLocalFiles) {
+      try {
+        if (fs.existsSync(createdPath)) {
+          fs.unlinkSync(createdPath);
+        }
+      } catch (cleanupErr) {
+        console.error(`Failed to clean up created local file ${createdPath}:`, cleanupErr.message);
+      }
+    }
+    throw firstRejected.reason;
+  }
+
+  // On full batch success, clean up original raw files that were converted to WebP
+  for (const originalPath of filesToUnlinkOnSuccess) {
+    try {
+      if (fs.existsSync(originalPath)) {
+        fs.unlinkSync(originalPath);
+      }
+    } catch (unlinkErr) {
+      console.error(`Failed to unlink temporary original file ${originalPath}:`, unlinkErr.message);
+    }
+  }
+
+  return settled.map(item => item.value);
 }
 
 function cloudinaryPublicIdFromUrl(imageUrl) {
@@ -150,9 +336,11 @@ function cloudinaryPublicIdFromUrl(imageUrl) {
     const markerIndex = url.pathname.indexOf(marker);
     if (!url.hostname.endsWith("cloudinary.com") || markerIndex === -1) return null;
 
-    let assetPath = url.pathname.slice(markerIndex + marker.length).replace(/^v\d+\//, "");
-    if (!assetPath.startsWith(`${cloudinaryFolderPrefix}/`)) return null;
+    const afterMarker = url.pathname.slice(markerIndex + marker.length);
+    const prefixIndex = afterMarker.indexOf(`${cloudinaryFolderPrefix}/`);
+    if (prefixIndex === -1) return null;
 
+    let assetPath = afterMarker.slice(prefixIndex);
     assetPath = decodeURIComponent(assetPath).replace(/\.[^/.]+$/, "");
     return assetPath || null;
   } catch {
@@ -160,11 +348,60 @@ function cloudinaryPublicIdFromUrl(imageUrl) {
   }
 }
 
+function extractImageUrls(entry) {
+  if (!entry) return [];
+  if (Array.isArray(entry)) {
+    return entry.flatMap(extractImageUrls);
+  }
+  if (typeof entry === "object") {
+    return [entry.preview, entry.original, entry.url].filter(Boolean);
+  }
+  if (typeof entry === "string") {
+    const trimmed = entry.trim();
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return [parsed.preview, parsed.original, parsed.url].filter(Boolean);
+      } catch {
+        // Fall back to treat as raw string URL
+      }
+    }
+    return [trimmed];
+  }
+  return [];
+}
+
 async function deleteCloudinaryImages(imageUrls) {
-  if (!isCloudinaryStorage()) return;
+  const rawList = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
+  const allUrls = rawList.flatMap(extractImageUrls);
+  if (allUrls.length === 0) return;
+
+  if (!isCloudinaryStorage()) {
+    allUrls.forEach(url => {
+      if (typeof url === "string" && url.startsWith("/uploads/")) {
+        const cleanPath = url.replace(/^\/uploads\//, "");
+        if (cleanPath.includes("..") || path.isAbsolute(cleanPath)) {
+          return;
+        }
+        const resolvedPath = path.resolve(uploadRoot, cleanPath);
+        const relative = path.relative(uploadRoot, resolvedPath);
+        const isContained = relative && !relative.startsWith("..") && !path.isAbsolute(relative);
+        if (isContained && fs.existsSync(resolvedPath)) {
+          try {
+            fs.unlinkSync(resolvedPath);
+          } catch (err) {
+            console.error(`Failed to delete local image ${resolvedPath}:`, err.message);
+          }
+        }
+      }
+    });
+    return;
+  }
 
   const cloudinary = getCloudinary();
-  const publicIds = [...new Set(imageUrls.map(cloudinaryPublicIdFromUrl).filter(Boolean))];
+  const publicIds = [...new Set(allUrls.map(cloudinaryPublicIdFromUrl).filter(Boolean))];
+  if (publicIds.length === 0) return;
+
   const results = await Promise.allSettled(publicIds.map(publicId =>
     cloudinary.uploader.destroy(publicId, { resource_type: "image", invalidate: true })
   ));
@@ -180,5 +417,6 @@ module.exports = {
   createImageUpload,
   uploadedImagePaths,
   deleteCloudinaryImages,
-  validateUploadedImages
+  validateUploadedImages,
+  uploadToCloudinary
 };

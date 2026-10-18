@@ -151,10 +151,10 @@
 
 .empty-products {
   max-width: 520px;
-  margin: 44px auto;
-  padding: 34px 30px;
-  border: 1px solid #f0d6bd;
-  border-radius: 16px;
+  margin: 40px auto;
+  padding: 38px 30px;
+  border: 1.5px solid #eddcd0;
+  border-radius: 18px;
   background: linear-gradient(135deg, #fffaf6, #ffffff);
   box-shadow: 0 12px 30px rgba(62, 39, 35, 0.06);
   color: #5d4037;
@@ -162,15 +162,16 @@
 }
 
 .empty-products h3 {
-  margin: 0 0 9px;
-  color: #3e2723;
+  margin: 0 0 8px;
+  color: #2c1b14;
   font-size: 22px;
+  font-weight: 700;
 }
 
 .empty-products p {
-  max-width: 360px;
+  max-width: 380px;
   margin: 0 auto;
-  color: #76665d;
+  color: #6e594d;
   font-size: 14px;
   line-height: 1.55;
 }
@@ -651,18 +652,19 @@
   height: 42px;
   padding: 0 34px 0 38px;
   background: #ffffff;
-  border: 1.5px solid #e2d4c8;
-  border-radius: 10px;
+  border: 1.5px solid #ded0c3;
+  border-radius: 12px;
   font-size: 13.5px;
   color: #2c1b14;
   font-family: inherit;
+  box-shadow: 0 1px 3px rgba(44, 27, 20, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .shop-search-field input:focus {
   border-color: #d97928;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.14);
+  box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
 }
 
 .shop-search-svg {
@@ -1009,22 +1011,70 @@
 }
 
 /* ─── Empty state action ─── */
-.empty-clear-filters-btn {
-  margin-top: 18px;
-  padding: 11px 24px;
-  border: none;
-  border-radius: 8px;
-  background: #3b2415;
-  color: #ffffff;
-  font-size: 13.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+.empty-search-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fbf1e8;
+  border: 1.5px solid #eddcd0;
+  color: #c8742d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  box-shadow: 0 4px 12px rgba(92, 57, 35, 0.05);
 }
 
+.empty-search-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.empty-clear-search-btn,
+.empty-clear-filters-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 26px;
+  border: none;
+  border-radius: 10px;
+  background: #3b2415;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(59, 36, 21, 0.16);
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.empty-clear-search-btn:hover,
 .empty-clear-filters-btn:hover {
-  background: #5c3923;
+  background: #54331c;
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(59, 36, 21, 0.22);
+}
+
+.empty-clear-search-btn:active,
+.empty-clear-filters-btn:active {
+  transform: translateY(0);
+}
+
+.empty-clear-all-link {
+  background: transparent;
+  border: none;
+  color: #8c7b70;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.15s ease;
+}
+
+.empty-clear-all-link:hover {
+  color: #3b2415;
 }
 
 /* ─── Shop Mobile & Tablet Responsive (< 860px) ─── */
@@ -1073,20 +1123,21 @@
     height: 44px;
     min-height: 44px;
     padding: 0 34px 0 38px;
-    background: #fffaf5;
+    background: #ffffff;
     border: 1.5px solid #ded0c3;
-    border-radius: 10px;
-    font-size: 13.5px;
+    border-radius: 12px;
+    font-size: 14px;
     color: #2c1b14;
     font-family: inherit;
     box-sizing: border-box;
     box-shadow: 0 1px 3px rgba(44, 27, 20, 0.04);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .shop-mobile-search input:focus {
     border-color: #d97928;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.14);
+    box-shadow: 0 0 0 3px rgba(217, 121, 40, 0.16);
   }
 
   .shop-mobile-search .shop-search-svg {
@@ -1111,6 +1162,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .shop-mobile-search .shop-search-clear-btn:hover {
+    background: #dcbeaa;
+    color: #2c1b14;
   }
 
   .shop-mobile-bar-actions {

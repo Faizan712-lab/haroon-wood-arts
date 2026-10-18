@@ -313,87 +313,20 @@ function Orders() {
 
     }
 
-    const reader =
-      new FileReader();
+    const key = String(orderId);
 
-    reader.onload = (event) => {
+    setReturnImageFile(prev => ({
+      ...prev,
+      [key]: file
+    }));
+    setReturnImage(prev => ({
+      ...prev,
+      [key]: URL.createObjectURL(file)
+    }));
 
-      const img =
-        new Image();
-
-      img.src =
-        event.target.result;
-
-      img.onload = () => {
-
-        const canvas =
-          document.createElement(
-            "canvas"
-          );
-
-        const ctx =
-          canvas.getContext("2d");
-
-        const MAX_WIDTH =
-          600;
-
-        const scale =
-          MAX_WIDTH /
-          img.width;
-
-        canvas.width =
-          MAX_WIDTH;
-
-        canvas.height =
-          img.height * scale;
-
-        ctx.drawImage(
-
-          img,
-
-          0,
-
-          0,
-
-          canvas.width,
-
-          canvas.height
-
-        );
-
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            setPopupMessage("Unable to process image.");
-            setShowPopup(true);
-            return;
-          }
-
-          const key = String(orderId);
-          const compressedFile = new File(
-            [blob],
-            "return-evidence.jpg",
-            { type: "image/jpeg" }
-          );
-
-          setReturnImageFile(prev => ({
-            ...prev,
-            [key]: compressedFile
-          }));
-          setReturnImage(prev => ({
-            ...prev,
-            [key]: URL.createObjectURL(blob)
-          }));
-
-          setPopupMessage("Image Uploaded Successfully");
-          setShowPopup(true);
-          setTimeout(() => setShowPopup(false), 2000);
-        }, "image/jpeg", 0.5);
-
-      };
-
-    };
-
-    reader.readAsDataURL(file);
+    setPopupMessage("Image Uploaded Successfully");
+    setShowPopup(true);
+    setTimeout(() => setShowPopup(false), 2000);
 
   }
 
@@ -716,6 +649,36 @@ function Orders() {
                 <p className="order-delivered-date">
                   Delivered on {formatOrderDate(order.deliveredDate)}
                 </p>
+              )}
+
+              {order.returnImage && (
+                <div className="order-return-proof-row" style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <a
+                    href={order.returnImageOriginal || order.returnImage}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Click to view full uncompressed return evidence"
+                  >
+                    <img
+                      src={order.returnImage}
+                      alt="Return proof"
+                      style={{ width: "42px", height: "42px", objectFit: "cover", borderRadius: "6px", border: "1px solid #d8cfc4" }}
+                    />
+                  </a>
+                  <div style={{ fontSize: "12px", color: "#5d4037" }}>
+                    <span style={{ fontWeight: 600, display: "block" }}>Return proof submitted</span>
+                    {order.returnImageOriginal && order.returnImageOriginal !== order.returnImage && (
+                      <a
+                        href={order.returnImageOriginal}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#8a5836", textDecoration: "underline" }}
+                      >
+                        View Full Original
+                      </a>
+                    )}
+                  </div>
+                </div>
               )}
 
               <div className="order-card-footer">

@@ -710,7 +710,26 @@ function AdminOrders() {
                     {order.returnImage && (
                       <div className="return-proof-wrapper">
                         <h4>Uploaded Product Proof</h4>
-                        <img src={order.returnImage} alt="Return Proof" className="return-proof-image" />
+                        <a
+                          href={order.returnImageOriginal || order.returnImage}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Open full resolution evidence in a new tab"
+                        >
+                          <img src={order.returnImage} alt="Return Proof" className="return-proof-image" />
+                        </a>
+                        {order.returnImageOriginal && order.returnImageOriginal !== order.returnImage && (
+                          <div style={{ marginTop: "8px" }}>
+                            <a
+                              href={order.returnImageOriginal}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "#8a5836", fontSize: "13px", textDecoration: "underline", fontWeight: 600 }}
+                            >
+                              View Full Original (Uncompressed) &rarr;
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="pickup-schedule">

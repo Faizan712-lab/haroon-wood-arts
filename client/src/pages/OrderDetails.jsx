@@ -367,45 +367,9 @@ function OrderDetails() {
       return;
     }
 
-    const reader = new FileReader();
-
-    reader.onload = (loadEvent) => {
-      const image = new Image();
-      image.src = loadEvent.target.result;
-
-      image.onload = () => {
-        const maxWidth = 600;
-        const scale = Math.min(1, maxWidth / image.width);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(image.width * scale);
-        canvas.height = Math.round(image.height * scale);
-        canvas.getContext("2d").drawImage(
-          image,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            toast.error("Unable to process image");
-            return;
-          }
-
-          const compressedFile = new File(
-            [blob],
-            "return-evidence.jpg",
-            { type: "image/jpeg" }
-          );
-          setReturnImageFile(compressedFile);
-          setReturnImagePreview(URL.createObjectURL(blob));
-          setReturnImageName(file.name);
-        }, "image/jpeg", 0.5);
-      };
-    };
-
-    reader.readAsDataURL(file);
+    setReturnImageFile(file);
+    setReturnImagePreview(URL.createObjectURL(file));
+    setReturnImageName(file.name);
   }
 
   async function requestReturn() {
@@ -690,6 +654,48 @@ function OrderDetails() {
                 );
               })}
             </div>
+
+            {(order.returnReason || order.returnImage) && (
+              <div className="details-return-submitted-info" style={{ marginTop: "16px", padding: "14px", background: "#fcfbf9", border: "1px solid #ede8e3", borderRadius: "10px" }}>
+                {order.returnReason && (
+                  <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#4a3b32" }}>
+                    <strong>Return Reason: </strong>{order.returnReason}
+                  </p>
+                )}
+                {order.returnImage && (
+                  <div className="details-return-proof-row" style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    <a
+                      href={order.returnImageOriginal || order.returnImage}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Click to view full uncompressed evidence"
+                    >
+                      <img
+                        src={order.returnImage}
+                        alt="Return evidence"
+                        className="details-return-preview"
+                        style={{ width: "80px", height: "80px", borderRadius: "8px", objectFit: "cover", border: "1px solid #d8cfc4" }}
+                      />
+                    </a>
+                    <div>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#4a3b32", display: "block" }}>
+                        Submitted Return Proof
+                      </span>
+                      {order.returnImageOriginal && order.returnImageOriginal !== order.returnImage && (
+                        <a
+                          href={order.returnImageOriginal}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: "12px", color: "#8a5836", textDecoration: "underline" }}
+                        >
+                          View Full Original Evidence &rarr;
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
 

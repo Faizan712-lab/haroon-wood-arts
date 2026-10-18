@@ -207,11 +207,28 @@ function codPaymentBreakdown(totalAmount) {
   };
 }
 
+function parseReturnImage(raw) {
+  if (!raw) return { preview: "", original: "" };
+  if (typeof raw === "string" && raw.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        preview: parsed.preview || parsed.url || raw,
+        original: parsed.original || parsed.preview || parsed.url || raw
+      };
+    } catch {
+      return { preview: raw, original: raw };
+    }
+  }
+  return { preview: raw, original: raw };
+}
+
 function mapOrderRow(row, items = []) {
   const total = Number(row.total_amount || 0);
   const codBreakdown = row.payment_mode === "COD"
     ? codPaymentBreakdown(total)
     : null;
+  const returnImageData = parseReturnImage(row.return_image);
 
   return {
     id: row.order_code,
@@ -237,7 +254,8 @@ function mapOrderRow(row, items = []) {
     deliveredDate: formatDateValue(row.delivered_date),
     cancellationReason: row.cancellation_reason || "",
     returnReason: row.return_reason || "",
-    returnImage: row.return_image || "",
+    returnImage: returnImageData.preview || "",
+    returnImageOriginal: returnImageData.original || "",
     pickupDate: formatDateValue(row.pickup_date),
     pickupTime: row.pickup_time,
     returnCompletedDate: formatDateValue(row.return_completed_date),
@@ -1559,6 +1577,7 @@ async function requestReturn(req, res) {
   }
 
   let image = "";
+  let persistenceSucceeded = false;
 
   try {
     [image] = await uploadedImagePaths(req, "returns");
@@ -1575,15 +1594,39 @@ async function requestReturn(req, res) {
     );
 
     if (!result.body.success) {
-      await deleteCloudinaryImages([image]);
+      if (image) {
+        await deleteCloudinaryImages([image]);
+      }
       return res.status(result.statusCode).json(result.body);
     }
 
-    await deleteCloudinaryImages([result.previousOrder.return_image]);
-    await notifyOrderTransition(result.previousOrder, result.body.order);
+    persistenceSucceeded = true;
+
+    // Cleanup previous return evidence if present
+    if (result.previousOrder?.return_image) {
+      try {
+        await deleteCloudinaryImages([result.previousOrder.return_image]);
+      } catch (cleanupError) {
+        console.error("Failed to delete previous return image:", cleanupError);
+      }
+    }
+
+    // Best-effort notification: email failure must NOT fail the request or destroy the saved evidence
+    try {
+      await notifyOrderTransition(result.previousOrder, result.body.order);
+    } catch (notifyError) {
+      console.error("Failed to send return notification email:", notifyError);
+    }
+
     return res.status(result.statusCode).json(result.body);
   } catch (error) {
-    await deleteCloudinaryImages([image]);
+    if (!persistenceSucceeded && image) {
+      try {
+        await deleteCloudinaryImages([image]);
+      } catch (cleanupErr) {
+        console.error("Failed to clean up unpersisted return image:", cleanupErr);
+      }
+    }
     console.error("Failed to request return:", error);
     return res.status(500).json({ success: false, message: "Failed to request return" });
   }
@@ -1698,5 +1741,7 @@ module.exports = {
   getOrderWithItems,
   notifyOrderCreated,
   isPaymentPendingOrder,
-  codPaymentBreakdown
+  codPaymentBreakdown,
+  parseReturnImage,
+  mapOrderRow
 };

@@ -198,6 +198,8 @@ function Products({
       sort: searchParams.get("sort") || "newest"
     });
 
+  const [searchInput, setSearchInput] = useState(() => searchParams.get("search") || "");
+
   /* LOAD */
 
   const fetchProducts = useCallback(async (signal) => {
@@ -276,8 +278,10 @@ function Products({
 
     const params = new URLSearchParams(location.search);
     setPage(Math.max(1, Number(params.get("page")) || 1));
+    const nextSearch = params.get("search") || "";
+    setSearchInput(nextSearch);
     setFilters({
-      search: params.get("search") || "",
+      search: nextSearch,
       category: selectedCategory || params.get("category") || "",
       min: params.get("min") || "",
       max: params.get("max") || "",
@@ -324,6 +328,31 @@ function Products({
     setFilters(updater);
   }
 
+  /* DEBOUNCE SEARCH INPUT (PREVENTS SPAMMING API ON KEYSTROKES) */
+  useEffect(() => {
+    if (!isShopPage) return;
+    const trimmedInput = searchInput.trim();
+    const currentSearch = (filters.search || "").trim();
+    if (trimmedInput === currentSearch) return;
+
+    const timer = setTimeout(() => {
+      updateFilters(previous => ({ ...previous, search: trimmedInput }));
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [searchInput, isShopPage, filters.search]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchInput("");
+    updateFilters(previous => ({ ...previous, search: "" }));
+  }, []);
+
+  const handleSearchSubmit = (event) => {
+    if (event) event.preventDefault();
+    const trimmed = searchInput.trim();
+    updateFilters(previous => ({ ...previous, search: trimmed }));
+  };
+
   const hasActiveFilters = Boolean(
     (filters.search && filters.search.trim()) ||
     filters.category ||
@@ -344,6 +373,7 @@ function Products({
   );
 
   const clearAllFilters = useCallback(() => {
+    setSearchInput("");
     updateFilters({
       search: "",
       category: "",
@@ -540,29 +570,31 @@ function Products({
             <div className="shop-toolbar-wrapper">
               {/* Mobile Toolbar (visible on screens <= 860px) */}
               <div className="shop-mobile-toolbar">
-                <div className="shop-mobile-search">
-                  <svg className="shop-search-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
+                <form className="shop-mobile-search" role="search" onSubmit={handleSearchSubmit}>
+                  <span className="shop-search-svg" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
                   <input
                     type="search"
                     placeholder="Search crafts, boxes, trays..."
-                    value={filters.search}
-                    onChange={(event) => updateFilters(previous => ({ ...previous, search: event.target.value }))}
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
                     aria-label="Search products"
                   />
-                  {filters.search && (
+                  {searchInput && (
                     <button
                       type="button"
                       className="shop-search-clear-btn"
                       aria-label="Clear search"
-                      onClick={() => updateFilters(previous => ({ ...previous, search: "" }))}
+                      onClick={handleClearSearch}
                     >
                       ×
                     </button>
                   )}
-                </div>
+                </form>
 
                 <div className="shop-mobile-bar-actions">
                   <button
@@ -601,29 +633,31 @@ function Products({
               {/* Desktop Filter Panel (visible on screens > 860px) */}
               <div className="shop-desktop-toolbar">
                 <div className="shop-desktop-top-row">
-                  <div className="shop-search-field">
-                    <svg className="shop-search-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
+                  <form className="shop-search-field" role="search" onSubmit={handleSearchSubmit}>
+                    <span className="shop-search-svg" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      </svg>
+                    </span>
                     <input
                       type="search"
                       placeholder="Search Kashmiri crafts, boxes, tables, dry fruit trays..."
-                      value={filters.search}
-                      onChange={(event) => updateFilters(previous => ({ ...previous, search: event.target.value }))}
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
                       aria-label="Search products"
                     />
-                    {filters.search && (
+                    {searchInput && (
                       <button
                         type="button"
                         className="shop-search-clear-btn"
                         aria-label="Clear search"
-                        onClick={() => updateFilters(previous => ({ ...previous, search: "" }))}
+                        onClick={handleClearSearch}
                       >
                         ×
                       </button>
                     )}
-                  </div>
+                  </form>
 
                   <div className="shop-sort-control">
                     <span className="sort-label">Sort by:</span>
@@ -958,31 +992,63 @@ function Products({
 
             <div className="empty-products" role="status">
 
-              <h3>
-                {filters.search.trim()
-                  ? "No Products Found"
-                  : "No Products Available"}
-              </h3>
+              {Boolean(filters.search && filters.search.trim()) ? (
+                <>
+                  <div className="empty-search-icon-wrap" aria-hidden="true">
+                    <svg
+                      width="38"
+                      height="38"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </div>
 
-              <p>
-                {filters.search.trim()
-                  ? (
-                    <>
-                      Sorry, we couldn't find any products matching your search.<br />
-                      Try searching for a different product name or keyword.
-                    </>
-                  )
-                  : "No products match the current selection. Try adjusting your filters or browse again later."}
-              </p>
+                  <h3>No products found</h3>
 
-              {isShopPage && hasActiveFilters && (
-                <button
-                  type="button"
-                  className="empty-clear-filters-btn"
-                  onClick={clearAllFilters}
-                >
-                  Clear All Filters
-                </button>
+                  <p>Try another product name or check your spelling.</p>
+
+                  <div className="empty-search-actions">
+                    <button
+                      type="button"
+                      className="empty-clear-search-btn"
+                      onClick={handleClearSearch}
+                    >
+                      Clear search
+                    </button>
+                    {isShopPage && hasActiveFilters && (filters.category || filters.min || filters.max || filters.onSale || filters.rating) && (
+                      <button
+                        type="button"
+                        className="empty-clear-all-link"
+                        onClick={clearAllFilters}
+                      >
+                        Reset all filters
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3>No Products Available</h3>
+
+                  <p>No products match the current selection. Try adjusting your filters or browse again later.</p>
+
+                  {isShopPage && hasActiveFilters && (
+                    <button
+                      type="button"
+                      className="empty-clear-filters-btn"
+                      onClick={clearAllFilters}
+                    >
+                      Clear All Filters
+                    </button>
+                  )}
+                </>
               )}
 
             </div>
