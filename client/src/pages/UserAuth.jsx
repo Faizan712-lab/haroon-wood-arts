@@ -29,9 +29,9 @@ const emptyForm = {
   confirmPassword: ""
 };
 
-const DESKTOP_GOOGLE_BUTTON_WIDTH = 380;
-const MOBILE_GOOGLE_BUTTON_WIDTH = 280;
-const NARROW_GOOGLE_BUTTON_WIDTH = 240;
+const DESKTOP_GOOGLE_BUTTON_WIDTH = 360;
+const MOBILE_GOOGLE_BUTTON_WIDTH = 260;
+const NARROW_GOOGLE_BUTTON_WIDTH = 220;
 
 function getGoogleButtonWidth() {
   if (typeof window === "undefined") {
