@@ -324,15 +324,19 @@
   transition: opacity 0.2s ease;
 }
 
-.auth-google > div {
-  max-width: 100% !important;
+.auth-google > .auth-google-native {
+  width: 400px !important;
+  max-width: none !important;
+  flex: 0 0 400px;
   display: flex !important;
   justify-content: center !important;
   overflow: visible !important;
+  transform: scale(0.9);
+  transform-origin: center;
 }
 
-.auth-google iframe {
-  max-width: 100% !important;
+.auth-google > .auth-google-native iframe {
+  max-width: none !important;
   overflow: visible !important;
 }
 
@@ -507,6 +511,10 @@
     margin: 3px 0 2px;
   }
 
+  .auth-google > .auth-google-native {
+    transform: scale(0.7);
+  }
+
   .auth-link-btn {
     padding: 6px 0;
     min-height: 36px;
@@ -555,6 +563,10 @@
   .auth-card {
     padding: 18px 13px 22px;
     border-radius: 14px;
+  }
+
+  .auth-google > .auth-google-native {
+    transform: scale(0.6);
   }
 
   .auth-tabs {

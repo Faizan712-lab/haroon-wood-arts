@@ -1,6 +1,6 @@
 import "./UserAuth.css";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -29,25 +29,7 @@ const emptyForm = {
   confirmPassword: ""
 };
 
-const DESKTOP_GOOGLE_BUTTON_WIDTH = 320;
-const MOBILE_GOOGLE_BUTTON_WIDTH = 250;
-const NARROW_GOOGLE_BUTTON_WIDTH = 220;
-
-function getGoogleButtonWidth() {
-  if (typeof window === "undefined") {
-    return DESKTOP_GOOGLE_BUTTON_WIDTH;
-  }
-
-  if (window.matchMedia("(max-width: 360px)").matches) {
-    return NARROW_GOOGLE_BUTTON_WIDTH;
-  }
-
-  if (window.matchMedia("(max-width: 480px)").matches) {
-    return MOBILE_GOOGLE_BUTTON_WIDTH;
-  }
-
-  return DESKTOP_GOOGLE_BUTTON_WIDTH;
-}
+const GOOGLE_NATIVE_BUTTON_WIDTH = 400;
 
 function getAuthErrorMessage(error) {
   const message = error?.message || "Authentication failed";
@@ -91,36 +73,10 @@ function UserAuth() {
   const [form, setForm] = useState(emptyForm);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [googleButtonWidth, setGoogleButtonWidth] = useState(getGoogleButtonWidth);
   const [resetStep, setResetStep] = useState(1);
   const [signupStep, setSignupStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  useEffect(() => {
-    const narrowQuery = window.matchMedia("(max-width: 360px)");
-    const mobileQuery = window.matchMedia("(max-width: 480px)");
-
-    const updateGoogleButtonWidth = () => {
-      if (narrowQuery.matches) {
-        setGoogleButtonWidth(NARROW_GOOGLE_BUTTON_WIDTH);
-      } else if (mobileQuery.matches) {
-        setGoogleButtonWidth(MOBILE_GOOGLE_BUTTON_WIDTH);
-      } else {
-        setGoogleButtonWidth(DESKTOP_GOOGLE_BUTTON_WIDTH);
-      }
-    };
-
-    narrowQuery.addEventListener("change", updateGoogleButtonWidth);
-    mobileQuery.addEventListener("change", updateGoogleButtonWidth);
-    window.addEventListener("resize", updateGoogleButtonWidth);
-
-    return () => {
-      narrowQuery.removeEventListener("change", updateGoogleButtonWidth);
-      mobileQuery.removeEventListener("change", updateGoogleButtonWidth);
-      window.removeEventListener("resize", updateGoogleButtonWidth);
-    };
-  }, []);
 
   const redirectTo =
     new URLSearchParams(location.search).get("next") || "/";
@@ -680,7 +636,8 @@ function UserAuth() {
                     size="large"
                     shape="pill"
                     logo_alignment="left"
-                    width={googleButtonWidth}
+                    width={GOOGLE_NATIVE_BUTTON_WIDTH}
+                    containerProps={{ className: "auth-google-native" }}
                   />
                 </div>
               </>
