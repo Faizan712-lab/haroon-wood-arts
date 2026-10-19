@@ -26,6 +26,10 @@ const {
   cookieMutationProtection,
   requestShapeLimit
 } = require("./middleware/securityMiddleware");
+const {
+  createCorsOptions,
+  getAllowedOrigins
+} = require("./middleware/corsConfig");
 
 const app = express();
 
@@ -38,25 +42,11 @@ const isProduction = process.env.NODE_ENV === "production";
 const configuredOrigins = process.env.CLIENT_ORIGIN || (
   isProduction ? "" : "http://localhost:5173,http://192.168.1.16:5173"
 );
-const allowedOrigins = configuredOrigins
-  .split(",")
-  .map(origin => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = getAllowedOrigins(configuredOrigins, isProduction);
 
-if (isProduction && allowedOrigins.length === 0) {
-  throw new Error("CLIENT_ORIGIN must list the production frontend origin(s).");
-}
-
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true
-}));
+// Keep CORS first so allowed preflight requests are answered before any
+// request-shape, cookie, authentication, or route middleware runs.
+app.use(cors(createCorsOptions(allowedOrigins)));
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
