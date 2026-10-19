@@ -6,6 +6,7 @@ import {
 
 import {
   useEffect,
+  useLayoutEffect,
   useState
 } from "react";
 
@@ -66,6 +67,8 @@ import {
 import {
   WishlistProvider
 } from "./context/WishlistContext";
+
+import { applyRouteMetadata } from "./utils/seoMetadata.js";
 
 /* ================= ADMIN PAGES ================= */
 
@@ -164,6 +167,16 @@ function ProtectedUserRoute({ children }) {
 
 }
 
+function RouteMetadata() {
+  const { pathname } = useLocation();
+
+  useLayoutEffect(() => {
+    applyRouteMetadata(pathname);
+  }, [pathname]);
+
+  return null;
+}
+
 /* ================= APP ================= */
 
 function App() {
@@ -175,6 +188,7 @@ function App() {
       <WishlistProvider>
 
       <ScrollToTop />
+      <RouteMetadata />
 
       <Toaster
         position="top-right"

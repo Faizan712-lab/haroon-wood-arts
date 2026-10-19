@@ -97,6 +97,16 @@ npm run build
 
 The production frontend build is generated in `client/dist/` and should not be committed.
 
+## Sitemap
+
+Regenerate the sitemap manually after the public product catalog changes:
+
+```bash
+npm run generate:sitemap --prefix server
+```
+
+The command reads the complete catalog from the public products API and updates `client/public/sitemap.xml`. It is intentionally not part of the Vercel build, so a temporary API outage will not prevent a frontend deployment. If fetching or validating the catalog fails, the existing sitemap is left unchanged.
+
 ## Screenshots
 
 Add screenshots or GIFs here before sharing the repository:
