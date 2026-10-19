@@ -543,7 +543,7 @@ function Products({
               </h1>
             </header>
           ) : (
-            <>
+            <div className="featured-section-header">
               {/* TAG */}
               <p className="section-tag">
                 OUR PRODUCTS
@@ -563,7 +563,7 @@ function Products({
               >
                 View All Products →
               </button>
-            </>
+            </div>
           )}
 
           {isShopPage && (
@@ -974,8 +974,10 @@ function Products({
 
           {loading ? (
 
-            <div className="product-grid" aria-busy="true" aria-label="Loading products">
-              <ProductCardSkeleton count={isShopPage ? 10 : 12} />
+            <div className={!isShopPage ? "featured-carousel-container" : undefined}>
+              <div className="product-grid" aria-busy="true" aria-label="Loading products">
+                <ProductCardSkeleton count={isShopPage ? 10 : 12} />
+              </div>
             </div>
 
           ) : loadError ? (
@@ -1055,41 +1057,44 @@ function Products({
 
           ) : (
 
-            <div className="product-grid">
+            <div className={!isShopPage ? "featured-carousel-container" : undefined}>
+              <div className="product-grid">
 
-              {filteredProducts.map(
+                {filteredProducts.map(
 
-                (item, index) => (
+                  (item, index) => (
 
-                  <motion.div
+                    <motion.div
 
-                    className="product-card"
+                      className="product-card"
 
-                    key={item.id}
+                      key={item.id}
 
-                    onClick={() =>
+                      onClick={() =>
 
-                      navigate(
-                        `/product/${item.id}`
-                      )
+                        navigate(
+                          `/product/${item.id}`
+                        )
 
-                    }
+                      }
 
-                    initial={{
-                      opacity: 0,
-                      y: 60
-                    }}
+                      initial={{
+                        opacity: 0,
+                        y: 60
+                      }}
 
-                    whileInView={{
-                      opacity: 1,
-                      y: 0
-                    }}
+                      whileInView={{
+                        opacity: 1,
+                        y: 0
+                      }}
 
-                    transition={{
-                      duration: 0.5,
-                      delay:
-                        index * 0.1
-                    }}
+                      viewport={{ once: true }}
+
+                      transition={{
+                        duration: 0.5,
+                        delay:
+                          isShopPage ? index * 0.1 : Math.min(index * 0.05, 0.25)
+                      }}
 
                   >
 
@@ -1204,6 +1209,7 @@ function Products({
 
               )}
 
+              </div>
             </div>
 
           )}

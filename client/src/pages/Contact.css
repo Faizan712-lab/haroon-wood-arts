@@ -64,18 +64,6 @@
   position: relative;
 }
 
-/* Top brand accent stripe */
-.contact-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #bd7336 0%, #e8904a 50%, #bd7336 100%);
-  border-radius: 20px 20px 0 0;
-}
-
 /* ======================================== */
 /* CONTACT GRID */
 /* ======================================== */

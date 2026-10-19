@@ -6,11 +6,19 @@ import {
   FaHeart,
   FaShippingFast
 } from "react-icons/fa";
+import logo from "../assets/logo.png";
 
 function About() {
   return (
     <div className="about-page">
       <div className="about-hero">
+        <div className="about-logo-wrapper">
+          <img
+            src={logo}
+            alt="Haroon Stores logo"
+            className="about-logo"
+          />
+        </div>
         <span className="about-tag">OUR STORY</span>
         <h1>About Haroon Stores</h1>
         <p className="about-subtitle">

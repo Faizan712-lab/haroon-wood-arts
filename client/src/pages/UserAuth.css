@@ -317,26 +317,24 @@
   width: 100%;
   max-width: 100%;
   min-height: 44px;
-  margin: 2px 0;
-  padding: 2px 0;
+  margin: 4px 0 2px;
+  padding: 0;
   overflow: visible;
   box-sizing: border-box;
   transition: opacity 0.2s ease;
 }
 
 .auth-google > .auth-google-native {
-  width: 400px !important;
-  max-width: none !important;
-  flex: 0 0 400px;
+  width: 100% !important;
+  max-width: 400px !important;
   display: flex !important;
   justify-content: center !important;
+  align-items: center !important;
   overflow: visible !important;
-  transform: scale(0.9);
-  transform-origin: center;
 }
 
 .auth-google > .auth-google-native iframe {
-  max-width: none !important;
+  max-width: 100% !important;
   overflow: visible !important;
 }
 
@@ -497,22 +495,41 @@
   }
 
   .auth-submit {
-    height: 46px;
-    font-size: 14.5px;
+    height: 48px;
+    min-height: 48px;
+    font-size: 15px;
+    font-weight: 600;
     margin-top: 4px;
+    border-radius: 10px;
     touch-action: manipulation;
   }
 
   .auth-divider {
-    margin: 2px 0;
+    margin: 4px 0;
   }
 
   .auth-google {
-    margin: 3px 0 2px;
+    min-height: 46px;
+    height: 46px;
+    margin: 4px 0 2px;
   }
 
   .auth-google > .auth-google-native {
-    transform: scale(0.7);
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 46px !important;
+    justify-content: center !important;
+    transform: none !important;
+  }
+
+  .auth-google .auth-google-native > div,
+  .auth-google .auth-google-native > div > div,
+  .auth-google [role="button"] {
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 9999px !important;
+    display: flex !important;
+    align-items: center !important;
   }
 
   .auth-link-btn {
@@ -565,8 +582,28 @@
     border-radius: 14px;
   }
 
+  .auth-google {
+    min-height: 46px;
+    height: 46px;
+    margin: 3px 0 2px;
+  }
+
   .auth-google > .auth-google-native {
-    transform: scale(0.6);
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 46px !important;
+    justify-content: center !important;
+    transform: none !important;
+  }
+
+  .auth-google .auth-google-native > div,
+  .auth-google .auth-google-native > div > div,
+  .auth-google [role="button"] {
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 9999px !important;
+    display: flex !important;
+    align-items: center !important;
   }
 
   .auth-tabs {
@@ -611,8 +648,10 @@
   }
 
   .auth-submit {
-    height: 44px;
-    font-size: 14px;
+    height: 46px;
+    min-height: 46px;
+    font-size: 14.5px;
+    border-radius: 10px;
   }
 
   .auth-switch-prompt {

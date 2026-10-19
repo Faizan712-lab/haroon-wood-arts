@@ -49,6 +49,8 @@ import Categories from "./pages/Categories";
 import About from "./pages/About";
 
 import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
 
 import UserAuth from "./pages/UserAuth";
 
@@ -326,21 +328,33 @@ function App() {
         />
 
         <Route
-
           path="/contact"
-
           element={
-
             <>
-
               <Navbar />
-
               <Contact />
-
             </>
-
           }
+        />
 
+        <Route
+          path="/privacy-policy"
+          element={
+            <>
+              <Navbar />
+              <PrivacyPolicy />
+            </>
+          }
+        />
+
+        <Route
+          path="/terms-and-conditions"
+          element={
+            <>
+              <Navbar />
+              <TermsAndConditions />
+            </>
+          }
         />
 
         <Route

@@ -9,9 +9,21 @@ import {
 from "react-router-dom";
 
 import {
-  FaShoppingCart
+  FaHome,
+  FaShoppingBag,
+  FaThLarge,
+  FaListUl,
+  FaEnvelope,
+  FaInfoCircle,
+  FaSignInAlt,
+  FaTimes
 }
 from "react-icons/fa";
+
+import {
+  IoCartOutline
+}
+from "react-icons/io5";
 
 import logo
 from "../assets/logo.png";
@@ -391,7 +403,7 @@ function Navbar() {
         className="mobile-cart-link"
         aria-label="Open cart"
       >
-        <FaShoppingCart />
+        <IoCartOutline />
 
         {totalQuantity > 0 && (
 
@@ -438,8 +450,8 @@ function Navbar() {
         <input
           ref={searchInputRef}
           type="search"
-          placeholder="Search products..."
-          aria-label="Search products"
+          placeholder="Search authentic crafts..."
+          aria-label="Search authentic crafts"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -520,78 +532,77 @@ function Navbar() {
           }
         }}
       >
+        <li className="mobile-drawer-header">
+          <div className="mobile-drawer-brand">
+            <img src={logo} alt="Haroon Stores logo" className="mobile-drawer-logo" />
+            <span className="mobile-drawer-title">
+              <span className="mobile-drawer-title-bold">Haroon</span>{" "}
+              <span className="mobile-drawer-title-light">Stores</span>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="mobile-drawer-close"
+            aria-label="Close navigation menu"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMobileMenuOpen(false);
+            }}
+          >
+            <FaTimes aria-hidden="true" />
+          </button>
+        </li>
 
         <li>
-
           <NavLink to="/" end>
-
-            Home
-
+            <span>Home</span>
+            <FaHome className="drawer-item-icon" aria-hidden="true" />
           </NavLink>
-
         </li>
 
         <li>
-
           <NavLink to="/shop">
-
-            Shop
-
+            <span>Shop</span>
+            <FaShoppingBag className="drawer-item-icon" aria-hidden="true" />
           </NavLink>
-
         </li>
 
         <li>
-
           <NavLink to="/categories">
-
-            Categories
-
+            <span>Categories</span>
+            <FaThLarge className="drawer-item-icon" aria-hidden="true" />
           </NavLink>
-
         </li>
 
         <li>
-
           <NavLink
             to="/orders"
             className={({ isActive }) =>
               isActive || isOrderDetailsPath ? "active" : undefined
             }
           >
-
-            Orders
-
+            <span>Orders</span>
+            <FaListUl className="drawer-item-icon" aria-hidden="true" />
           </NavLink>
-
         </li>
 
         <li>
-
           <NavLink to="/contact">
-
-            Contact Us
-
+            <span>Contact Us</span>
+            <FaEnvelope className="drawer-item-icon" aria-hidden="true" />
           </NavLink>
-
         </li>
 
         <li>
-
           <NavLink to="/about">
-
-            About Us
-
+            <span>About Us</span>
+            <FaInfoCircle className="drawer-item-icon" aria-hidden="true" />
           </NavLink>
-
         </li>
 
         <li className="user-auth-link">
-
           {userSession ? (
-
             <>
-
               <Link
                 to="/profile"
                 className="profile-avatar-link desktop-profile-link"
@@ -611,19 +622,13 @@ function Navbar() {
               >
                 View Profile
               </Link>
-
             </>
-
           ) : (
-
-            <NavLink to="/login">
-
-              Login
-
+            <NavLink to="/login" className="mobile-login-link">
+              <FaSignInAlt className="mobile-login-icon" aria-hidden="true" />
+              <span>Login</span>
             </NavLink>
-
           )}
-
         </li>
 
         {userSession && (
@@ -664,6 +669,16 @@ function Navbar() {
 
           </Link>
 
+        </li>
+
+        {/* MOBILE SIDEBAR POLICY LINKS */}
+        <li className="mobile-policy-section">
+          <NavLink to="/privacy-policy" className="mobile-policy-link">
+            Privacy Policy
+          </NavLink>
+          <NavLink to="/terms-and-conditions" className="mobile-policy-link">
+            Terms &amp; Conditions
+          </NavLink>
         </li>
 
       </ul>

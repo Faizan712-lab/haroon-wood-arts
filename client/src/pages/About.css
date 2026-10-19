@@ -20,6 +20,20 @@
   margin: 0 auto 54px;
 }
 
+.about-logo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.about-logo {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(44, 27, 20, 0.08));
+}
+
 .about-tag {
   display: inline-block;
   color: #bd7336;
@@ -64,17 +78,6 @@
   box-shadow: 0 12px 36px rgba(62, 39, 35, 0.05);
   margin-bottom: 32px;
   position: relative;
-}
-
-.about-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #bd7336 0%, #e8904a 50%, #bd7336 100%);
-  border-radius: 20px 20px 0 0;
 }
 
 .about-section-tag {
@@ -190,6 +193,15 @@
     margin-bottom: 34px;
   }
 
+  .about-logo-wrapper {
+    margin-bottom: 12px;
+  }
+
+  .about-logo {
+    width: 44px;
+    height: 44px;
+  }
+
   .about-card {
     padding: 24px 18px 22px;
     border-radius: 16px;
@@ -242,6 +254,11 @@
 
   .about-hero h1 {
     font-size: 28px;
+  }
+
+  .about-logo {
+    width: 38px;
+    height: 38px;
   }
 
   .about-card {

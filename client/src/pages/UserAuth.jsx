@@ -1,6 +1,6 @@
 import "./UserAuth.css";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -80,6 +80,36 @@ function UserAuth() {
 
   const redirectTo =
     new URLSearchParams(location.search).get("next") || "/";
+
+  const googleContainerRef = useRef(null);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(GOOGLE_NATIVE_BUTTON_WIDTH);
+
+  useEffect(() => {
+    function updateGoogleWidth() {
+      if (googleContainerRef.current) {
+        const clientWidth = Math.floor(googleContainerRef.current.clientWidth);
+        if (clientWidth > 0) {
+          // Google Identity Services button width must be between 200 and 400 pixels
+          const clamped = Math.max(200, Math.min(400, clientWidth));
+          setGoogleButtonWidth(clamped);
+        }
+      }
+    }
+
+    updateGoogleWidth();
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== "undefined" && googleContainerRef.current) {
+      resizeObserver = new ResizeObserver(updateGoogleWidth);
+      resizeObserver.observe(googleContainerRef.current);
+    }
+
+    window.addEventListener("resize", updateGoogleWidth);
+    return () => {
+      window.removeEventListener("resize", updateGoogleWidth);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [mode]);
 
   function updateField(e) {
     setForm({
@@ -624,6 +654,7 @@ function UserAuth() {
                 </div>
 
                 <div
+                  ref={googleContainerRef}
                   className={`auth-google${isGoogleLoading ? " is-loading" : ""}`}
                   aria-label="Continue with Google"
                   aria-busy={isGoogleLoading}
@@ -635,8 +666,8 @@ function UserAuth() {
                     theme="outline"
                     size="large"
                     shape="pill"
-                    logo_alignment="left"
-                    width={GOOGLE_NATIVE_BUTTON_WIDTH}
+                    logo_alignment="center"
+                    width={googleButtonWidth}
                     containerProps={{ className: "auth-google-native" }}
                   />
                 </div>
