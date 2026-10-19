@@ -8,6 +8,7 @@ import {
 import {
   useContext,
   useEffect,
+  useLayoutEffect,
   useState
 } from "react";
 
@@ -35,6 +36,12 @@ from "../utils/imageFallback";
 import {
   getProductVariants
 } from "../utils/productDisplay";
+
+import {
+  applyMissingProductMetadata,
+  applyProductMetadata,
+  classifyProductResponse
+} from "../utils/seoMetadata.js";
 
 function RatingStars({
   rating,
@@ -123,6 +130,7 @@ function ProductDetails() {
   const [comment, setComment] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [productNotFound, setProductNotFound] = useState(false);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [galleryKey, setGalleryKey] = useState(0);
@@ -130,57 +138,62 @@ function ProductDetails() {
 
   /* GET PRODUCT */
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
     async function fetchProduct() {
       try {
         setLoading(true);
         setLoadError("");
+        setProductNotFound(false);
+        setProduct(null);
 
         const response = await fetch(
           getApiUrl(`/api/products/${id}`),
-          { cache: "no-store" }
+          { cache: "no-store", signal: controller.signal }
         );
 
         const data = await response.json();
+        const result = classifyProductResponse(response.status, data, id);
 
-        if (response.ok && data.success && data.product) {
-          setProduct(data.product);
+        if (!active) return;
+
+        if (result.type === "found") {
+          setProduct(result.product);
           return;
         }
 
-        const listResponse = await fetch(
-          getApiUrl("/api/products"),
-          { cache: "no-store" }
-        );
-
-        const listData = await listResponse.json();
-
-        if (listResponse.ok && listData.success) {
-          const matchedProduct = (listData.products || []).find(item =>
-            String(item.id) === String(id)
-          );
-
-          if (matchedProduct) {
-            setProduct(matchedProduct);
-            return;
-          }
+        if (result.type === "missing") {
+          setProductNotFound(true);
+          setLoadError("This product may have been removed or is unavailable.");
+          return;
         }
 
-        const message = data.message || "Product not found";
-        setLoadError(message);
-        setProduct(null);
-        toast.error(message);
+        setLoadError(data?.message || "Unable to load this product right now.");
       } catch (error) {
+        if (error.name === "AbortError" || !active) return;
         console.error("Failed to load product:", error);
-        setLoadError("Unable to load this product right now.");
-        setProduct(null);
-        toast.error("Unable to load this product right now.");
+        setLoadError("Unable to load this product right now. Please try again.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     fetchProduct();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [id]);
+
+  useLayoutEffect(() => {
+    if (product && String(product.id) === String(id)) {
+      applyProductMetadata(product, id);
+    } else if (productNotFound) {
+      applyMissingProductMetadata();
+    }
+  }, [id, product, productNotFound]);
 
   if (loading) {
     return (
@@ -194,14 +207,14 @@ function ProductDetails() {
     );
   }
 
-  /* NOT FOUND */
+  /* NOT FOUND OR TEMPORARY LOAD FAILURE */
   if (!product) {
     return (
       <div className="product-not-found">
         <div className="product-state-card">
-          <h1>Product not found</h1>
+          <h1>{productNotFound ? "Product not found" : "Unable to load product"}</h1>
           <p>
-            {loadError || "This product may have been removed or is unavailable."}
+            {loadError || "Please try again in a moment."}
           </p>
           <button
             type="button"

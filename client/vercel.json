@@ -1,8 +1,48 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/product/(.*)",
+      "destination": "/spa-shell.html"
+    },
+    {
+      "source": "/shop",
+      "destination": "/shop/index.html"
+    },
+    {
+      "source": "/shop/",
+      "destination": "/shop/index.html"
+    },
+    {
+      "source": "/categories",
+      "destination": "/categories/index.html"
+    },
+    {
+      "source": "/categories/",
+      "destination": "/categories/index.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about/index.html"
+    },
+    {
+      "source": "/about/",
+      "destination": "/about/index.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact/index.html"
+    },
+    {
+      "source": "/contact/",
+      "destination": "/contact/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/spa-shell.html"
     }
   ]
 }
