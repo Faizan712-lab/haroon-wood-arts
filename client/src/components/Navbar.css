@@ -799,13 +799,13 @@
   }
 
   /* ─── Navigation Items ─── */
-  .nav-links li:not(.mobile-drawer-header):not(.cart-icon):not(.user-auth-link):not(.mobile-policy-section) {
+  .nav-links li:not(.mobile-drawer-header):not(.cart-icon):not(.user-auth-link):not(.mobile-user-logout):not(.mobile-policy-section) {
     width: 100%;
     display: block;
     margin: 0;
   }
 
-  .nav-links a {
+  .nav-links a:not(.mobile-login-link):not(.mobile-view-profile-link):not(.mobile-policy-link) {
     width: 100%;
     height: 44px;
     min-height: 44px;
@@ -933,7 +933,7 @@
   }
 
   /* Authenticated User in Drawer */
-  .mobile-view-profile-link {
+  .user-auth-link a.mobile-view-profile-link {
     display: flex;
     width: 100%;
     height: 44px;
@@ -942,43 +942,79 @@
     justify-content: center;
     padding: 0 16px;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #f2e7dd;
+    background: rgba(222, 160, 110, 0.12);
+    color: #f7ebe1;
+    font-size: 14.5px;
     font-weight: 600;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    border: 1px solid rgba(222, 160, 110, 0.28);
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
   }
 
-  .mobile-view-profile-link:hover {
-    background: rgba(255, 255, 255, 0.12);
+  .user-auth-link a.mobile-view-profile-link:hover {
+    background: rgba(222, 160, 110, 0.18);
+    border-color: rgba(217, 121, 40, 0.45);
+    color: #ffffff;
+  }
+
+  .user-auth-link a.mobile-view-profile-link:active {
+    background: rgba(222, 160, 110, 0.24);
+    transform: scale(0.98);
+    color: #ffffff;
+  }
+
+  .user-auth-link a.mobile-view-profile-link:focus-visible {
+    outline: 2px solid #df7a28;
+    outline-offset: 2px;
   }
 
   .mobile-user-logout {
-    display: block;
-    margin-top: 8px;
-    padding-bottom: 4px;
+    display: block !important;
+    width: 100%;
+    margin-top: 10px !important;
+    padding: 0;
+    box-sizing: border-box;
   }
 
   .mobile-user-logout button {
     width: 100%;
-    height: 42px;
-    min-height: 42px;
-    border: 1px solid rgba(220, 53, 69, 0.28);
+    height: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border: 1px solid rgba(239, 68, 68, 0.32);
     border-radius: 9999px;
-    background: rgba(220, 53, 69, 0.12);
-    color: #ff8585;
-    font-size: 14px;
+    background: rgba(185, 28, 28, 0.15);
+    color: #fca5a5;
+    font-size: 14.5px;
     font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: background 0.16s ease, color 0.16s ease;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
   }
 
   .mobile-user-logout button:hover {
-    background: rgba(220, 53, 69, 0.2);
-    color: #ffa3a3;
+    background: rgba(185, 28, 28, 0.22);
+    border-color: rgba(239, 68, 68, 0.48);
+    color: #fecaca;
   }
 
   .mobile-user-logout button:active {
-    background: rgba(220, 53, 69, 0.28);
+    background: rgba(185, 28, 28, 0.32);
+    transform: scale(0.98);
+    color: #ffffff;
+  }
+
+  .mobile-user-logout button:focus-visible {
+    outline: 2px solid #ef4444;
+    outline-offset: 2px;
   }
 
   /* ─── Legal / Policy Section in Drawer ─── */
@@ -987,7 +1023,7 @@
     flex-direction: column;
     gap: 11px;
     width: 100%;
-    margin-top: 14px !important;
+    margin-top: 16px !important;
     padding: 0 4px;
     border-top: none;
     align-items: flex-start;
