@@ -55,11 +55,11 @@
     },
     {
       "source": "/product/(.*)",
-      "destination": "/spa-shell.html"
+      "destination": "/spa-shell"
     },
     {
       "source": "/(.*)",
-      "destination": "/spa-shell.html"
+      "destination": "/spa-shell"
     }
   ]
 }
