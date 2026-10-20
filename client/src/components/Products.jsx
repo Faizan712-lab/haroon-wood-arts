@@ -132,9 +132,6 @@ function Products({
   const isShopPage =
     location.pathname === "/shop";
 
-  const currentCategorySeo =
-    filters.category ? getCategorySeo(filters.category) : null;
-
   const {
     addToCart,
     cartItems,
@@ -203,6 +200,9 @@ function Products({
       rating: searchParams.get("rating") || "",
       sort: searchParams.get("sort") || "newest"
     });
+
+  const currentCategorySeo =
+    filters.category ? getCategorySeo(filters.category) : null;
 
   const [searchInput, setSearchInput] = useState(() => searchParams.get("search") || "");
 
