@@ -1,12 +1,9 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/",
       "destination": "/index.html"
-    },
-    {
-      "source": "/product/(.*)",
-      "destination": "/spa-shell.html"
     },
     {
       "source": "/shop",
@@ -39,6 +36,26 @@
     {
       "source": "/contact/",
       "destination": "/contact/index.html"
+    },
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy/index.html"
+    },
+    {
+      "source": "/privacy-policy/",
+      "destination": "/privacy-policy/index.html"
+    },
+    {
+      "source": "/terms-and-conditions",
+      "destination": "/terms-and-conditions/index.html"
+    },
+    {
+      "source": "/terms-and-conditions/",
+      "destination": "/terms-and-conditions/index.html"
+    },
+    {
+      "source": "/product/(.*)",
+      "destination": "/spa-shell.html"
     },
     {
       "source": "/(.*)",

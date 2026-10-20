@@ -174,21 +174,21 @@ export function buildProductSeoMetadata(product, requestedId) {
   const images = getProductImages(product);
   const price = getProductPrice(product);
   const availability = getSchemaAvailability(product);
-  const structuredData = {
-    "@context": "https://schema.org",
+
+  const productSchema = {
     "@type": "Product",
     name,
     url: canonicalUrl
   };
 
   if (description) {
-    structuredData.description = description;
+    productSchema.description = description;
   }
   if (images.length > 0) {
-    structuredData.image = images;
+    productSchema.image = images;
   }
   if (price !== null) {
-    structuredData.offers = {
+    productSchema.offers = {
       "@type": "Offer",
       url: canonicalUrl,
       priceCurrency: "INR",
@@ -196,9 +196,38 @@ export function buildProductSeoMetadata(product, requestedId) {
     };
 
     if (availability) {
-      structuredData.offers.availability = availability;
+      productSchema.offers.availability = availability;
     }
   }
+
+  const breadcrumbList = {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${SITE_ORIGIN}/`
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Shop",
+        item: `${SITE_ORIGIN}/shop`
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name,
+        item: canonicalUrl
+      }
+    ]
+  };
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [productSchema, breadcrumbList]
+  };
 
   return {
     title: `${name} | Haroon Stores`,

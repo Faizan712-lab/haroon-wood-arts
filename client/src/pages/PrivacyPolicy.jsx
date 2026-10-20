@@ -62,12 +62,12 @@ function PrivacyPolicy() {
               <p>
                 Welcome to Haroon Stores (accessible at{" "}
                 <a
-                  href="https://haroonstores.in"
+                  href="https://www.haroonstores.in"
                   target="_blank"
                   rel="noreferrer"
                   className="policy-breadcrumb-link"
                 >
-                  https://haroonstores.in
+                  https://www.haroonstores.in
                 </a>
                 ). Haroon Stores is an e-commerce platform dedicated to offering
                 authentic Kashmiri handcrafted wooden decor, traditional artisan

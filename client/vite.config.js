@@ -13,4 +13,23 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            if (id.includes('react-icons')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('react-phone-input-2') || id.includes('react-confetti') || id.includes('@react-oauth/google')) {
+              return 'vendor-ui-extras';
+            }
+          }
+        },
+      },
+    },
+  },
 })

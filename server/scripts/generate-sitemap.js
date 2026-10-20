@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const API_URL = "https://api.haroonstores.in/api/products";
-const SITE_URL = "https://haroonstores.in";
+const SITE_URL = "https://www.haroonstores.in";
 const OUTPUT_PATH = path.resolve(__dirname, "../../client/public/sitemap.xml");
 const PAGE_SIZE = 50;
 const MAX_URLS_PER_SITEMAP = 50000;
@@ -17,7 +17,9 @@ const STATIC_PAGES = [
   { path: "/shop", changefreq: "daily", priority: "0.8" },
   { path: "/categories", changefreq: "weekly", priority: "0.8" },
   { path: "/about", changefreq: "monthly", priority: "0.6" },
-  { path: "/contact", changefreq: "monthly", priority: "0.6" }
+  { path: "/contact", changefreq: "monthly", priority: "0.6" },
+  { path: "/privacy-policy", changefreq: "monthly", priority: "0.4" },
+  { path: "/terms-and-conditions", changefreq: "monthly", priority: "0.4" }
 ];
 
 function escapeXml(value) {

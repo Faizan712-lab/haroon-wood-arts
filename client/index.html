@@ -12,16 +12,30 @@
     <meta property="og:description" content="Haroon Stores — Kashmiri handicrafts, wooden decor, handmade products and traditional Kashmiri craftsmanship." />
     <meta property="og:site_name" content="Haroon Stores" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://haroonstores.in/" />
-    <meta property="og:image" content="https://haroonstores.in/logo.png" />
+    <meta property="og:url" content="https://www.haroonstores.in/" />
+    <meta property="og:image" content="https://www.haroonstores.in/logo.png" />
 
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Haroon Stores",
-      "url": "https://haroonstores.in/"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://www.haroonstores.in/#website",
+          "url": "https://www.haroonstores.in/",
+          "name": "Haroon Stores",
+          "description": "Shop authentic Kashmiri wooden handicrafts, decor, and handmade products from Haroon Stores."
+        },
+        {
+          "@type": "Store",
+          "@id": "https://www.haroonstores.in/#store",
+          "name": "Haroon Stores",
+          "url": "https://www.haroonstores.in/",
+          "logo": "https://www.haroonstores.in/logo.png",
+          "description": "Authentic Kashmiri wooden handicrafts, home decor, and handmade artifacts."
+        }
+      ]
     }
     </script>
   </head>

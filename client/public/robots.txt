@@ -1,4 +1,14 @@
-User-agent: *
+﻿User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /admin-login
+Disallow: /checkout
+Disallow: /payment
+Disallow: /order-success
+Disallow: /orders
+Disallow: /order-details
+Disallow: /profile
+Disallow: /settings
 
-Sitemap: https://haroonstores.in/sitemap.xml
+Sitemap: https://www.haroonstores.in/sitemap.xml

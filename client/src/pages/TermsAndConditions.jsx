@@ -69,12 +69,12 @@ function TermsAndConditions() {
                 Haroon Stores (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;)
                 operates the e-commerce store accessible at{" "}
                 <a
-                  href="https://haroonstores.in"
+                  href="https://www.haroonstores.in"
                   target="_blank"
                   rel="noreferrer"
                   className="policy-breadcrumb-link"
                 >
-                  https://haroonstores.in
+                  https://www.haroonstores.in
                 </a>
                 . We specialize in authentic Kashmiri wooden handicrafts, traditional
                 walnut wood carvings, home decor, artistic accessories, and handmade

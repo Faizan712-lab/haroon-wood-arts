@@ -1,85 +1,158 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://haroonstores.in/</loc>
+    <loc>https://www.haroonstores.in/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://haroonstores.in/shop</loc>
+    <loc>https://www.haroonstores.in/shop</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://haroonstores.in/categories</loc>
+    <loc>https://www.haroonstores.in/categories</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://haroonstores.in/about</loc>
+    <loc>https://www.haroonstores.in/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://haroonstores.in/contact</loc>
+    <loc>https://www.haroonstores.in/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/22</loc>
+    <loc>https://www.haroonstores.in/privacy-policy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/21</loc>
+    <loc>https://www.haroonstores.in/terms-and-conditions</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/20</loc>
+    <loc>https://www.haroonstores.in/product/47</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/16</loc>
+    <loc>https://www.haroonstores.in/product/46</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/15</loc>
+    <loc>https://www.haroonstores.in/product/45</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/14</loc>
+    <loc>https://www.haroonstores.in/product/44</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/13</loc>
+    <loc>https://www.haroonstores.in/product/43</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/12</loc>
+    <loc>https://www.haroonstores.in/product/42</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/11</loc>
+    <loc>https://www.haroonstores.in/product/41</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/10</loc>
+    <loc>https://www.haroonstores.in/product/40</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/9</loc>
+    <loc>https://www.haroonstores.in/product/39</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/8</loc>
+    <loc>https://www.haroonstores.in/product/38</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/7</loc>
+    <loc>https://www.haroonstores.in/product/37</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/6</loc>
+    <loc>https://www.haroonstores.in/product/36</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/5</loc>
+    <loc>https://www.haroonstores.in/product/35</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/4</loc>
+    <loc>https://www.haroonstores.in/product/34</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/3</loc>
+    <loc>https://www.haroonstores.in/product/33</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/2</loc>
+    <loc>https://www.haroonstores.in/product/32</loc>
   </url>
   <url>
-    <loc>https://haroonstores.in/product/1</loc>
+    <loc>https://www.haroonstores.in/product/31</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/30</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/29</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/28</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/27</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/22</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/21</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/20</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/16</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/15</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/14</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/13</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/12</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/11</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/10</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/9</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/8</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/7</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/6</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/5</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/4</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/3</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/2</loc>
+  </url>
+  <url>
+    <loc>https://www.haroonstores.in/product/1</loc>
   </url>
 </urlset>

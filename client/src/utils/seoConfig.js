@@ -1,4 +1,4 @@
-export const SITE_ORIGIN = "https://haroonstores.in";
+export const SITE_ORIGIN = "https://www.haroonstores.in";
 
 export const DEFAULT_SITE_DESCRIPTION =
   "Shop authentic Kashmiri wooden handicrafts, decor, and handmade products from Haroon Stores.";
@@ -28,5 +28,15 @@ export const STATIC_SEO_PAGES = {
     title: "Contact Haroon Stores",
     description:
       "Contact Haroon Stores for orders, custom woodwork, collaborations, and questions about our Kashmiri handicrafts."
+  },
+  "/privacy-policy": {
+    title: "Privacy Policy | Haroon Stores",
+    description:
+      "Read the Haroon Stores Privacy Policy to understand how customer personal information, orders, and payments are protected."
+  },
+  "/terms-and-conditions": {
+    title: "Terms & Conditions | Haroon Stores",
+    description:
+      "Read the Haroon Stores Terms and Conditions for orders, pricing, authentic Kashmiri handicraft purchases, and policies."
   }
 };
