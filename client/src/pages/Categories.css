@@ -36,6 +36,14 @@
 
 /* HEADER TITLE */
 
+.categories-intro {
+  font-size: 15px;
+  color: #6d5b52;
+  max-width: 720px;
+  margin: -16px 0 28px;
+  line-height: 1.6;
+}
+
 .categories-title,
 .home-categories-section .categories-title {
   font-size: 36px;
@@ -58,6 +66,9 @@
 
 .category-card,
 .home-categories-section .category-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
   position: relative;
   width: 300px;
   height: auto;

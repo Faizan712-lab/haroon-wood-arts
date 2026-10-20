@@ -7,9 +7,8 @@ import {
 from "react";
 
 import {
-  useNavigate
-}
-from "react-router-dom";
+  Link
+} from "react-router-dom";
 
 import {
   getApiUrl
@@ -31,9 +30,6 @@ function Categories({
   const [categories,
     setCategories] =
     useState([]);
-
-  const navigate =
-    useNavigate();
 
   /* LOAD CATEGORIES */
 
@@ -76,20 +72,6 @@ function Categories({
 
   }, []);
 
-  /* OPEN CATEGORY */
-
-  function openCategory(
-    categoryName
-  ) {
-
-    navigate(
-
-      `/shop?category=${categoryName}`
-
-    );
-
-  }
-
   function handleImageError(event) {
     event.currentTarget.onerror = null;
     event.currentTarget.src = CATEGORY_PLACEHOLDER;
@@ -125,11 +107,14 @@ function Categories({
 
         ) : (
 
-          <h1 className="categories-title">
-
-            Shop By Categories
-
-          </h1>
+          <>
+            <h1 className="categories-title">
+              Shop By Categories
+            </h1>
+            <p className="categories-intro">
+              Explore authentic Kashmiri walnut wood handicrafts. Discover hand-carved furniture, intricate wall panels, wooden bowls, vases, and traditional home décor.
+            </p>
+          </>
 
         )}
 
@@ -154,27 +139,17 @@ function Categories({
 
             {categories.map((category) => (
 
-              <div
-
+              <Link
                 key={category.id}
-
+                to={`/shop?category=${encodeURIComponent(category.name)}`}
                 className="category-card"
-
-                onClick={() =>
-
-                  openCategory(
-                    category.name
-                  )
-
-                }
-
               >
 
                 <img
 
                   src={getImageList(category)[0] || CATEGORY_PLACEHOLDER}
 
-                  alt={category.name}
+                  alt={`${category.name} - Kashmiri Walnut Wood Handicrafts`}
                   loading="lazy"
                   onError={handleImageError}
 
@@ -192,7 +167,7 @@ function Categories({
 
                 </div>
 
-              </div>
+              </Link>
 
             ))}
 

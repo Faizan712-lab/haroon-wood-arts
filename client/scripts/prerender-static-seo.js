@@ -1,3 +1,4 @@
+/* global process */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +8,11 @@ import {
   SITE_ORIGIN,
   STATIC_SEO_PAGES
 } from "../src/utils/seoConfig.js";
+import {
+  buildProductSeoTitle,
+  formatProductDescription,
+  formatProductTitle
+} from "../src/utils/seoMetadata.js";
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIRECTORY = path.resolve(SCRIPT_DIRECTORY, "..");
@@ -138,11 +144,11 @@ function createProductSpaShell(template) {
 function applyProductMetadataToHtml(template, product) {
   const productId = Number(product?.id);
   const canonicalUrl = `${SITE_ORIGIN}/product/${productId}`;
-  const name = String(product?.name || "").trim();
-  const title = `${escapeAttribute(name)} | Haroon Stores`;
-  const rawDescription = typeof product.description === "string" && product.description.trim()
-    ? product.description.trim().slice(0, 300)
-    : DEFAULT_SITE_DESCRIPTION;
+  const rawName = String(product?.name || "").trim();
+  const cleanName = formatProductTitle(rawName);
+  const pageTitle = buildProductSeoTitle({ ...product, name: cleanName });
+  const title = escapeAttribute(pageTitle);
+  const rawDescription = formatProductDescription(product.description, { ...product, name: cleanName });
 
   const images = getProductImages(product);
   const primaryImage = images[0] || `${SITE_ORIGIN}/logo.png`;
@@ -156,7 +162,7 @@ function applyProductMetadataToHtml(template, product) {
 
   let html = template.replace(/<title>[^<]*<\/title>/i, `<title>${title}</title>`);
   html = upsertMeta(html, "name", "description", rawDescription);
-  html = upsertMeta(html, "property", "og:title", `${name} | Haroon Stores`);
+  html = upsertMeta(html, "property", "og:title", pageTitle);
   html = upsertMeta(html, "property", "og:description", rawDescription);
   html = upsertMeta(html, "property", "og:type", "product");
   html = upsertMeta(html, "property", "og:site_name", "Haroon Stores");
@@ -183,7 +189,7 @@ function applyProductMetadataToHtml(template, product) {
   // Build schema.org Product and BreadcrumbList structured data
   const productSchema = {
     "@type": "Product",
-    name,
+    name: cleanName,
     url: canonicalUrl
   };
   if (rawDescription) {
@@ -222,7 +228,7 @@ function applyProductMetadataToHtml(template, product) {
       {
         "@type": "ListItem",
         position: 3,
-        name,
+        name: cleanName,
         item: canonicalUrl
       }
     ]

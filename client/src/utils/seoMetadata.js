@@ -1,11 +1,137 @@
 import {
   DEFAULT_SITE_DESCRIPTION,
   SITE_ORIGIN,
-  STATIC_SEO_PAGES
+  STATIC_SEO_PAGES,
+  getCategorySeo
 } from "./seoConfig.js";
 import { getCanonicalHref } from "./canonicalUrl.js";
 
 const PRODUCT_JSON_LD_SELECTOR = 'script[data-seo-product="true"]';
+
+export function formatProductTitle(name) {
+  if (typeof name !== "string") return "";
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+
+  const letters = trimmed.replace(/[^a-zA-Z]/g, "");
+  const upperCount = (trimmed.match(/[A-Z]/g) || []).length;
+  const isAllCaps = letters.length > 0 && upperCount / letters.length > 0.75;
+
+  if (isAllCaps) {
+    return trimmed
+      .toLowerCase()
+      .split(/\s+/)
+      .map(word => {
+        if (!word) return "";
+        if (/^\d+x\d+$/i.test(word)) return word.toUpperCase();
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(" ");
+  }
+
+  return trimmed;
+}
+
+export function formatProductDescription(description, productOrName = null) {
+  let rawDesc = typeof description === "string" ? description.trim() : "";
+  let productName = "";
+
+  if (productOrName) {
+    if (typeof productOrName === "object") {
+      productName = typeof productOrName.name === "string" ? productOrName.name : "";
+    } else if (typeof productOrName === "string") {
+      productName = productOrName;
+    }
+  }
+
+  const cleanName = formatProductTitle(productName);
+
+  if (!rawDesc) {
+    if (cleanName) {
+      return `Explore ${cleanName} at Haroon Stores. Authentic handcrafted Kashmiri wooden creations online.`;
+    }
+    return DEFAULT_SITE_DESCRIPTION;
+  }
+
+  let text = rawDesc;
+  const letters = text.replace(/[^a-zA-Z]/g, "");
+  const upperCount = (text.match(/[A-Z]/g) || []).length;
+  const isAllCaps = letters.length > 0 && upperCount / letters.length > 0.75;
+
+  if (isAllCaps) {
+    text = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+    text = text.replace(/\.\s+([a-z])/g, (_, letter) => `. ${letter.toUpperCase()}`);
+    text = text.replace(/\b(kashmir|kashmiri|haroon stores|haroon)\b/gi, match => {
+      const lower = match.toLowerCase();
+      if (lower === "kashmiri") return "Kashmiri";
+      if (lower === "kashmir") return "Kashmir";
+      if (lower === "haroon stores") return "Haroon Stores";
+      if (lower === "haroon") return "Haroon";
+      return match;
+    });
+  }
+
+  const trimmed = text.trim();
+  const punctuated = /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+
+  if (!cleanName) {
+    return punctuated.slice(0, 300);
+  }
+
+  const lowerText = punctuated.toLowerCase();
+  const lowerName = cleanName.toLowerCase();
+  const alreadyMentionsName = lowerText.includes(lowerName);
+  const alreadyMentionsBrand = lowerText.includes("haroon stores");
+
+  if (alreadyMentionsName && alreadyMentionsBrand) {
+    return punctuated.slice(0, 300);
+  }
+
+  if (alreadyMentionsName) {
+    if (!alreadyMentionsBrand && punctuated.length < 140) {
+      return `${punctuated} Available at Haroon Stores.`.slice(0, 300);
+    }
+    return punctuated.slice(0, 300);
+  }
+
+  if (alreadyMentionsBrand) {
+    return `${cleanName} \u2014 ${punctuated}`.slice(0, 300);
+  }
+
+  return `${cleanName} at Haroon Stores. ${punctuated}`.slice(0, 300);
+}
+
+export function buildProductSeoTitle(product) {
+  const cleanName = formatProductTitle(product?.name || "");
+  if (!cleanName) {
+    return "Kashmiri Handicrafts | Haroon Stores";
+  }
+
+  const lower = cleanName.toLowerCase();
+  const category = String(product?.category || "").trim().toUpperCase();
+
+  if (lower.includes("haroon stores")) {
+    return cleanName;
+  }
+
+  // If the product title is already long (> 42 chars), keep it clean with brand suffix
+  if (cleanName.length > 42) {
+    return `${cleanName} | Haroon Stores`;
+  }
+
+  // For short titles, enrich with natural material/craftsmanship context
+  if (!lower.includes("kashmiri")) {
+    if (category === "FURNITURE") {
+      return `${cleanName} - Kashmiri Handcrafted Furniture | Haroon Stores`;
+    }
+    if (!lower.includes("walnut") && !lower.includes("wood")) {
+      return `${cleanName} - Handcrafted Kashmiri Walnut Wood | Haroon Stores`;
+    }
+    return `${cleanName} - Handcrafted Kashmiri Walnut Wood | Haroon Stores`;
+  }
+
+  return `${cleanName} | Haroon Stores`;
+}
 
 function upsertMeta(attribute, key, content) {
   const matches = Array.from(
@@ -161,23 +287,23 @@ export function classifyProductResponse(status, data, requestedId) {
 export function buildProductSeoMetadata(product, requestedId) {
   const productId = positiveProductId(product?.id);
   const requestedProductId = positiveProductId(requestedId);
-  const name = typeof product?.name === "string" ? product.name.trim() : "";
+  const rawName = typeof product?.name === "string" ? product.name.trim() : "";
 
-  if (!productId || productId !== requestedProductId || !name) {
+  if (!productId || productId !== requestedProductId || !rawName) {
     return null;
   }
 
+  const cleanName = formatProductTitle(rawName);
+  const title = buildProductSeoTitle({ ...product, name: cleanName });
   const canonicalUrl = getCanonicalHref(`/product/${productId}`);
-  const description = typeof product.description === "string"
-    ? product.description.trim().slice(0, 300)
-    : "";
+  const description = formatProductDescription(product.description, { ...product, name: cleanName });
   const images = getProductImages(product);
   const price = getProductPrice(product);
   const availability = getSchemaAvailability(product);
 
   const productSchema = {
     "@type": "Product",
-    name,
+    name: cleanName,
     url: canonicalUrl
   };
 
@@ -218,7 +344,7 @@ export function buildProductSeoMetadata(product, requestedId) {
       {
         "@type": "ListItem",
         position: 3,
-        name,
+        name: cleanName,
         item: canonicalUrl
       }
     ]
@@ -230,7 +356,7 @@ export function buildProductSeoMetadata(product, requestedId) {
   };
 
   return {
-    title: `${name} | Haroon Stores`,
+    title,
     description,
     canonicalUrl,
     image: images[0] || null,
@@ -244,19 +370,41 @@ export function buildProductSeoMetadata(product, requestedId) {
   };
 }
 
-export function applyRouteMetadata(pathname) {
+export function applyRouteMetadata(pathname, search = "") {
   const path = (pathname || "/").replace(/\/+$/, "") || "/";
-  const staticPage = STATIC_SEO_PAGES[path];
   const canonicalUrl = getCanonicalHref(pathname);
 
   clearProductStructuredData();
   upsertMeta("name", "robots", null);
 
+  let pageTitle = null;
+  let pageDescription = null;
+
+  if (path === "/shop" && search) {
+    try {
+      const params = new URLSearchParams(search);
+      const categoryParam = params.get("category");
+      if (categoryParam) {
+        const catSeo = getCategorySeo(categoryParam);
+        if (catSeo) {
+          pageTitle = catSeo.title;
+          pageDescription = catSeo.description;
+        }
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }
+
+  const staticPage = STATIC_SEO_PAGES[path];
   if (staticPage) {
-    document.title = staticPage.title;
-    upsertMeta("name", "description", staticPage.description);
-    upsertMeta("property", "og:title", staticPage.title);
-    upsertMeta("property", "og:description", staticPage.description);
+    const title = pageTitle || staticPage.title;
+    const description = pageDescription || staticPage.description;
+
+    document.title = title;
+    upsertMeta("name", "description", description);
+    upsertMeta("property", "og:title", title);
+    upsertMeta("property", "og:description", description);
     upsertMeta("property", "og:url", canonicalUrl);
     upsertMeta("property", "og:image", `${SITE_ORIGIN}/logo.png`);
     upsertMeta("property", "og:type", "website");

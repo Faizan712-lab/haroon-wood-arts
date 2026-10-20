@@ -168,11 +168,11 @@ function ProtectedUserRoute({ children }) {
 }
 
 function RouteMetadata() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   useLayoutEffect(() => {
-    applyRouteMetadata(pathname);
-  }, [pathname]);
+    applyRouteMetadata(pathname, search);
+  }, [pathname, search]);
 
   return null;
 }

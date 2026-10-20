@@ -100,7 +100,7 @@ function Hero() {
 
         >
 
-          Kashmiri Handicrafts Made with Heritage
+          Authentic Kashmiri Handicrafts & Walnut Wood Décor
 
         </motion.h1>
 
@@ -124,9 +124,7 @@ function Hero() {
 
         >
 
-          Discover the beauty of authentic Kashmiri wooden crafts —
-
-          handcrafted with love and tradition.
+          Discover authentic Kashmiri walnut wood handicrafts, carved home décor, and handmade wooden creations crafted with generations of artisan heritage.
 
         </motion.p>
 

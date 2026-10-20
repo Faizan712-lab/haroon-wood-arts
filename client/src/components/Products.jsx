@@ -8,7 +8,8 @@ from "framer-motion";
 
 import {
   useNavigate,
-  useLocation
+  useLocation,
+  Link
 }
 from "react-router-dom";
 
@@ -44,6 +45,8 @@ from "../utils/imageFallback";
 import {
   getProductVariants
 } from "../utils/productDisplay";
+import { getCategorySeo } from "../utils/seoConfig";
+import { formatProductTitle } from "../utils/seoMetadata";
 
 function RatingStars({
   rating,
@@ -128,6 +131,9 @@ function Products({
 
   const isShopPage =
     location.pathname === "/shop";
+
+  const currentCategorySeo =
+    filters.category ? getCategorySeo(filters.category) : null;
 
   const {
     addToCart,
@@ -539,8 +545,15 @@ function Products({
             <header className="shop-header">
               <span className="shop-header-tag">HAROON STORES</span>
               <h1 className="shop-header-title">
-                {filters.category ? `${filters.category} Collection` : "Kashmiri Handcrafted Collection"}
+                {currentCategorySeo
+                  ? currentCategorySeo.heading
+                  : (filters.category ? `${filters.category} Collection` : "Kashmiri Wooden Handicrafts & Décor")}
               </h1>
+              <p className="shop-header-intro">
+                {currentCategorySeo
+                  ? currentCategorySeo.intro
+                  : "Shop authentic Kashmiri wooden handicrafts online at Haroon Stores. Explore hand-carved walnut wood furniture, wall panels, bowls, and traditional home décor."}
+              </p>
             </header>
           ) : (
             <div className="featured-section-header">
@@ -1105,7 +1118,7 @@ function Products({
 
                       src={getPrimaryImage(item) || PRODUCT_PLACEHOLDER}
 
-                      alt={item.name}
+                      alt={`${formatProductTitle(item.name)} - Kashmiri Walnut Wood Handicraft`}
                       loading="lazy"
 
                       onError={handleImageFallback}
@@ -1140,7 +1153,13 @@ function Products({
                     {/* NAME */}
 
                     <h3>
-                      {item.name}
+                      <Link
+                        to={`/product/${item.id}`}
+                        className="product-title-link"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {formatProductTitle(item.name)}
+                      </Link>
                     </h3>
 
                     {/* PRICE */}

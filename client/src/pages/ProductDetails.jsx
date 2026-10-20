@@ -2,7 +2,8 @@ import "./ProductDetails.css";
 
 import {
   useNavigate,
-  useParams
+  useParams,
+  Link
 } from "react-router-dom";
 
 import {
@@ -40,7 +41,8 @@ import {
 import {
   applyMissingProductMetadata,
   applyProductMetadata,
-  classifyProductResponse
+  classifyProductResponse,
+  formatProductTitle
 } from "../utils/seoMetadata.js";
 
 function RatingStars({
@@ -334,6 +336,31 @@ function ProductDetails() {
 
   return (
     <div className="product-details-page">
+      <nav aria-label="Breadcrumb" className="product-breadcrumbs">
+        <ol className="breadcrumbs-list">
+          <li>
+            <Link to="/">Home</Link>
+          </li>
+          <li aria-hidden="true" className="breadcrumb-separator">›</li>
+          <li>
+            <Link to="/shop">Shop</Link>
+          </li>
+          {product.category && (
+            <>
+              <li aria-hidden="true" className="breadcrumb-separator">›</li>
+              <li>
+                <Link to={`/shop?category=${encodeURIComponent(product.category)}`}>
+                  {product.category}
+                </Link>
+              </li>
+            </>
+          )}
+          <li aria-hidden="true" className="breadcrumb-separator">›</li>
+          <li aria-current="page" className="breadcrumb-current">
+            {formatProductTitle(product.name)}
+          </li>
+        </ol>
+      </nav>
       <div className="product-details-container">
 
         {/* LEFT: IMAGE GALLERY */}
@@ -349,7 +376,7 @@ function ProductDetails() {
               >
                 <img
                   src={activeImage}
-                  alt={product.name}
+                  alt={`${formatProductTitle(product.name)} - Handcrafted Kashmiri Walnut Wood`}
                   onError={handleImageFallback}
                 />
               </button>
@@ -410,12 +437,15 @@ function ProductDetails() {
           {/* 1. Category Tag & Product Name */}
           <div className="product-header-group">
             {product.category && (
-              <span className="product-category-tag">
+              <Link
+                to={`/shop?category=${encodeURIComponent(product.category)}`}
+                className="product-category-tag"
+              >
                 {product.category}
-              </span>
+              </Link>
             )}
             <h1 className="product-title">
-              {product.name}
+              {formatProductTitle(product.name)}
             </h1>
           </div>
 
