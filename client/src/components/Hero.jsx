@@ -100,7 +100,7 @@ function Hero() {
 
         >
 
-          Authentic Kashmiri Handicrafts & Walnut Wood Décor
+          Authentic Kashmiri Handicrafts & Walnut Wood Decor
 
         </motion.h1>
 

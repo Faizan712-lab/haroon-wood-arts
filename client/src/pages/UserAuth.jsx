@@ -29,7 +29,9 @@ const emptyForm = {
   confirmPassword: ""
 };
 
-const GOOGLE_NATIVE_BUTTON_WIDTH = 400;
+const GOOGLE_MAX_BUTTON_WIDTH = 380;
+const GOOGLE_MIN_BUTTON_WIDTH = 200;
+const GOOGLE_NATIVE_BUTTON_WIDTH = 380;
 
 function getAuthErrorMessage(error) {
   const message = error?.message || "Authentication failed";
@@ -89,8 +91,13 @@ function UserAuth() {
       if (googleContainerRef.current) {
         const clientWidth = Math.floor(googleContainerRef.current.clientWidth);
         if (clientWidth > 0) {
+          // Inset slightly from parent width to ensure 1px outline is never clipped by container boundaries
+          const available = clientWidth - 8;
           // Google Identity Services button width must be between 200 and 400 pixels
-          const clamped = Math.max(200, Math.min(400, clientWidth));
+          const clamped = Math.max(
+            GOOGLE_MIN_BUTTON_WIDTH,
+            Math.min(GOOGLE_MAX_BUTTON_WIDTH, available)
+          );
           setGoogleButtonWidth(clamped);
         }
       }
